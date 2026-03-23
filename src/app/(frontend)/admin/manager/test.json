@@ -1,0 +1,92 @@
+[
+  {
+    "firstName": "Juan",
+    "surname": "Dela Cruz",
+    "email": "juan.dc@example.com",
+    "phone": "09171112222",
+    "service": "Anti-Aging Treatment",
+    "appointmentDate": "2026-03-23T09:00:00Z",
+    "status": "completed"
+  },
+  {
+    "firstName": "Maria",
+    "surname": "Clara",
+    "email": "m.clara@example.com",
+    "phone": "09183334444",
+    "service": "Hydrating Facial",
+    "appointmentDate": "2026-03-23T11:00:00Z",
+    "status": "completed"
+  },
+  {
+    "firstName": "Pedro",
+    "surname": "Penduko",
+    "email": "p.penduko@example.com",
+    "phone": "09195556666",
+    "service": "Anti-Aging Treatment",
+    "appointmentDate": "2026-03-22T14:00:00Z",
+    "status": "completed"
+  },
+  {
+    "firstName": "Elena",
+    "surname": "Adarna",
+    "email": "e.adarna@example.com",
+    "phone": "09207778888",
+    "service": "Hydrating Facial",
+    "appointmentDate": "2026-03-21T10:00:00Z",
+    "status": "completed"
+  },
+  {
+    "firstName": "Ricardo",
+    "surname": "Dalisay",
+    "email": "carding@example.com",
+    "phone": "09219990000",
+    "service": "Anti-Aging Treatment",
+    "appointmentDate": "2026-03-20T13:00:00Z",
+    "status": "completed"
+  },
+  {
+    "firstName": "Liza",
+    "surname": "Soberano",
+    "email": "liza.s@example.com",
+    "phone": "09221112222",
+    "service": "Hydrating Facial",
+    "appointmentDate": "2026-03-19T15:00:00Z",
+    "status": "completed"
+  },
+  {
+    "firstName": "Enrique",
+    "surname": "Gil",
+    "email": "quen@example.com",
+    "phone": "09234445555",
+    "service": "Anti-Aging Treatment",
+    "appointmentDate": "2026-03-15T09:00:00Z",
+    "status": "completed"
+  },
+  {
+    "firstName": "Kathryn",
+    "surname": "Bernardo",
+    "email": "kath@example.com",
+    "phone": "09246667777",
+    "service": "Hydrating Facial",
+    "appointmentDate": "2026-03-10T11:00:00Z",
+    "status": "completed"
+  },
+  {
+    "firstName": "Daniel",
+    "surname": "Padilla",
+    "email": "dj@example.com",
+    "phone": "09258889999",
+    "service": "Anti-Aging Treatment",
+    "appointmentDate": "2026-03-05T10:00:00Z",
+    "status": "completed"
+  },
+  {
+    "firstName": "Bea",
+    "surname": "Alonzo",
+    "email": "bea.a@example.com",
+    "phone": "09260001111",
+    "service": "Hydrating Facial",
+    "appointmentDate": "2026-03-01T14:00:00Z",
+    "status": "completed"
+  }
+]
