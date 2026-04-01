@@ -26,7 +26,7 @@ const nextConfig = {
       {
         // Add your Vercel domain here once live
         protocol: 'https',
-        hostname: 'clinic-app-lyart.vercel.app',
+        hostname: 'clinic-app-sp.vercel.app',
       },
     ],
   },

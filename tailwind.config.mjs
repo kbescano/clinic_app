@@ -7,7 +7,9 @@ const config = {
   ],
   theme: {
     extend: {
-      // Move colors HERE
+      fontFamily: {
+        ovo: ['var(--font-ovo)', 'serif'],
+      },
       colors: {
         primary: 'var(--primary)',
         secondary: 'var(--secondary)',

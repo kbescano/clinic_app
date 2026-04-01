@@ -5,6 +5,7 @@ import { cloudinaryStorage } from 'payload-cloudinary' // 1. Import the storage 
 import path from 'path'
 import { fileURLToPath } from 'url'
 import sharp from 'sharp'
+import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
 
 import { Users } from './collections/Users'
 import { Appointments } from './collections/Appointments'
@@ -51,4 +52,17 @@ export default buildConfig({
   routes: {
     admin: '/dashboard-secret-portal',
   },
+  email: nodemailerAdapter({
+    defaultFromAddress: process.env.FROM_EMAIL || 'onboarding@resend.dev',
+    defaultFromName: 'Clinic Admin',
+    // The transportOptions now live inside the adapter function
+    transportOptions: {
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT) || 465,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    },
+  }),
 })

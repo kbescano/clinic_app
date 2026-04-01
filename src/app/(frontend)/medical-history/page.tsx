@@ -1,54 +1,44 @@
+// src/app/medical-history/page.tsx (or wherever this lives)
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-// import { headers as getHeaders } from 'next/headers'
-// import { redirect } from 'next/navigation'
-import React from 'react'
+import React, { Suspense } from 'react'
 import MedicalHistoryClient from './MedicalHistoryClient'
-
-// src/app/(frontend)/medical-history/page.tsx
+import { RegistrySkeleton } from '../components/RegistrySkeleton'
 
 export default async function MedicalHistoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; search?: string }> // 1. Update Type to Promise
+  searchParams: Promise<{ page?: string; search?: string }>
 }) {
   const payload = await getPayload({ config })
-
-  // 2. Await the params before using them
   const params = await searchParams
 
-  // 3. Use the awaited object
   const currentPage = Number(params.page) || 1
   const search = params.search || ''
-  const limit = 10
 
+  // FETCH ALL DATA: No pagination, no limits.
   const data = await payload.find({
     collection: 'appointments',
-    where: {
-      and: [
-        { status: { in: ['confirmed', 'completed'] } },
-        search
-          ? {
-              or: [
-                { firstName: { contains: search } },
-                { surname: { contains: search } },
-                { email: { contains: search } },
-              ],
-            }
-          : {},
-      ],
-    },
+    pagination: false,
+    where: search
+      ? {
+          or: [
+            { firstName: { contains: search } },
+            { surname: { contains: search } },
+            { email: { contains: search } },
+          ],
+        }
+      : {},
     sort: '-appointmentDate',
-    page: currentPage,
-    limit: limit,
     depth: 1,
   })
 
   return (
-    <MedicalHistoryClient
-      initialData={data.docs}
-      totalPages={data.totalPages || 1}
-      currentPage={data.page || 1}
-    />
+    <Suspense fallback={<RegistrySkeleton />}>
+      <MedicalHistoryClient
+        initialData={data.docs}
+        currentPage={currentPage} // Pass the page from the URL
+      />
+    </Suspense>
   )
 }

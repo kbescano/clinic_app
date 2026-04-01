@@ -4,6 +4,16 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import MobileMenu from './components/MobileMenu'
 import { ColorConfig } from '@/payload-types'
+import { Ovo } from 'next/font/google'
+import './globals.css'
+import Navbar from './components/Navbar'
+import { ContactProvider } from './components/ContactContext'
+
+const ovo = Ovo({
+  weight: '400', // Ovo only comes in regular weight
+  subsets: ['latin'],
+  variable: '--font-ovo', // This name is used in Tailwind config
+})
 
 export const metadata = {
   description: 'A modern clinic management system.',
@@ -17,6 +27,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const branding = (await payload.findGlobal({
     slug: 'color-config',
   })) as ColorConfig
+
+  const contactData = await payload.findGlobal({ slug: 'contact-config' })
+  const headerData = await payload.findGlobal({ slug: 'header-config' })
 
   // Fallback colors in case the CMS is empty
   const primary = branding?.primaryColor
@@ -37,8 +50,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
       </head>
-      <body className="antialiased">
-        <main className="min-h-screen pb-20 lg:pb-0 dark:bg-black">{children}</main>
+      <body className={`${ovo.variable} antialiased`}>
+        <ContactProvider contactData={contactData}>
+          <Navbar contactData={contactData} headerData={headerData} />
+          <main className="min-h-screen pb-20 lg:pb-0 dark:bg-black">{children}</main>
+        </ContactProvider>
         <MobileMenu />
       </body>
     </html>

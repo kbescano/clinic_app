@@ -1,78 +1,66 @@
-import { getPayload } from 'payload'
-import config from '@/payload.config'
-import { headers as getHeaders } from 'next/headers'
+'use client'
+
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import React from 'react'
-import MobileMenu from './MobileMenu'
-import UserMenu from './UserMenu'
+import ContactTrigger from './ContactTrigger'
+import FadeIn from './FadeIn'
 
 interface NavbarProps {
-  logoFirst: string
-  logoSecond: string
+  contactData: any
+  headerData: any
 }
 
-export default async function Navbar({ logoFirst, logoSecond }: NavbarProps) {
-  const payload = await getPayload({ config })
-  const headers = await getHeaders()
-  const { user } = await payload.auth({ headers })
+export default function Navbar({ contactData, headerData }: NavbarProps) {
+  const [isVisible, setIsVisible] = useState(true)
+  const [lastScrollY, setLastScrollY] = useState(0)
+
+  // --- SCROLL LOGIC ---
+  useEffect(() => {
+    const controlNavbar = () => {
+      // Show navbar if at the top, or if scrolling up. Hide on scroll down.
+      if (typeof window !== 'undefined') {
+        if (window.scrollY > lastScrollY && window.scrollY > 100) {
+          setIsVisible(false) // Scrolling Down
+        } else {
+          setIsVisible(true) // Scrolling Up
+        }
+        setLastScrollY(window.scrollY)
+      }
+    }
+
+    window.addEventListener('scroll', controlNavbar)
+    return () => window.removeEventListener('scroll', controlNavbar)
+  }, [lastScrollY])
 
   return (
-    <nav className="relative bg-[#122c4f] dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 z-50">
-      <div className="container p-6 mx-auto lg:flex lg:justify-between lg:items-center">
-        <div className="flex items-center justify-between w-full lg:w-auto">
-          <Link href="/" className="text-xl font-bold text-primary dark:text-white">
-            {logoFirst}
-            <span className="text-secondary">{logoSecond}</span>
-          </Link>
+    <nav
+      className={`fixed top-0 left-0 w-full bg-white dark:bg-black border-b border-zinc-100 dark:border-zinc-900 z-[100] selection:bg-zinc-100 transition-transform duration-500 ease-in-out ${
+        isVisible ? 'translate-y-0' : '-translate-y-full'
+      }`}
+    >
+      <FadeIn>
+        <div className="max-w-[1440px] mx-auto px-6 md:px-10 h-20 md:h-24 flex items-center justify-between">
+          {/* LEFT PILLAR (Empty to balance the layout) */}
+          <div className="flex-1 hidden md:block" />
 
-          <div className="flex lg:hidden">
-            {/* 1. PASS USER TO MOBILE MENU */}
-            <MobileMenu />
+          {/* CENTER PILLAR: BRANDING */}
+          <div className="flex-none text-center">
+            <Link href="/" className="flex flex-col items-center group">
+              {/* ATELIER LOGO: Small, High Tracking */}
+              <span className="text-[10px] uppercase tracking-[0.6em] text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors font-serif">
+                {headerData?.clinicName || 'Clinic Registry'}
+              </span>
+            </Link>
+          </div>
+
+          {/* RIGHT PILLAR: CONTACT */}
+          <div className="flex items-center justify-end gap-6 md:gap-10 flex-1">
+            <div className="flex items-center">
+              <ContactTrigger contactData={contactData} />
+            </div>
           </div>
         </div>
-
-        {/* DESKTOP NAV */}
-        <div className="hidden lg:flex lg:items-center">
-          <div className="flex items-center text-white dark:text-gray-200">
-            <Link className="lg:mx-6 hover:text-primary transition-colors" href="/">
-              Home
-            </Link>
-            <Link className="lg:mx-6 hover:text-primary transition-colors" href="/#services">
-              Services
-            </Link>
-
-            {user && (
-              <>
-                <Link className="lg:mx-6 text-primary font-bold" href="/dashboard">
-                  Dashboard
-                </Link>
-                <Link className="lg:mx-6 hover:text-primary text-sm" href="/medical-history">
-                  Medical History
-                </Link>
-                <Link
-                  className="lg:mx-6 hover:text-primary text-sm"
-                  href="/dashboard-secret-portal"
-                >
-                  Admin Settings
-                </Link>
-              </>
-            )}
-          </div>
-
-          <div className="lg:ml-6">
-            {!user ? (
-              <Link
-                href="/dashboard-secret-portal"
-                className="px-5 py-2 text-sm text-white bg-primary rounded-lg font-medium"
-              >
-                Admin Login
-              </Link>
-            ) : (
-              <UserMenu email={user.name} />
-            )}
-          </div>
-        </div>
-      </div>
+      </FadeIn>
     </nav>
   )
 }

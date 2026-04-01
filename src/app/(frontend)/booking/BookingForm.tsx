@@ -1,11 +1,15 @@
 'use client'
 
-import React, { useActionState, useState, useEffect, Suspense, useTransition } from 'react'
+import React, { useActionState, useState, useEffect, Suspense, useTransition, useMemo } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createBookingAction, getBusySlots, getCustomerByEmail } from './actions'
 import { Service } from '@/payload-types'
 import FadeIn from '../components/FadeIn'
-import { TrashIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
+import Notification from '../components/Notification'
+import { ArrowPathIcon, ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import BackToHome from '../components/BackToHome'
+import dayjs from '@/lib/dayjs'
+import { RegistrySkeleton } from '../components/RegistrySkeleton'
 
 interface BookingEntry {
   serviceId: string
@@ -17,51 +21,57 @@ interface BookingEntry {
   time: string
 }
 
-// --- VALIDATION HELPERS ---
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 const isValidPHPhone = (phone: string) => {
-  const cleanPhone = phone.replace(/\s/g, '')
-  return /^(09|\+639)\d{9}$/.test(cleanPhone)
+  const cleanPhone = phone.replace(/[\s\-()]/g, '')
+  return /^(09|\+639|639)\d{9}$/.test(cleanPhone)
 }
 
-export default function BookingForm({ services }: { services: Service[] }) {
+export default function BookingForm({
+  services,
+  initialData,
+}: {
+  services: Service[]
+  initialData: { email: string; fn: string; sn: string; ph: string }
+}) {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="animate-pulse text-zinc-400 text-[9px] uppercase tracking-[0.4em]">
-            Loading...
-          </div>
-        </div>
-      }
-    >
-      <BookingFormContent services={services} />
+    <Suspense fallback={<RegistrySkeleton />}>
+      <BookingFormContent services={services} initialData={initialData} />
     </Suspense>
   )
 }
 
-function BookingFormContent({ services }: { services: Service[] }) {
-  const searchParams = useSearchParams()
+function BookingFormContent({
+  services,
+  initialData,
+}: {
+  services: Service[]
+  initialData: { email: string; fn: string; sn: string; ph: string }
+}) {
   const router = useRouter()
+  const searchParams = useSearchParams()
 
-  const [showModal, setShowModal] = useState(() => searchParams.get('prefill') !== 'true')
-  const [existingEmail, setExistingEmail] = useState(searchParams.get('email') || '')
+  // --- 1. INSTANT INITIALIZATION (Bypasses useSearchParams lag) ---
+  const hasPrefillData = !!(initialData.email && initialData.fn)
+
+  const [showModal, setShowModal] = useState(!hasPrefillData)
+  const [existingEmail, setExistingEmail] = useState(initialData.email)
+  const [personalInfo, setPersonalInfo] = useState({
+    firstName: initialData.fn,
+    surname: initialData.sn,
+    phone: initialData.ph,
+    email: initialData.email,
+  })
+
+  // --- 2. CORE STATE ---
   const [isExisting, setIsExisting] = useState<boolean | null>(null)
   const [isVerifying, setIsVerifying] = useState(false)
+  const [errorToast, setErrorToast] = useState<string | null>(null)
   const [modalError, setModalError] = useState<string | null>(null)
-  const [localError, setLocalError] = useState<string | null>(null)
-
   const [isPendingTransition, startTransition] = useTransition()
   const [state, formAction] = useActionState(createBookingAction, null)
-
   const [bookings, setBookings] = useState<BookingEntry[]>([])
-
-  const [personalInfo, setPersonalInfo] = useState({
-    firstName: searchParams.get('fn') || '',
-    surname: searchParams.get('sn') || '',
-    phone: searchParams.get('ph') || '',
-    email: searchParams.get('email') || '',
-  })
+  const [drawLine, setDrawLine] = useState(false)
 
   const [currentServiceId, setCurrentServiceId] = useState('')
   const [extraServiceId, setExtraServiceId] = useState('')
@@ -83,228 +93,283 @@ function BookingFormContent({ services }: { services: Service[] }) {
     '17:00',
   ]
 
-  // --- NEW: CLEAR SESSION LOGIC ---
+  const { todayStr, manilaTimeNow, minSelectableDate } = useMemo(() => {
+    const nowPHT = dayjs().tz('Asia/Manila')
+    const isAfterCutoff = nowPHT.hour() >= 15
+    return {
+      todayStr: nowPHT.format('YYYY-MM-DD'),
+      manilaTimeNow: nowPHT.format('HH:mm'),
+      minSelectableDate: isAfterCutoff
+        ? nowPHT.add(1, 'day').format('YYYY-MM-DD')
+        : nowPHT.format('YYYY-MM-DD'),
+    }
+  }, [])
+
+  const activeDate = bookings.length > 0 ? bookings[0].date : currentDate
+
+  // --- 3. EFFECTS ---
+  useEffect(() => {
+    if (state?.error) setErrorToast(state.error)
+  }, [state])
+
+  // Trigger DrawLine immediately for prefilled users
+  useEffect(() => {
+    if (!showModal || hasPrefillData) {
+      setDrawLine(true)
+    } else {
+      setDrawLine(false)
+    }
+  }, [showModal, hasPrefillData])
+
+  useEffect(() => {
+    async function updateAvailability() {
+      if (activeDate) {
+        setLoadingSlots(true)
+        const taken = await getBusySlots(activeDate)
+        setBusySlots(taken)
+        setLoadingSlots(false)
+      }
+    }
+    updateAvailability()
+  }, [activeDate])
+
+  // Handles dynamic URL changes (Back button, etc.)
+  useEffect(() => {
+    const email = searchParams.get('email') || ''
+    const fn = searchParams.get('fn') || ''
+    if (email && fn && (email !== personalInfo.email || fn !== personalInfo.firstName)) {
+      setPersonalInfo({
+        firstName: fn,
+        surname: searchParams.get('sn') || '',
+        phone: searchParams.get('ph') || '',
+        email: email,
+      })
+      setExistingEmail(email)
+      setShowModal(false)
+    }
+  }, [searchParams, personalInfo.email, personalInfo.firstName])
+
+  // --- 4. HANDLERS ---
+  const handleLookup = async () => {
+    if (!isValidEmail(existingEmail)) {
+      setModalError('Invalid email format.')
+      return
+    }
+
+    setIsVerifying(true)
+    setModalError(null)
+
+    try {
+      const normalizedEmail = existingEmail.trim().toLowerCase()
+      const data = (await getCustomerByEmail(normalizedEmail)) as any
+
+      if (!data) {
+        setModalError('No record found with this email.')
+        setIsVerifying(false)
+        return
+      }
+
+      if (data.appointments && data.appointments.length > 0) {
+        const simplifiedApts = data.appointments.map((apt: any) => ({
+          date: apt.date || apt.appointmentDate,
+          service: typeof apt.service === 'object' ? apt.service.title : apt.service,
+          firstName: apt.firstName,
+          surname: apt.surname,
+          isGuest: apt.isGuest,
+        }))
+
+        const statusParams = new URLSearchParams({
+          fn: data.firstName || '',
+          sn: data.surname || '',
+          email: normalizedEmail,
+          ph: data.phone || '',
+          apts: JSON.stringify(simplifiedApts),
+        })
+
+        startTransition(() => {
+          setShowModal(false)
+          router.push(`/booking/status?${statusParams.toString()}`)
+        })
+        return
+      }
+
+      const bookingParams = new URLSearchParams({
+        fn: data.firstName || '',
+        sn: data.surname || '',
+        email: normalizedEmail,
+        ph: data.phone || '',
+      })
+
+      startTransition(() => {
+        setShowModal(false)
+        router.replace(`/booking?${bookingParams.toString()}`)
+      })
+    } catch (err) {
+      console.error('Lookup Error:', err)
+      setModalError('Server error. Please try again.')
+      setIsVerifying(false)
+    }
+  }
+
+  useEffect(() => {
+    router.prefetch('/booking/status')
+  }, [])
+
+  const handleAddPerson = () => {
+    setErrorToast(null)
+    if (
+      !personalInfo.firstName ||
+      !personalInfo.surname ||
+      !currentServiceId ||
+      !activeDate ||
+      !currentTime
+    ) {
+      setErrorToast('Complete Name, Service, and Time.')
+      return
+    }
+    if (!isValidEmail(personalInfo.email)) {
+      setErrorToast('Invalid email.')
+      return
+    }
+    if (!isValidPHPhone(personalInfo.phone)) {
+      setErrorToast('Invalid PH phone format.')
+      return
+    }
+
+    const entry: BookingEntry = {
+      ...personalInfo,
+      serviceId: currentServiceId,
+      date: activeDate,
+      time: currentTime,
+    }
+    const batch = [entry]
+    if (showExtraService && extraServiceId) batch.push({ ...entry, serviceId: extraServiceId })
+    setBookings([...bookings, ...batch])
+    setPersonalInfo((prev) => ({ ...prev, firstName: '', surname: '' }))
+    setCurrentServiceId('')
+    setExtraServiceId('')
+    setShowExtraService(false)
+    setCurrentTime('')
+  }
+
+  const handleFinalSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setErrorToast(null)
+    const finalEntries = [...bookings]
+    if (personalInfo.firstName && currentTime) {
+      if (!isValidEmail(personalInfo.email)) {
+        setErrorToast('Valid email required.')
+        return
+      }
+      if (!isValidPHPhone(personalInfo.phone)) {
+        setErrorToast('Valid PH phone required.')
+        return
+      }
+      const currentPerson = {
+        ...personalInfo,
+        serviceId: currentServiceId,
+        date: activeDate,
+        time: currentTime,
+      }
+      finalEntries.push(currentPerson)
+      if (showExtraService && extraServiceId)
+        finalEntries.push({ ...currentPerson, serviceId: extraServiceId })
+    }
+    if (finalEntries.length === 0) {
+      setErrorToast('Add at least one appointment.')
+      return
+    }
+
+    const finalData = new FormData()
+    startTransition(() => {
+      finalEntries.forEach((b) => {
+        finalData.append('firstName', b.firstName)
+        finalData.append('surname', b.surname)
+        finalData.append('email', b.email)
+        finalData.append('phone', b.phone)
+        finalData.append('serviceId', b.serviceId)
+        finalData.append('appointmentDate', `${b.date}T${b.time}:00`)
+      })
+      formAction(finalData)
+    })
+  }
+
   const handleClearSession = () => {
-    if (confirm('Clear all selections and guest lists?')) {
+    if (confirm('Clear all selections?')) {
       setBookings([])
       setCurrentServiceId('')
       setExtraServiceId('')
       setShowExtraService(false)
       setCurrentDate('')
       setCurrentTime('')
-      setLocalError(null)
+      setErrorToast(null)
+      setPersonalInfo({ firstName: '', surname: '', phone: '', email: '' })
+      setIsExisting(null)
+      setShowModal(true)
+      router.replace('/booking')
     }
   }
 
-  useEffect(() => {
-    const isPrefill = searchParams.get('prefill') === 'true'
-    const email = searchParams.get('email')
-
-    if (isPrefill && email) {
-      setShowModal(false)
-      const loadUser = async () => {
-        try {
-          const data = (await getCustomerByEmail(email)) as any
-          if (data) {
-            setPersonalInfo({
-              firstName: data.firstName || searchParams.get('fn') || '',
-              surname: data.surname || searchParams.get('sn') || '',
-              phone: data.phone || searchParams.get('ph') || '',
-              email: email,
-            })
-            setCurrentDate('')
-            setCurrentTime('')
-          }
-        } catch (err) {
-          console.error('Silent prefill failed', err)
-        }
-      }
-      loadUser()
-    }
-  }, [searchParams])
-
-  useEffect(() => {
-    const idFromUrl = searchParams.get('serviceId')
-    if (idFromUrl && services.length > 0) setCurrentServiceId(String(idFromUrl))
-  }, [searchParams, services])
-
-  useEffect(() => {
-    async function updateAvailability() {
-      if (currentDate) {
-        setLoadingSlots(true)
-        const taken = await getBusySlots(currentDate)
-        setBusySlots(taken)
-        setLoadingSlots(false)
-      }
-    }
-    updateAvailability()
-  }, [currentDate])
-
-  const handleLookup = async () => {
-    if (!isValidEmail(existingEmail)) {
-      setModalError('Invalid email format.')
-      return
-    }
-    setIsVerifying(true)
-    setModalError(null)
-    try {
-      const data = (await getCustomerByEmail(existingEmail)) as any
-      if (data && data.appointments?.length > 0) {
-        const params = new URLSearchParams({
-          fn: data.firstName || '',
-          email: existingEmail,
-          sn: data.surname || '',
-          ph: data.phone || '',
-          apts: JSON.stringify(data.appointments),
-        })
-        router.push(`/booking/status?${params.toString()}`)
-      } else if (data) {
-        setPersonalInfo({
-          firstName: data.firstName || '',
-          surname: data.surname || '',
-          phone: data.phone || '',
-          email: existingEmail,
-        })
-        setCurrentDate('')
-        setCurrentTime('')
-        setShowModal(false)
-      } else {
-        setModalError('No record found. Please continue as a new customer.')
-      }
-    } catch {
-      setModalError('Error connecting to server.')
-    } finally {
-      setIsVerifying(false)
-    }
-  }
-
-  const handleAddPerson = () => {
-    setLocalError(null)
-    if (!currentServiceId || !currentDate || !currentTime) {
-      setLocalError('Complete current booking first.')
-      return
-    }
-    if (!isValidEmail(personalInfo.email)) {
-      setLocalError('Invalid email format.')
-      return
-    }
-    if (!isValidPHPhone(personalInfo.phone)) {
-      setLocalError('Invalid PH phone number (09XXXXXXXXX).')
-      return
-    }
-
-    const primaryBooking: BookingEntry = {
-      ...personalInfo,
-      serviceId: currentServiceId,
-      date: currentDate,
-      time: currentTime,
-    }
-    const newBatch = [primaryBooking]
-    if (showExtraService && extraServiceId)
-      newBatch.push({ ...primaryBooking, serviceId: extraServiceId })
-
-    setBookings([...bookings, ...newBatch])
-    setPersonalInfo({ ...personalInfo, firstName: '', surname: '', phone: '' })
-    setCurrentServiceId('')
-    setExtraServiceId('')
-    setShowExtraService(false)
-    setCurrentDate('')
-    setCurrentTime('')
-  }
-
-  const handleFinalSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setLocalError(null)
-
-    if (!isValidEmail(personalInfo.email)) {
-      setLocalError('Invalid email format.')
-      return
-    }
-    if (!isValidPHPhone(personalInfo.phone)) {
-      setLocalError('Invalid PH phone format.')
-      return
-    }
-
-    const currentEntries: BookingEntry[] = [
-      { ...personalInfo, serviceId: currentServiceId, date: currentDate, time: currentTime },
-    ]
-    if (showExtraService && extraServiceId)
-      currentEntries.push({ ...currentEntries[0], serviceId: extraServiceId })
-
-    const finalData = new FormData()
-    startTransition(() => {
-      ;[...bookings, ...currentEntries].forEach((b) => {
-        finalData.append('serviceId', b.serviceId)
-        finalData.append('firstName', b.firstName)
-        finalData.append('surname', b.surname)
-        finalData.append('email', b.email)
-        finalData.append('phone', b.phone)
-        const localDateTime = new Date(`${b.date}T${b.time}:00`)
-        finalData.append('appointmentDate', localDateTime.toISOString())
-      })
-      formAction(finalData)
-    })
-  }
-
-  const todayStr = new Date().toLocaleDateString('en-CA')
-  const nowStr = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
   const getServiceTitle = (id: string) =>
     services.find((s) => String(s.id) === id)?.title || 'Service'
 
   return (
-    <>
+    <div className="min-h-screen bg-white dark:bg-[#050505] text-zinc-900 dark:text-zinc-100 pt-24 md:pt-32 pb-32 selection:bg-zinc-100 overflow-x-hidden">
+      {errorToast && (
+        <Notification message={errorToast} type="error" onClose={() => setErrorToast(null)} />
+      )}
+
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 text-black dark:text-white">
-          <div className="w-full max-w-md bg-white dark:bg-zinc-950 p-10 border border-zinc-100 dark:border-zinc-900 rounded-[2.5rem] shadow-2xl">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+          <div className="w-full max-w-md bg-white dark:bg-black p-10 md:p-14 border border-zinc-50 dark:border-zinc-900 shadow-2xl text-center">
             {isExisting === null ? (
-              <div className="space-y-6 text-center">
-                <h3 className="text-2xl font-light">Visited us before?</h3>
-                <div className="flex flex-col gap-3 pt-4">
+              <div className="animate-in fade-in zoom-in-95 duration-300">
+                <h3 className="text-[20px] md:text-[22px] font-light mb-12 font-serif uppercase tracking-tight">
+                  Visited us before?
+                </h3>
+                <div className="space-y-4">
                   <button
                     onClick={() => setIsExisting(true)}
-                    className="w-full py-5 bg-black dark:bg-white text-white dark:text-black text-[8px] font-bold uppercase tracking-[0.3em] rounded-full active:scale-[0.98] transition-all"
+                    className="w-full py-5 bg-zinc-900 dark:bg-white text-white dark:text-black text-[8px] font-medium uppercase tracking-[0.4em] font-serif transition-all hover:bg-zinc-800 dark:hover:bg-zinc-100"
                   >
-                    Yes, I&apos;m a current customer.
+                    Yes, I&apos;m a current customer
                   </button>
                   <button
                     onClick={() => setShowModal(false)}
-                    className="w-full py-5 border border-zinc-200 dark:border-zinc-800 text-[8px] font-bold uppercase tracking-[0.3em] rounded-full dark:text-white transition-all active:scale-[0.98]"
+                    className="w-full py-5 border border-zinc-100 dark:border-zinc-900 text-zinc-400 text-[8px] font-medium uppercase tracking-[0.4em] font-serif transition-all hover:text-zinc-900 dark:hover:text-white"
                   >
-                    No, I am new customer.
+                    No, I am new customer
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="space-y-6 text-center">
-                <h3 className="text-2xl font-light">Confirm Email</h3>
+              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <h3 className="text-[18px] md:text-[20px] font-light mb-4 font-serif uppercase tracking-tight">
+                  Confirm Email
+                </h3>
                 {modalError && (
-                  <p className="text-[10px] text-red-500 font-bold border-l-2 border-red-500 pl-3 text-left">
-                    {modalError}
-                  </p>
+                  <p className="text-[9px] text-rose-500 mb-6 font-serif italic">{modalError}</p>
                 )}
                 <input
                   type="email"
                   value={existingEmail}
-                  onChange={(e) => {
-                    setExistingEmail(e.target.value)
-                    setModalError(null)
-                  }}
-                  className="w-full bg-transparent border-b border-zinc-100 dark:border-zinc-800 outline-none py-4 text-sm text-center"
+                  onChange={(e) => setExistingEmail(e.target.value)}
+                  className="w-full bg-transparent border-b border-zinc-100 dark:border-zinc-800 outline-none py-4 mb-10 text-center text-[16px] md:text-[18px] font-serif tracking-tight"
                   placeholder="email@example.com"
                   autoFocus
                 />
                 <button
                   onClick={handleLookup}
                   disabled={isVerifying}
-                  className="w-full py-5 bg-black dark:bg-white text-white dark:text-black text-[10px] font-bold uppercase tracking-[0.3em] rounded-full transition-all"
+                  className="w-full py-5 bg-zinc-900 dark:bg-white text-white dark:text-black text-[9px] font-medium uppercase tracking-[0.4em] font-serif mb-8 disabled:opacity-50"
                 >
                   {isVerifying ? 'Searching...' : 'Check Schedule'}
                 </button>
                 <button
                   onClick={() => setIsExisting(null)}
-                  className="w-full text-[9px] uppercase tracking-[0.4em] text-zinc-400 py-4"
+                  className="text-[8px] uppercase tracking-[0.4em] text-zinc-400 font-serif"
                 >
-                  Go Back
+                  [ Go Back ]
                 </button>
               </div>
             )}
@@ -313,282 +378,326 @@ function BookingFormContent({ services }: { services: Service[] }) {
       )}
 
       <FadeIn>
-        <div className="flex items-start justify-center min-h-screen bg-white dark:bg-black md:pt-24 pb-20 text-black dark:text-white px-6">
-          <div className="w-full max-w-[700px]">
-            <div className="flex items-center justify-between mb-10">
-              {searchParams.get('prefill') === 'true' ? (
-                <button
-                  onClick={() => {
-                    setShowModal(true)
-                    setPersonalInfo({ firstName: '', surname: '', phone: '', email: '' })
-                  }}
-                  className="text-[8px] uppercase tracking-[0.4em] text-zinc-300 dark:text-white hover:text-black dark:hover:text-white transition-colors"
-                >
-                  &larr; Switch User
-                </button>
-              ) : (
-                <div />
-              )}
-
+        <div className="max-w-5xl mx-auto px-4 md:px-8">
+          <div className="flex items-center justify-between mb-12">
+            {hasPrefillData ? (
               <button
-                onClick={handleClearSession}
-                className="flex items-center gap-2 text-[8px] uppercase tracking-[0.4em] text-zinc-300 hover:text-red-500 transition-colors"
+                onClick={() => {
+                  setShowModal(true)
+                  setPersonalInfo({ firstName: '', surname: '', phone: '', email: '' })
+                  router.replace('/booking')
+                }}
+                className="text-[8px] uppercase tracking-[0.35em] text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors font-serif italic"
               >
-                <ArrowPathIcon className="w-3 h-3" />
-                Clear Session
+                &larr; Switch User
               </button>
-            </div>
+            ) : (
+              <div />
+            )}
+            <button
+              onClick={handleClearSession}
+              className="flex items-center gap-3 text-[8px] uppercase tracking-[0.35em] text-zinc-300 hover:text-rose-500 transition-colors font-serif italic"
+            >
+              <ArrowPathIcon className="w-3 h-3" />
+              Clear Session
+            </button>
+          </div>
 
-            <header className="mb-10 text-left">
-              <p className="text-[10px] uppercase tracking-[0.8em] text-zinc-400 font-medium mb-6 uppercase">
+          <header className="mb-16 md:mb-24 flex items-start gap-5">
+            <div
+              className={`w-[1px] bg-zinc-900 dark:bg-white transition-all duration-1000 ease-out origin-top will-change-[height,opacity] ${drawLine ? 'h-10 md:h-12 opacity-100' : 'h-0 opacity-0'}`}
+            />
+            <div className="space-y-1">
+              <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-zinc-400 font-serif">
                 {bookings.length > 0 ? 'Guest Session' : 'Appointment'}
               </p>
-              <h1 className="text-4xl md:text-4xl font-light tracking-tight leading-tight uppercase dark:text-white">
+              <h1 className="text-[20px] md:text-[24px] font-light tracking-tight font-serif uppercase leading-none">
                 {bookings.length > 0 ? 'Adding Another' : 'New Visit'}
               </h1>
-            </header>
+            </div>
+          </header>
 
-            <form onSubmit={handleFinalSubmit} className="space-y-12">
-              {(state?.error || localError) && (
-                <div className="text-[10px] uppercase text-red-500 border-l-2 border-red-500 pl-4 py-1">
-                  {state?.error || localError}
-                </div>
-              )}
-
-              <div className="flex flex-col gap-y-12">
-                <div className="group border-b border-zinc-100 dark:border-zinc-900 pb-2">
-                  <label className="block text-[8px] font-bold uppercase tracking-[0.4em] text-zinc-400 mb-3">
-                    Service
-                  </label>
-                  <select
-                    required
-                    value={currentServiceId}
-                    onChange={(e) => setCurrentServiceId(e.target.value)}
-                    className="w-full bg-transparent text-[15px] outline-none py-1 appearance-none cursor-pointer"
-                  >
-                    <option value="">Select Service...</option>
-                    {services.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.title}
-                      </option>
-                    ))}
-                  </select>
-                  {!showExtraService && (
-                    <button
-                      type="button"
-                      onClick={() => setShowExtraService(true)}
-                      className="mt-4 text-[7px] uppercase tracking-widest text-zinc-400 hover:text-black transition-colors font-bold"
-                    >
-                      + Add second service
-                    </button>
-                  )}
-                </div>
-
-                {showExtraService && (
-                  <div className="group border-b border-zinc-100 dark:border-zinc-900 pb-2 animate-in fade-in slide-in-from-top-1">
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="block text-[8px] font-bold uppercase tracking-[0.4em] text-zinc-400">
-                        Additional Treatment
-                      </label>
+          <form onSubmit={handleFinalSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-16">
+            <div className="lg:col-span-6">
+              <div className="grid grid-cols-1 gap-px bg-zinc-50 dark:bg-zinc-900 border-y border-zinc-100 dark:border-zinc-900">
+                <div className="bg-white dark:bg-black py-8 space-y-10">
+                  <div className="relative group">
+                    <label className="block text-[8px] md:text-[9px] font-medium uppercase tracking-[0.4em] text-zinc-400 mb-3 font-serif italic">
+                      Service
+                    </label>
+                    <div className="relative">
+                      <select
+                        required
+                        value={currentServiceId}
+                        onChange={(e) => setCurrentServiceId(e.target.value)}
+                        className="w-full bg-transparent text-[14px] md:text-[15px] font-serif outline-none py-1 appearance-none border-b border-zinc-100 dark:border-zinc-900 focus:border-zinc-900 dark:focus:border-white transition-colors"
+                      >
+                        <option value="" className="bg-white dark:bg-black">
+                          Select Service...
+                        </option>
+                        {services.map((s) => (
+                          <option key={s.id} value={s.id} className="bg-white dark:bg-black">
+                            {s.title}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-300 pointer-events-none" />
+                    </div>
+                    {!showExtraService && (
                       <button
                         type="button"
-                        onClick={() => {
-                          setShowExtraService(false)
-                          setExtraServiceId('')
-                        }}
-                        className="text-[7px] text-red-400 uppercase tracking-widest font-bold"
+                        onClick={() => setShowExtraService(true)}
+                        className="mt-4 text-[7px] md:text-[8px] uppercase tracking-[0.35em] text-zinc-400 font-serif"
                       >
-                        Remove
+                        + Add second service
                       </button>
-                    </div>
-                    <select
-                      value={extraServiceId}
-                      onChange={(e) => setExtraServiceId(e.target.value)}
-                      className="w-full bg-transparent text-[15px] outline-none py-1 appearance-none cursor-pointer"
-                    >
-                      <option value="">Select Service...</option>
-                      {services.map((s) => (
-                        <option
-                          key={s.id}
-                          value={s.id}
-                          disabled={String(s.id) === currentServiceId}
-                        >
-                          {s.title}
-                        </option>
-                      ))}
-                    </select>
+                    )}
                   </div>
-                )}
 
-                <Field
-                  label="First Name"
-                  value={personalInfo.firstName}
-                  onChange={(v) => setPersonalInfo({ ...personalInfo, firstName: v })}
-                  placeholder="Juan"
-                />
-                <Field
-                  label="Surname"
-                  value={personalInfo.surname}
-                  onChange={(v) => setPersonalInfo({ ...personalInfo, surname: v })}
-                  placeholder="Dela Cruz"
-                />
-                <Field
-                  label="Phone"
-                  value={personalInfo.phone}
-                  onChange={(v) => setPersonalInfo({ ...personalInfo, phone: v })}
-                  placeholder="0917 123 4567"
-                />
-                <Field
-                  label="Email"
-                  value={personalInfo.email}
-                  onChange={(v) => setPersonalInfo({ ...personalInfo, email: v })}
-                  placeholder="hello@example.com"
-                />
+                  {showExtraService && (
+                    <div className="relative animate-in fade-in duration-500">
+                      <div className="flex justify-between mb-3">
+                        <label className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-zinc-400 font-serif italic">
+                          Additional Treatment
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowExtraService(false)
+                            setExtraServiceId('')
+                          }}
+                          className="text-[7px] text-rose-500 uppercase tracking-widest font-serif"
+                        >
+                          [ Remove ]
+                        </button>
+                      </div>
+                      <div className="relative">
+                        <select
+                          value={extraServiceId}
+                          onChange={(e) => setExtraServiceId(e.target.value)}
+                          className="w-full bg-transparent text-[14px] md:text-[15px] font-serif outline-none py-1 appearance-none border-b border-zinc-100 dark:border-zinc-900"
+                        >
+                          <option value="" className="bg-white dark:bg-black">
+                            Select Service...
+                          </option>
+                          {services.map((s) => (
+                            <option
+                              key={s.id}
+                              value={s.id}
+                              disabled={String(s.id) === currentServiceId}
+                              className="bg-white dark:bg-black"
+                            >
+                              {s.title}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-300 pointer-events-none" />
+                      </div>
+                    </div>
+                  )}
 
-                <div className="group border-b border-zinc-100 dark:border-zinc-900 pb-2">
-                  <label className="block text-[8px] font-bold uppercase tracking-[0.4em] text-zinc-400 mb-3">
-                    Date
-                  </label>
-                  <input
-                    type="date"
-                    min={todayStr}
-                    required
-                    value={currentDate}
-                    onChange={(e) => {
-                      setCurrentDate(e.target.value)
-                      setCurrentTime('')
-                    }}
-                    className="w-full bg-transparent text-[15px] outline-none py-1 dark:invert"
+                  <Field
+                    label={bookings.length > 0 ? 'Guest First Name' : 'First Name'}
+                    value={personalInfo.firstName}
+                    onChange={(v) => setPersonalInfo({ ...personalInfo, firstName: v })}
+                    placeholder="Juan"
                   />
-                </div>
+                  <Field
+                    label={bookings.length > 0 ? 'Guest Surname' : 'Surname'}
+                    value={personalInfo.surname}
+                    onChange={(v) => setPersonalInfo({ ...personalInfo, surname: v })}
+                    placeholder="Dela Cruz"
+                  />
 
-                <div className="group border-b border-zinc-100 dark:border-zinc-900 pb-2">
-                  <label className="block text-[8px] font-bold uppercase tracking-[0.4em] text-zinc-400 mb-3">
-                    Time Slot
-                  </label>
-                  <select
-                    required
-                    value={currentTime}
-                    onChange={(e) => setCurrentTime(e.target.value)}
-                    disabled={!currentDate || loadingSlots}
-                    className="w-full bg-transparent text-[15px] outline-none py-1 appearance-none cursor-pointer"
-                  >
-                    <option value="">{loadingSlots ? 'Refreshing...' : 'Select Slot'}</option>
-                    {timeSlots.map((slot) => {
-                      const isPast = currentDate === todayStr && slot <= nowStr
-                      const isBusyInDB = busySlots.includes(slot)
-                      const isBusyInSession = bookings.some(
-                        (b) => b.date === currentDate && b.time === slot,
-                      )
-                      const isFull = isPast || isBusyInDB || isBusyInSession
-                      return (
-                        <option key={slot} value={slot} disabled={isFull}>
-                          {slot} {isFull ? '— Fully booked' : ''}
+                  {bookings.length === 0 && (
+                    <>
+                      <Field
+                        label="Phone"
+                        value={personalInfo.phone}
+                        onChange={(v) => setPersonalInfo({ ...personalInfo, phone: v })}
+                        placeholder="0917 123 4567"
+                      />
+                      <Field
+                        label="Email"
+                        value={personalInfo.email}
+                        onChange={(v) => setPersonalInfo({ ...personalInfo, email: v })}
+                        placeholder="hello@example.com"
+                      />
+                      <div className="relative">
+                        <label className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-zinc-400 mb-3 block font-serif italic">
+                          Date
+                        </label>
+                        <input
+                          type="date"
+                          min={minSelectableDate}
+                          required
+                          value={currentDate}
+                          onChange={(e) => {
+                            setCurrentDate(e.target.value)
+                            setCurrentTime('')
+                          }}
+                          className="w-full bg-transparent text-[14px] md:text-[15px] font-serif dark:text-white outline-none py-1 border-b border-zinc-100 dark:border-zinc-900"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div className="relative">
+                    <label className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-zinc-400 mb-3 block font-serif italic">
+                      Time Slot
+                    </label>
+                    <div className="relative">
+                      <select
+                        required
+                        value={currentTime}
+                        onChange={(e) => setCurrentTime(e.target.value)}
+                        disabled={!activeDate || loadingSlots}
+                        className="w-full bg-transparent text-[14px] md:text-[15px] font-serif outline-none py-1 appearance-none border-b border-zinc-100 dark:border-zinc-900 disabled:opacity-30"
+                      >
+                        <option value="" className="bg-white dark:bg-black">
+                          {loadingSlots ? 'Refreshing...' : 'Select Slot'}
                         </option>
-                      )
-                    })}
-                  </select>
-                </div>
+                        {timeSlots.map((slot) => {
+                          const isPast = activeDate === todayStr && slot <= manilaTimeNow
+                          const isBusyInDB = busySlots.includes(slot)
+                          const isBusyInSession = bookings.some(
+                            (b) => b.date === activeDate && b.time === slot,
+                          )
+                          const isFull = isPast || isBusyInDB || isBusyInSession
+                          return (
+                            <option
+                              key={slot}
+                              value={slot}
+                              disabled={isFull}
+                              className="bg-white dark:bg-black"
+                            >
+                              {slot} {isFull ? (isPast ? '— PASSED' : '— FULLY BOOKED') : ''}
+                            </option>
+                          )
+                        })}
+                      </select>
+                      <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-300 pointer-events-none" />
+                    </div>
+                  </div>
 
-                {bookings.length < 1 && (
                   <button
                     type="button"
                     onClick={handleAddPerson}
-                    className="w-full py-7 border border-dashed border-zinc-100 dark:border-zinc-900 text-[8px] uppercase tracking-[0.5em] text-zinc-400 hover:text-black dark:hover:text-white rounded-[2rem] transition-all font-bold"
+                    className="w-full py-8 border border-dashed border-zinc-100 dark:border-zinc-900 text-[8px] uppercase tracking-[0.45em] text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all font-serif italic"
                   >
                     + Add Guest
                   </button>
-                )}
+                </div>
+              </div>
+            </div>
 
-                {(bookings.length > 0 || currentTime) && (
-                  <div className="pt-20 border-t border-zinc-100 dark:border-zinc-900 space-y-16">
-                    <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-900 pb-4">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.5em] text-zinc-400">
-                        Booking Summary
+            <div className="lg:col-span-6 space-y-12">
+              <div className="flex items-baseline justify-between mb-8 border-b border-zinc-900 dark:border-white pb-3">
+                <h2 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] font-medium font-serif italic flex items-center gap-3">
+                  Booking Summary
+                </h2>
+                <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-zinc-400 font-serif tabular-nums whitespace-nowrap">
+                  Entry Count: {bookings.length + (currentTime ? 1 : 0)}
+                </span>
+              </div>
+              <div className="space-y-6">
+                {Object.values(
+                  bookings.reduce(
+                    (acc, b) => {
+                      const key = `${b.firstName}-${b.surname}-${b.time}`
+                      if (!acc[key]) acc[key] = { ...b, services: [b.serviceId] }
+                      else acc[key].services.push(b.serviceId)
+                      return acc
+                    },
+                    {} as Record<string, any>,
+                  ),
+                ).map((group, i) => (
+                  <div
+                    key={i}
+                    className="bg-white dark:bg-black border border-zinc-50 dark:border-zinc-900 p-8 flex items-start justify-between shadow-sm animate-in slide-in-from-right-4 duration-500"
+                  >
+                    <div className="space-y-6">
+                      <div className="space-y-1">
+                        <p className="text-[8px] uppercase tracking-[0.35em] text-zinc-400 font-serif italic mb-2">
+                          {group.date} • {group.time}
+                        </p>
+                        <h4 className="text-[16px] md:text-[18px] font-light font-serif uppercase tracking-tight">
+                          {group.firstName} {group.surname}
+                        </h4>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {group.services.map((sId: string, idx: number) => (
+                          <div key={idx} className="flex items-center gap-3">
+                            <div className="w-0.5 h-[1px] bg-zinc-200 dark:bg-zinc-800" />
+                            <span className="text-[8px] md:text-[9px] uppercase tracking-[0.2em] text-zinc-400 font-serif italic">
+                              {getServiceTitle(sId)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setBookings(bookings.filter((b) => b.time !== group.time))}
+                      className="text-zinc-200 hover:text-rose-500 transition-colors"
+                    >
+                      <XMarkIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                {currentTime && (
+                  <div className="bg-zinc-900 text-white dark:bg-white dark:text-black p-8 md:p-12 flex flex-col justify-between min-h-[220px] shadow-sm relative overflow-hidden animate-in fade-in duration-500">
+                    <div className="absolute top-0 left-0 w-full h-[1px] bg-emerald-500/30" />
+                    <div className="flex justify-between items-start">
+                      <p className="text-[8px] uppercase tracking-[0.4em] font-serif italic opacity-50">
+                        Session Draft
+                      </p>
+                      <p className="text-[20px] md:text-[24px] font-light font-serif tabular-nums tracking-tighter">
+                        {currentTime}
                       </p>
                     </div>
-
-                    <div className="space-y-10">
-                      {bookings.map((b, i) => (
-                        <div
-                          key={i}
-                          className="flex flex-row items-center justify-between group gap-4"
-                        >
-                          <div className="flex flex-col gap-1 min-w-0">
-                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 truncate">
-                              {getServiceTitle(b.serviceId)}
-                            </span>
-                            <span className="text-xl md:text-2xl font-light tracking-tight truncate">
-                              {b.firstName} {b.surname}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-4 md:gap-8 shrink-0">
-                            <span className="text-[10px] md:text-[11px] text-zinc-400 uppercase tracking-[0.3em] font-medium whitespace-nowrap">
-                              {b.date} @ {b.time}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setBookings(bookings.filter((_, idx) => idx !== i))}
-                              className="p-2 text-zinc-300 hover:text-red-500 transition-colors"
-                            >
-                              <TrashIcon className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {currentTime && (
-                      <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 flex flex-row items-center justify-between p-6 md:p-14 border border-zinc-100 dark:border-zinc-900 rounded-[2.5rem] md:rounded-[3.5rem] bg-zinc-50/30 dark:bg-white/[0.02] gap-4">
-                        <div className="flex flex-col gap-4 text-left min-w-0">
-                          <span className="text-xl md:text-4xl font-light tracking-tight truncate">
-                            {personalInfo.firstName || 'Patient'} {personalInfo.surname}
+                    <div className="space-y-4">
+                      <h4 className="text-[18px] md:text-[22px] font-light font-serif uppercase tracking-tight leading-none">
+                        {personalInfo.firstName || 'New'} {personalInfo.surname || 'Patient'}
+                      </h4>
+                      <div className="flex flex-wrap gap-3">
+                        <span className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] font-serif border border-white/20 dark:border-black/20 px-2.5 py-0.5 italic">
+                          {getServiceTitle(currentServiceId)}
+                        </span>
+                        {showExtraService && extraServiceId && (
+                          <span className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] font-serif border border-white/20 dark:border-black/20 px-2.5 py-0.5 italic">
+                            {getServiceTitle(extraServiceId)}
                           </span>
-                          <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2 md:gap-3">
-                              <span className="w-1 h-1 md:w-1.5 md:h-1.5 shrink-0 bg-blue-600 rounded-full animate-pulse"></span>
-                              <span className="text-[9px] md:text-[11px] font-bold uppercase tracking-[0.2em] dark:text-zinc-200 truncate">
-                                {getServiceTitle(currentServiceId)}
-                              </span>
-                            </div>
-                            {showExtraService && extraServiceId && (
-                              <div className="flex items-center gap-2 md:gap-3">
-                                <span className="w-1 h-1 md:w-1.5 md:h-1.5 shrink-0 bg-blue-600 rounded-full"></span>
-                                <span className="text-[9px] md:text-[11px] font-bold uppercase tracking-[0.2em] dark:text-zinc-200 truncate">
-                                  {getServiceTitle(extraServiceId)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-right flex flex-col items-end shrink-0">
-                          <p className="text-[32px] md:text-[64px] font-extralight dark:text-white tracking-tighter leading-none">
-                            {currentTime}
-                          </p>
-                          <p className="text-[8px] md:text-[10px] text-zinc-400 uppercase tracking-[0.3em] md:tracking-[0.5em] mt-2 md:mt-4 font-medium whitespace-nowrap">
-                            {currentDate}
-                          </p>
-                        </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
-
-              <div className="max-w-[500px] mx-auto pt-10">
+              <div className="pt-10">
                 <button
                   type="submit"
-                  disabled={isPendingTransition || !currentTime}
-                  className="w-full bg-black dark:bg-white text-white dark:text-black text-[11px] font-bold py-7 rounded-full uppercase tracking-[0.4em] disabled:opacity-30 transition-all active:scale-[0.98] shadow-sm"
+                  disabled={isPendingTransition || (!currentTime && bookings.length === 0)}
+                  className="w-full bg-zinc-900 dark:bg-white text-white dark:text-black text-[9px] md:text-[10px] font-medium py-6 uppercase tracking-[0.45em] font-serif disabled:opacity-20 shadow-sm flex items-center justify-center gap-4 transition-all hover:tracking-[0.5em]"
                 >
-                  {isPendingTransition ? 'Processing...' : 'Confirm Appointment(s)'}
+                  {isPendingTransition ? (
+                    <>
+                      <ArrowPathIcon className="animate-spin h-3.5 w-3.5" />
+                      Processing ...
+                    </>
+                  ) : (
+                    'Confirm Appointment(s)'
+                  )}
                 </button>
               </div>
-            </form>
+            </div>
+          </form>
+          <div className="mt-24 flex justify-center border-t border-zinc-50 dark:border-zinc-900/50 pt-10 opacity-30 hover:opacity-100 transition-opacity">
+            <BackToHome />
           </div>
         </div>
       </FadeIn>
-    </>
+    </div>
   )
 }
 
@@ -604,8 +713,8 @@ function Field({
   placeholder: string
 }) {
   return (
-    <div className="group border-b border-zinc-100 dark:border-zinc-900 pb-2 relative transition-all focus-within:border-black dark:focus-within:border-white">
-      <label className="block text-[8px] font-bold uppercase tracking-[0.4em] text-zinc-400 mb-3">
+    <div className="group relative">
+      <label className="block text-[8px] md:text-[9px] font-medium uppercase tracking-[0.4em] text-zinc-400 mb-3 font-serif italic">
         {label}
       </label>
       <input
@@ -613,7 +722,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required
-        className="w-full bg-transparent text-[15px] outline-none py-1 placeholder-zinc-200 dark:placeholder-zinc-800"
+        className="w-full bg-transparent text-[14px] md:text-[15px] font-serif outline-none py-1 border-b border-zinc-100 dark:border-zinc-900 focus:border-zinc-900 dark:focus:border-white transition-colors placeholder:text-zinc-200"
       />
     </div>
   )

@@ -8,42 +8,45 @@ import FadeIn from './FadeIn'
 export default async function SpecialistSection() {
   const payload = await getPayload({ config })
 
-  // Fetch from the new 'specialists' collection slug
+  // Fetch from the 'specialists' collection slug
   const specialistsData = await payload.find({
     collection: 'specialists',
   })
 
   if (specialistsData.docs.length === 0) return null
 
-  // Get the server URL from environment variables for local path fallback
   const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
 
   return (
-    <section className="bg-white dark:bg-black pt-8 pb-8 lg:pb-10 overflow-x-hidden">
-      <FadeIn>
-        <div className="max-w-7xl mx-auto px-6">
-          {/* Header Section */}
-          <div className="mb-8 space-y-3">
-            <p className="text-[9px] uppercase tracking-[0.6em] text-zinc-500 dark:text-white font-medium">
-              Expertise
-            </p>
-            <h2 className="text-3xl md:text-4xl font-light tracking-tighter uppercase font-serif text-black dark:text-white">
-              Meet Our <span className="">Specialists</span>
-            </h2>
+    <section
+      id="specialists"
+      className="bg-white dark:bg-[#050505] text-zinc-900 dark:text-zinc-100 selection:bg-zinc-100 overflow-hidden"
+    >
+      <div className="max-w-[1440px] mx-auto border-x border-zinc-100 dark:border-zinc-900 bg-white dark:bg-[#050505]">
+        <FadeIn>
+          {/* HEADER: Standardized Couture Vertical Line */}
+          <div className="px-4 md:px-12 pt-24 md:pt-32 bg-white dark:bg-[#050505]">
+            <header className="mb-16 md:mb-24 flex flex-col md:flex-row md:items-end justify-between gap-6">
+              <div className="flex items-start gap-4 md:gap-5">
+                <div className="w-[1px] bg-zinc-900 dark:bg-white h-12 md:h-16" />
+                <div className="space-y-1">
+                  <p className="text-[9px] md:text-[10px] uppercase tracking-[0.4em] text-zinc-400 font-serif">
+                    Clinical Expertise
+                  </p>
+                  {/* REDUCED HEADER SIZE: From 3xl/5xl to 20px/24px */}
+                  <h2 className="text-[20px] md:text-[24px] font-light font-serif text-zinc-900 dark:text-white uppercase leading-none tracking-tight">
+                    Meet Our Specialists
+                  </h2>
+                </div>
+              </div>
+            </header>
           </div>
 
-          {/* Grid Container */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-10 gap-y-10">
+          {/* GRID REGISTRY: Consistent 1px Border Pattern */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-2 bg-white dark:bg-black">
             {specialistsData.docs.map((specialist: Specialist) => {
-              // 1. Cast the image field to the Media type
               const imageDoc = specialist.image as Media | undefined
-
-              // 2. Get the raw URL from the database
               const rawPath = imageDoc?.url || ''
-
-              // 3. Determine the final URL
-              // If it starts with http (Cloudinary), use it directly.
-              // If it's a relative path (/api/media/...), attach the server URL.
               const finalImageUrl = rawPath.startsWith('http')
                 ? rawPath
                 : rawPath
@@ -51,40 +54,50 @@ export default async function SpecialistSection() {
                   : ''
 
               return (
-                <div key={specialist.id} className="flex flex-col group">
+                <div
+                  key={specialist.id}
+                  className="group flex flex-col h-full bg-white dark:bg-black transition-colors duration-500 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/10"
+                >
                   {/* IMAGE WRAPPER */}
-                  <div className="relative -mx-6 sm:mx-0 overflow-hidden border-y sm:border border-zinc-100 dark:border-zinc-800 aspect-[4/5] transition-all duration-500">
+                  <div className="relative overflow-hidden w-full h-[500px] md:h-[600px] bg-white dark:bg-black grayscale-[0.2] group-hover:grayscale-0 transition-all duration-1000">
                     {finalImageUrl ? (
                       <Image
-                        className="object-cover transition-all duration-700 group-hover:scale-105"
+                        className="object-cover transition-transform duration-1000 group-hover:scale-105"
                         src={finalImageUrl}
                         alt={specialist.name}
                         fill
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                         priority={false}
                       />
                     ) : (
-                      <div className="w-full h-full bg-zinc-50 dark:bg-zinc-900 flex items-center justify-center text-[8px] uppercase tracking-widest text-zinc-400">
-                        No Image Found
+                      <div className="w-full h-full flex items-center justify-center text-[8px] uppercase tracking-[0.4em] font-serif text-zinc-400 dark:text-zinc-600 italic bg-zinc-50 dark:bg-zinc-900/10">
+                        Image Unavailable
                       </div>
                     )}
                   </div>
 
-                  {/* Text Content */}
-                  <div className="pt-8 text-left">
-                    <h3 className="text-[13px] font-medium uppercase tracking-[0.15em] text-black dark:text-white">
-                      {specialist.name}
-                    </h3>
-                    <p className="text-zinc-400 font-bold text-[8px] uppercase tracking-[0.3em] ">
-                      {specialist.specialization}
-                    </p>
+                  {/* TEXT CONTENT */}
+                  <div className="p-8 md:p-10 flex flex-col flex-grow border-t border-zinc-100 dark:border-zinc-900">
+                    <div className="space-y-2">
+                      <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] font-serif text-zinc-400 dark:text-zinc-500 italic">
+                        {specialist.specialization}
+                      </p>
+                      {/* REDUCED NAME SIZE: From xl/2xl to 14px/15px */}
+                      <h3 className="text-[14px] md:text-[15px] font-light font-serif text-zinc-900 dark:text-white leading-tight tracking-tighter uppercase transition-colors group-hover:text-zinc-500">
+                        {specialist.name}
+                      </h3>
+                    </div>
+
+                    {/* Ledger Bottom Accent */}
+                    <div className="mt-6 pt-6 border-t border-zinc-50 dark:border-zinc-900/50 flex justify-end">
+                      <div className="w-12 h-[1px] bg-zinc-100 dark:bg-zinc-800 group-hover:w-full group-hover:bg-zinc-900 dark:group-hover:bg-white transition-all duration-1000" />
+                    </div>
                   </div>
                 </div>
               )
             })}
           </div>
-        </div>
-      </FadeIn>
+        </FadeIn>
+      </div>
     </section>
   )
 }

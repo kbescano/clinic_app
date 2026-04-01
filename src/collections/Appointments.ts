@@ -1,10 +1,11 @@
 import { revalidatePage } from '@/hooks/revalidationPage'
+import { sendConfirmationEmail } from '@/hooks/sendConfirmation'
 import { CollectionConfig } from 'payload'
 
 export const Appointments: CollectionConfig = {
   slug: 'appointments',
   hooks: {
-    afterChange: [revalidatePage], // This triggers the magic
+    afterChange: [revalidatePage, sendConfirmationEmail],
   },
   admin: {
     useAsTitle: 'surname', // Displays the Surname in the Admin list
@@ -73,6 +74,30 @@ export const Appointments: CollectionConfig = {
         read: ({ req: { user } }) => user?.role === 'admin',
         update: ({ req: { user } }) => user?.role === 'admin',
       },
+    },
+    {
+      name: 'bookingGroupId',
+      type: 'text',
+      index: true, // Crucial for fast lookups
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+      },
+    },
+    {
+      name: 'isGuest',
+      type: 'checkbox',
+      defaultValue: false,
+    },
+    {
+      name: 'emailStatus',
+      type: 'group',
+      admin: { hidden: true },
+      fields: [
+        { name: 'confirmationSent', type: 'checkbox', defaultValue: false },
+        { name: 'reminder24hSent', type: 'checkbox', defaultValue: false },
+        { name: 'reminder2hSent', type: 'checkbox', defaultValue: false },
+      ],
     },
   ],
 }

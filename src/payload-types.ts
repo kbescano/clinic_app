@@ -175,6 +175,13 @@ export interface Appointment {
    * Internal clinical notes added by the specialist after the visit.
    */
   specialistNotes?: string | null;
+  bookingGroupId?: string | null;
+  isGuest?: boolean | null;
+  emailStatus?: {
+    confirmationSent?: boolean | null;
+    reminder24hSent?: boolean | null;
+    reminder2hSent?: boolean | null;
+  };
   updatedAt: string;
   createdAt: string;
 }
@@ -436,6 +443,15 @@ export interface AppointmentsSelect<T extends boolean = true> {
   appointmentDate?: T;
   status?: T;
   specialistNotes?: T;
+  bookingGroupId?: T;
+  isGuest?: T;
+  emailStatus?:
+    | T
+    | {
+        confirmationSent?: T;
+        reminder24hSent?: T;
+        reminder2hSent?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }
@@ -604,6 +620,10 @@ export interface ColorConfig {
  */
 export interface HeaderConfig {
   id: number;
+  /**
+   * Upload the clinical brand mark (Recommended: Transparent PNG or SVG)
+   */
+  logo?: (number | null) | Media;
   topLabel: string;
   clinicName: string;
   updatedAt?: string | null;
@@ -638,6 +658,7 @@ export interface ColorConfigSelect<T extends boolean = true> {
  * via the `definition` "header-config_select".
  */
 export interface HeaderConfigSelect<T extends boolean = true> {
+  logo?: T;
   topLabel?: T;
   clinicName?: T;
   updatedAt?: T;
