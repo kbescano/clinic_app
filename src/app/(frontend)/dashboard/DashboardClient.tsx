@@ -220,11 +220,9 @@ function BentoTable({ data, showDate }: { data: MergedAppointment[]; showDate: b
                 } hover:bg-zinc-50/30 dark:hover:bg-zinc-900/10`}
               >
                 {/* TIME COLUMN: Reduced py-3 for mobile to keep cards small */}
-                <td className="block md:table-cell py-3 md:py-8 pr-4 md:pr-8 align-top pl-4 md:pl-6 relative">
+                <td className="block md:table-cell py-3 pr-4 md:pr-8 align-top pl-4 md:pl-6 relative">
                   {isSticky && (
-                    <div
-                      className={`absolute left-0 top-0 bottom-0 w-[1.5px] ${isOngoing ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-                    />
+                    <div className="absolute left-0 top-0 bottom-0 w-[1.5px] bg-emerald-500" />
                   )}
 
                   <div className="flex flex-col">
@@ -249,23 +247,23 @@ function BentoTable({ data, showDate }: { data: MergedAppointment[]; showDate: b
                 </td>
 
                 {showDate && (
-                  <td className="block md:table-cell py-2 md:py-8 px-4 md:px-8 align-top">
-                    <div className="h-3 md:h-4" />
+                  <td className="block md:table-cell py-2 px-4 md:px-8 align-top">
+                    <div className="hidden md:block h-4" />
                     <span className="text-[10px] md:text-[11px] tracking-wider text-zinc-400 font-serif italic mt-0.5 block">
                       {formatPHDate(apt.appointmentDate)}
                     </span>
                   </td>
                 )}
 
-                <td className="block md:table-cell py-2 md:py-8 px-4 md:px-8 align-top">
-                  <div className="h-3 md:h-4" />
+                <td className="block md:table-cell py-2 px-4 md:px-8 align-top">
+                  <div className="hidden md:block h-4" />
                   <span className="text-[12px] md:text-[14px] font-serif tracking-wide capitalize text-zinc-800 dark:text-zinc-100 mt-0.5 block">
                     {apt.firstName} {apt.surname}
                   </span>
                 </td>
 
-                <td className="block md:table-cell py-2 md:py-8 px-4 md:px-8 align-top">
-                  <div className="h-3 md:h-4" />
+                <td className="block md:table-cell py-2 px-4 md:px-8 align-top">
+                  <div className="hidden md:block h-4" />
                   <div className="flex flex-wrap gap-1.5 mt-0.5">
                     {apt.services.map((s, i) => (
                       <span
@@ -278,8 +276,8 @@ function BentoTable({ data, showDate }: { data: MergedAppointment[]; showDate: b
                   </div>
                 </td>
 
-                <td className="block md:table-cell py-3 md:py-8 pl-4 md:pl-8 align-top text-right pr-4 md:pr-6">
-                  <div className="h-3 md:h-4" />
+                <td className="block md:table-cell pb-4 md:pb-8 pl-4 md:pl-8 align-top text-right pr-4 md:pr-6">
+                  <div className="hidden md:block h-4" />
                   <div className="mt-0.5">
                     <StatusBadge status={apt.status} />
                   </div>
@@ -302,7 +300,7 @@ function StatusBadge({ status }: { status: string }) {
   }
   return (
     <span
-      className={`text-[8px] md:text-[9px] uppercase tracking-[0.3em] font-medium font-serif italic ${styles[status]}`}
+      className={`text-[8px] md:text-[9px] uppercase tracking-[0.3em] font-medium font-serif ${styles[status]}`}
     >
       {status}
     </span>
