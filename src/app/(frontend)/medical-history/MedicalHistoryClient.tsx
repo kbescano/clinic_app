@@ -151,7 +151,7 @@ export default function MedicalHistoryClient({
   if (!isMounted) return <DirectorySkeleton />
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#050505] text-zinc-900 dark:text-zinc-100 pt-24 md:pt-32 pb-32 selection:bg-zinc-100 overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 selection:bg-zinc-100 overflow-x-hidden">
       {showNotification && (
         <Notification
           message="Clinical record updated successfully"
@@ -171,10 +171,10 @@ export default function MedicalHistoryClient({
                 }`}
               />
               <div className="space-y-1">
-                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-zinc-400 font-serif italic">
+                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif ">
                   Clinical
                 </p>
-                <h1 className="text-[20px] md:text-[24px] font-light tracking-tight font-serif uppercase leading-none">
+                <h1 className="text-[20px] md:text-[24px] font-light tracking-tight text-[#251101] dark:text-white font-serif uppercase leading-none">
                   Patient Records
                 </h1>
               </div>
@@ -200,7 +200,7 @@ export default function MedicalHistoryClient({
           {/* LIST SECTION */}
           <section className="space-y-4">
             <div className="flex items-baseline justify-between mb-8 md:mb-10 border-b border-zinc-900 dark:border-white pb-3">
-              <h3 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] font-medium font-serif italic">
+              <h3 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] font-medium text-[#251101] dark:text-white font-serif ">
                 Database
               </h3>
 
@@ -211,7 +211,7 @@ export default function MedicalHistoryClient({
                     setSortBy(e.target.value as 'latest' | 'oldest' | 'name')
                     updateFilters(1)
                   }}
-                  className="appearance-none bg-transparent border-none py-0 pl-0 pr-4 text-[8px] md:text-[9px] uppercase tracking-[0.3em] font-medium font-serif text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer outline-none transition-colors text-right"
+                  className="appearance-none bg-transparent border-none py-0 pl-0 pr-4 text-[8px] md:text-[9px] uppercase tracking-[0.3em] font-medium font-serif text-[#595f72] hover:text-zinc-900 dark:hover:text-white cursor-pointer outline-none transition-colors text-right"
                 >
                   <option value="latest" className="text-right bg-white dark:bg-black">
                     Latest Visit
@@ -244,35 +244,35 @@ export default function MedicalHistoryClient({
                     >
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-3">
-                          <h3 className="text-[14px] md:text-[15px] capitalize font-serif tracking-wide text-zinc-800 dark:text-zinc-100">
+                          <h3 className="text-[14px] md:text-[15px] capitalize font-serif tracking-wide text-[#251101] dark:text-zinc-100">
                             {patient.firstName} {patient.surname}
                           </h3>
                           {patient.isGuestPatient && (
-                            <span className="text-[6px] px-1.5 py-0.5 rounded-sm border border-zinc-100 dark:border-zinc-800 text-zinc-400 uppercase tracking-widest font-serif italic">
+                            <span className="text-[6px] px-1.5 py-0.5 rounded-sm border border-zinc-100 dark:border-zinc-800 text-[#595f72] uppercase tracking-widest font-serif ">
                               Guest
                             </span>
                           )}
                         </div>
-                        <p className="text-[8px] md:text-[9px] text-zinc-400 font-serif tracking-wider uppercase italic">
+                        <p className="text-[8px] md:text-[9px] text-[#595f72] font-serif tracking-wider lowercase ">
                           {patient.email}
                         </p>
                       </div>
 
                       <div className="flex items-center justify-between md:justify-end gap-10 md:gap-14">
                         <div className="text-left md:text-center">
-                          <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-400 font-serif mb-1 italic">
+                          <p className="text-[8px] uppercase tracking-[0.3em] text-[#595f72] font-serif mb-1 ">
                             Sessions
                           </p>
-                          <p className="text-[13px] font-light font-serif tabular-nums text-zinc-800 dark:text-zinc-100">
+                          <p className="text-[9px] md:text-[10px] font-light font-serif text-[#595f72] whitespace-nowrap uppercase tracking-widest0">
                             {patient.visitCount.toString().padStart(2, '0')}
                           </p>
                         </div>
                         <div className="flex gap-4">
                           <div className="text-right">
-                            <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-400 font-serif mb-1 italic">
+                            <p className="text-[8px] uppercase tracking-[0.3em] text-[#595f72] font-serif mb-1 ">
                               Latest
                             </p>
-                            <p className="text-[9px] md:text-[10px] font-light font-serif text-zinc-400 whitespace-nowrap uppercase tracking-widest">
+                            <p className="text-[9px] md:text-[10px] font-light font-serif text-[#595f72] whitespace-nowrap uppercase tracking-widest">
                               {new Date(patient.appointmentDate).toLocaleDateString('en-PH', {
                                 month: 'short',
                                 day: 'numeric',
@@ -282,9 +282,9 @@ export default function MedicalHistoryClient({
                           </div>
                           <div className="md:pl-4">
                             {expandedId === patient.uniqueId ? (
-                              <ChevronUpIcon className="w-3.5 h-3.5 text-zinc-900 dark:text-white" />
+                              <ChevronUpIcon className="w-3.5 h-3.5 text-[#251101] dark:text-white" />
                             ) : (
-                              <ChevronDownIcon className="w-3.5 h-3.5 text-zinc-200" />
+                              <ChevronDownIcon className="w-3.5 h-3.5 text-[#595f72]" />
                             )}
                           </div>
                         </div>
@@ -297,8 +297,8 @@ export default function MedicalHistoryClient({
                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-px bg-zinc-50 dark:bg-zinc-900 border border-zinc-50 dark:border-zinc-900 overflow-hidden shadow-sm">
                           {/* Left: History */}
                           <div className="lg:col-span-5 bg-white dark:bg-black p-6 md:p-8 space-y-6">
-                            <h4 className="text-[8px] md:text-[9px] uppercase tracking-[0.3em] text-zinc-400 font-medium font-serif italic flex items-center gap-2">
-                              <CalendarIcon className="w-3 h-3" /> Visit Registry
+                            <h4 className="text-[8px] md:text-[9px] uppercase tracking-[0.3em] text-[#595f72] font-medium font-serif  flex items-center gap-2">
+                              <CalendarIcon className="w-3 h-3" /> Visit Count
                             </h4>
                             <div className="flex flex-col gap-3">
                               {patient.history
@@ -308,24 +308,30 @@ export default function MedicalHistoryClient({
                                 .map((visit: any, index: number) => (
                                   <div
                                     key={visit.id || index}
-                                    className="flex justify-between items-center gap-4 border-b border-zinc-50 dark:border-zinc-900/30 pb-3"
+                                    className="flex justify-between items-end gap-4 border-b border-zinc-50 dark:border-zinc-900/30 pb-3"
                                   >
                                     <div className="flex flex-wrap gap-2">
                                       {visit.services?.map((serviceName: string, idx: number) => (
                                         <span
                                           key={idx}
-                                          className="text-[7px] md:text-[8px] uppercase tracking-widest border border-zinc-50 dark:border-zinc-800 px-2 py-1 rounded-sm italic font-light text-zinc-500"
+                                          className="text-[7px] md:text-[8px] uppercase tracking-widest border border-zinc-50 dark:border-zinc-800 px-2 py-1 rounded-sm  font-light text-[#595f72]"
                                         >
                                           {serviceName}
                                         </span>
                                       ))}
                                     </div>
 
-                                    <span className="text-[8px] text-zinc-400 font-serif tabular-nums uppercase">
-                                      {new Date(visit.appointmentDate).toLocaleDateString('en-PH', {
-                                        month: 'short',
-                                        day: 'numeric',
-                                      })}
+                                    <span className="text-[8px] text-[#595f72] font-serif tabular-nums uppercase">
+                                      <p className="text-[9px] md:text-[10px] font-light font-serif text-[#595f72] whitespace-nowrap uppercase tracking-widest">
+                                        {new Date(patient.appointmentDate).toLocaleDateString(
+                                          'en-PH',
+                                          {
+                                            month: 'short',
+                                            day: 'numeric',
+                                            year: 'numeric',
+                                          },
+                                        )}
+                                      </p>
                                     </span>
                                   </div>
                                 ))}
@@ -333,8 +339,8 @@ export default function MedicalHistoryClient({
                               {patient.history.filter(
                                 (v: any) => v.status === 'completed' || v.status === 'confirmed',
                               ).length === 0 && (
-                                <p className="text-[9px] text-zinc-300 font-serif italic py-1">
-                                  No registry found.
+                                <p className="text-[9px] text-[#595f72] font-serif  py-1">
+                                  No records found.
                                 </p>
                               )}
                             </div>
@@ -343,11 +349,11 @@ export default function MedicalHistoryClient({
                           {/* Right: Notes */}
                           <div className="lg:col-span-7 bg-white dark:bg-black p-6 md:p-8 space-y-6">
                             <div className="flex items-center justify-between">
-                              <h4 className="text-[8px] md:text-[9px] uppercase tracking-[0.3em] text-zinc-400 font-medium font-serif italic flex items-center gap-2">
+                              <h4 className="text-[8px] md:text-[9px] uppercase tracking-[0.3em] text-[#595f72] font-medium font-serif  flex items-center gap-2">
                                 <PencilSquareIcon className="w-3 h-3" /> Clinical Observation
                               </h4>
                               {savingId === patient.id && (
-                                <span className="text-[7px] uppercase tracking-[0.3em] animate-pulse text-zinc-400 font-medium">
+                                <span className="text-[7px] uppercase tracking-[0.3em] animate-pulse text-[#595f72] font-medium">
                                   Saving...
                                 </span>
                               )}
@@ -386,8 +392,8 @@ export default function MedicalHistoryClient({
                 ))
               ) : (
                 <div className="py-20 flex items-center justify-center border border-dashed border-zinc-100 dark:border-zinc-900">
-                  <p className="text-[9px] md:text-[10px] uppercase tracking-[0.3em] font-light text-zinc-300 italic">
-                    Registry Empty
+                  <p className="text-[9px] md:text-[10px] uppercase tracking-[0.3em] font-light text-[#595f72] ">
+                    No records
                   </p>
                 </div>
               )}
@@ -400,17 +406,17 @@ export default function MedicalHistoryClient({
               <button
                 disabled={currentPage <= 1}
                 onClick={() => updateFilters(currentPage - 1)}
-                className="flex items-center gap-3 text-[9px] font-medium uppercase tracking-[0.3em] text-zinc-400 hover:text-zinc-900 dark:hover:text-white disabled:opacity-10 transition-all"
+                className="flex items-center gap-3 text-[9px] font-medium uppercase tracking-[0.3em] text-[#595f72] hover:text-zinc-900 dark:hover:text-white disabled:opacity-10 transition-all"
               >
                 <ChevronLeftIcon className="w-3.5 h-3.5" /> Previous
               </button>
-              <div className="text-[10px] font-medium font-serif text-zinc-500 dark:text-zinc-400 tracking-widest">
+              <div className="text-[10px] font-medium font-serif text-[#595f72] dark:text-zinc-400 tracking-widest">
                 {currentPage} / {totalPages}
               </div>
               <button
                 disabled={currentPage >= totalPages}
                 onClick={() => updateFilters(currentPage + 1)}
-                className="flex items-center gap-3 text-[9px] font-medium uppercase tracking-[0.3em] text-zinc-400 hover:text-zinc-900 dark:hover:text-white disabled:opacity-10 transition-all"
+                className="flex items-center gap-3 text-[9px] font-medium uppercase tracking-[0.3em] text-[#595f72] hover:text-zinc-900 dark:hover:text-white disabled:opacity-10 transition-all"
               >
                 Next <ChevronRightIcon className="w-3.5 h-3.5" />
               </button>

@@ -47,7 +47,7 @@ export default function Navbar({ contactData, headerData }: NavbarProps) {
           <div className="flex-none text-center">
             <Link href="/" className="flex flex-col items-center group">
               {/* ATELIER LOGO: Small, High Tracking */}
-              <span className="text-[10px] uppercase tracking-[0.6em] text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors font-serif">
+              <span className="text-[10px] uppercase tracking-[0.6em] font-bold text-[#251101] dark:text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors font-serif">
                 {headerData?.clinicName || 'Clinic Registry'}
               </span>
             </Link>

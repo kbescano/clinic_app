@@ -54,7 +54,7 @@ export default function AdminAnalytics() {
   if (error) return <ErrorState />
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#050505] text-zinc-900 dark:text-zinc-100 pt-24 md:pt-32 pb-32 selection:bg-zinc-100 overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 selection:bg-zinc-100 overflow-x-hidden">
       <FadeIn>
         <div className="max-w-5xl mx-auto px-4 md:px-8">
           {/* HEADER (REDUCED FONT SCALE) */}
@@ -66,7 +66,7 @@ export default function AdminAnalytics() {
                 }`}
               />
               <div className="space-y-1">
-                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-zinc-400 font-serif italic">
+                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif ">
                   Clinical Metrics
                 </p>
                 <h1 className="text-[20px] md:text-[24px] font-light tracking-tight font-serif uppercase leading-none">
@@ -79,7 +79,7 @@ export default function AdminAnalytics() {
                 <select
                   value={range}
                   onChange={(e) => setRange(e.target.value)}
-                  className="appearance-none bg-transparent border-none py-0 pl-0 pr-4 text-[8px] md:text-[9px] uppercase tracking-[0.25em] font-medium font-serif text-zinc-500 hover:text-zinc-900 dark:hover:text-white cursor-pointer outline-none transition-colors text-right"
+                  className="appearance-none bg-transparent border-none py-0 pl-0 pr-4 text-[8px] md:text-[9px] uppercase tracking-[0.25em] font-medium font-serif text-[#595f72] hover:text-[#251101] dark:hover:text-white cursor-pointer outline-none transition-colors text-right"
                 >
                   <option value="today" className="text-right bg-white dark:bg-black">
                     Today
@@ -95,11 +95,11 @@ export default function AdminAnalytics() {
                   </option>
                 </select>
 
-                <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-zinc-400 pointer-events-none" />
+                <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-[#595f72] pointer-events-none" />
 
                 {loading && (
                   <div className="absolute -left-6 top-1/2 -translate-y-1/2">
-                    <ArrowPathIcon className="h-2 w-2 text-zinc-300 animate-spin" />
+                    <ArrowPathIcon className="h-2 w-2 text-[#595f72] animate-spin" />
                   </div>
                 )}
               </div>
@@ -114,7 +114,7 @@ export default function AdminAnalytics() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-px bg-zinc-100 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-900 mb-16 md:mb-20 overflow-hidden shadow-sm">
                 {/* Revenue Slot: Scaled down from 7xl */}
                 <div className="lg:col-span-6 bg-white dark:bg-black p-8 md:p-12 flex flex-col justify-center">
-                  <p className="text-[8px] md:text-[9px] uppercase tracking-[0.35em] text-zinc-400 mb-4 font-serif italic">
+                  <p className="text-[8px] md:text-[9px] uppercase tracking-[0.35em] text-[#595f72] mb-4 font-serif ">
                     Period Revenue
                   </p>
                   <div className="flex items-baseline gap-2 mb-8">
@@ -124,7 +124,7 @@ export default function AdminAnalytics() {
                   </div>
                   <div className="flex gap-6">
                     <div className="flex flex-col border-l border-zinc-100 dark:border-zinc-800 pl-4">
-                      <span className="text-[7px] md:text-[8px] uppercase tracking-widest text-zinc-400 mb-1 italic">
+                      <span className="text-[7px] md:text-[8px] uppercase tracking-widest text-[#595f72] mb-1 ">
                         Previous
                       </span>
                       <span className="text-[13px] md:text-[14px] font-light font-serif">
@@ -132,7 +132,7 @@ export default function AdminAnalytics() {
                       </span>
                     </div>
                     <div className="flex flex-col border-l border-zinc-100 dark:border-zinc-800 pl-4">
-                      <span className="text-[7px] md:text-[8px] uppercase tracking-widest text-zinc-400 mb-1 italic">
+                      <span className="text-[7px] md:text-[8px] uppercase tracking-widest text-[#595f72] mb-1 ">
                         Growth
                       </span>
                       <span
@@ -147,7 +147,7 @@ export default function AdminAnalytics() {
 
                 {/* Efficiency Slot: Scaled down from 5xl */}
                 <div className="lg:col-span-3 bg-white dark:bg-black p-8 md:p-12 flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-zinc-100 dark:border-zinc-900">
-                  <p className="text-[8px] md:text-[9px] uppercase tracking-[0.35em] text-zinc-400 mb-4 font-serif italic">
+                  <p className="text-[8px] md:text-[9px] uppercase tracking-[0.35em] text-[#595f72] mb-4 font-serif ">
                     Growth Index
                   </p>
                   <span className="text-xl md:text-2xl font-light tracking-tighter font-serif mb-6">
@@ -164,7 +164,7 @@ export default function AdminAnalytics() {
                 {/* Category List Slot: Scaled down from 5xl */}
                 <div className="lg:col-span-3 bg-white dark:bg-black p-8 md:p-12 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-zinc-100 dark:border-zinc-900">
                   <div>
-                    <p className="text-[8px] md:text-[9px] uppercase tracking-[0.35em] text-zinc-400 mb-4 font-serif italic">
+                    <p className="text-[8px] md:text-[9px] uppercase tracking-[0.35em] text-[#595f72] mb-4 font-serif ">
                       Total Sessions
                     </p>
                     <span className="text-xl md:text-2xl font-light tracking-tighter font-serif">
@@ -175,12 +175,12 @@ export default function AdminAnalytics() {
                     {Object.entries(data?.categorySales || {}).map(([name, val]) => (
                       <div
                         key={name}
-                        className="flex justify-between items-center border-b border-zinc-50 dark:border-zinc-900/50 py-1.5"
+                        className="flex justify-between items-end gap-2 border-b border-zinc-50 dark:border-zinc-900/50 py-1.5"
                       >
-                        <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-zinc-500 font-serif">
+                        <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-[#595f72] font-serif">
                           {name}
                         </span>
-                        <span className="text-[9px] font-serif tabular-nums text-zinc-400">
+                        <span className="text-[9px] font-serif tabular-nums text-[#595f72]">
                           ₱{val.toLocaleString()}
                         </span>
                       </div>
@@ -192,7 +192,7 @@ export default function AdminAnalytics() {
               {/* SECONDARY SECTION: RECENT FEED (REDUCED FONT SCALE) */}
               <div className="max-w-5xl">
                 <div className="flex items-center justify-between mb-8 border-b border-zinc-900 dark:border-white pb-3">
-                  <h2 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] text-zinc-400 font-serif flex items-center gap-3 italic font-medium">
+                  <h2 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] text-[#595f72] font-serif flex items-center gap-3  font-medium">
                     <ClockIcon className="w-3 h-3 opacity-40" /> Recent Activity
                   </h2>
                 </div>
@@ -205,18 +205,18 @@ export default function AdminAnalytics() {
                         className="group py-6 md:py-7 transition-colors flex justify-between items-center hover:bg-zinc-50/30 dark:hover:bg-zinc-900/10"
                       >
                         <div className="space-y-1">
-                          <span className="text-[13px] md:text-[14px] font-serif tracking-wide text-zinc-800 dark:text-zinc-100 capitalize block">
+                          <span className="text-[13px] md:text-[14px] font-serif tracking-wide text-[#251101] dark:text-zinc-100 capitalize block">
                             {booking.firstName} {booking.surname}
                           </span>
-                          <span className="text-[8px] md:text-[9px] text-zinc-400 uppercase tracking-[0.3em] font-medium font-serif italic">
+                          <span className="text-[8px] md:text-[9px] text-[#595f72] uppercase tracking-[0.3em] font-medium font-serif ">
                             {booking.service}
                           </span>
                         </div>
                         <div className="text-right">
-                          <span className="text-[12px] md:text-[13px] font-light font-serif text-zinc-800 dark:text-zinc-100 tabular-nums block">
+                          <span className="text-[12px] md:text-[13px] font-light font-serif text-[#248232] dark:text-zinc-100 tabular-nums block">
                             +₱{booking.price?.toLocaleString()}
                           </span>
-                          <span className="text-[8px] md:text-[9px] text-zinc-400 uppercase tracking-[0.2em] font-serif italic">
+                          <span className="text-[8px] md:text-[9px] text-[#595f72] uppercase tracking-[0.2em] font-serif ">
                             {booking.date}
                           </span>
                         </div>
@@ -224,8 +224,7 @@ export default function AdminAnalytics() {
                     ))
                   ) : (
                     <div className="py-20 flex flex-col items-center justify-center border border-dashed border-zinc-100 dark:border-zinc-900">
-                      <XMarkIcon className="w-6 h-6 text-zinc-100 dark:text-zinc-900 mb-4" />
-                      <p className="text-[9px] uppercase tracking-[0.4em] text-zinc-300 font-serif italic">
+                      <p className="text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif ">
                         Archive Clear
                       </p>
                     </div>
@@ -248,7 +247,7 @@ function ErrorState() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
       <div className="text-center space-y-8">
-        <p className="text-[9px] uppercase tracking-[0.5em] text-zinc-300 font-serif italic">
+        <p className="text-[9px] uppercase tracking-[0.5em] text-[#595f72] font-serif ">
           Data Stream Error
         </p>
         <button

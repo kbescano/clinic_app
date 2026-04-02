@@ -22,7 +22,7 @@ export default function ContactTrigger({ contactData }: ContactTriggerProps) {
       {/* ATELIER TYPOGRAPHY: 
           Reduced to 8px/9px with high tracking and italic serif 
       */}
-      <span className="text-[8px] md:text-[9px] uppercase tracking-[0.35em] font-serif font-medium pt-0.5 text-zinc-900 dark:text-white hover:opacity-50 transition-opacity">
+      <span className="text-[8px] md:text-[9px] uppercase tracking-[0.35em] font-serif font-medium pt-0.5 text-[#595f72] dark:text-white hover:opacity-50 transition-opacity">
         Call Us
       </span>
     </button>

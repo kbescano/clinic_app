@@ -61,13 +61,13 @@ export default function MobileMenu() {
               {/* Icon Container */}
               <div className="relative">
                 <Icon
-                  className={`w-4 h-4 transition-colors duration-200 ${isActive ? 'text-black dark:text-white' : 'text-gray-400'}`}
+                  className={`w-4 h-4 transition-colors duration-200 ${isActive ? 'text-[#251101] dark:text-white' : 'text-gray-400'}`}
                 />
               </div>
 
               {/* Label */}
               <span
-                className={`text-[6px] mt-1 font-bold uppercase tracking-widest ${isActive ? 'text-black dark:text-white' : 'text-gray-300'}`}
+                className={`text-[6px] mt-1 font-bold uppercase tracking-widest ${isActive ? 'text-[#251101] dark:text-white' : 'text-gray-300'}`}
               >
                 {item.name}
               </span>

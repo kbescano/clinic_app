@@ -32,7 +32,7 @@ export default function AdminManagementClient({
   }, [])
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#050505] text-zinc-900 dark:text-zinc-100 pt-24 md:pt-32 pb-32 selection:bg-zinc-100 overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-[#595f72] pt-24 md:pt-32 pb-32 selection:bg-zinc-100 overflow-x-hidden">
       <FadeIn>
         <div className="max-w-5xl mx-auto px-4 md:px-8">
           {/* COUTURE HEADER: With Reactive Drawline */}
@@ -44,7 +44,7 @@ export default function AdminManagementClient({
                 }`}
               />
               <div className="space-y-1">
-                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-zinc-400 font-serif italic">
+                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif ">
                   Clinical Operations
                 </p>
                 <h1 className="text-[20px] md:text-[24px] font-light tracking-tight font-serif uppercase leading-none">
@@ -62,10 +62,10 @@ export default function AdminManagementClient({
             {/* TODAY SECTION */}
             <section>
               <div className="flex items-baseline justify-between mb-8 border-b border-zinc-900 dark:border-white pb-3">
-                <h2 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] font-medium font-serif italic flex items-center gap-3">
+                <h2 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] font-medium font-serif  flex items-center gap-3">
                   Today&apos;s Sessions
                 </h2>
-                <span className="text-[8px] uppercase tracking-widest text-zinc-400 font-serif">
+                <span className="text-[8px] uppercase tracking-widest text-[#595f72] font-serif">
                   {todayData.length} Registry Entries
                 </span>
               </div>
@@ -83,10 +83,10 @@ export default function AdminManagementClient({
             {range !== 'today' && (
               <section className="animate-in fade-in duration-700">
                 <div className="flex items-baseline justify-between mb-8 border-b border-zinc-100 dark:border-zinc-900 pb-3">
-                  <h2 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] font-medium font-serif text-zinc-400 italic">
+                  <h2 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] font-medium font-serif text-[#595f72] ">
                     {secondaryLabel}
                   </h2>
-                  <span className="text-[8px] uppercase tracking-widest text-zinc-400 font-serif">
+                  <span className="text-[8px] uppercase tracking-widest text-[#595f72] font-serif">
                     {otherData.length} Found
                   </span>
                 </div>
@@ -106,14 +106,14 @@ export default function AdminManagementClient({
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-px bg-zinc-50 dark:bg-zinc-900 border border-zinc-50 dark:border-zinc-900 overflow-hidden shadow-sm">
                 <div className="lg:col-span-4 bg-white dark:bg-black p-8 md:p-12 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-zinc-50 dark:border-zinc-900">
                   <div>
-                    <p className="text-[8px] uppercase tracking-[0.3em] text-zinc-400 font-serif mb-6 flex items-center gap-2">
+                    <p className="text-[8px] uppercase tracking-[0.3em] text-[#595f72] font-serif mb-6 flex items-center gap-2">
                       <TableCellsIcon className="w-3.5 h-3.5 opacity-30" /> System
                     </p>
-                    <h2 className="text-[18px] md:text-[20px] font-light font-serif text-zinc-900 dark:text-white tracking-tight uppercase">
+                    <h2 className="text-[18px] md:text-[20px] font-light font-serif text-[#251101] dark:text-white tracking-tight uppercase">
                       Data Import
                     </h2>
                   </div>
-                  <p className="text-[9px] text-zinc-400 font-serif leading-relaxed mt-10 uppercase tracking-widest opacity-60 italic">
+                  <p className="text-[9px] text-[#595f72] font-serif leading-relaxed mt-10 uppercase tracking-widest opacity-60 ">
                     Batch upload clinical manifest.
                   </p>
                 </div>
@@ -142,10 +142,10 @@ function AppointmentTicket({ apt }: { apt: any }) {
       <div className="flex flex-col lg:grid lg:grid-cols-[20%_45%_35%] lg:items-start gap-y-8">
         <div className="flex flex-row items-start justify-between lg:flex-col lg:h-full lg:pr-10">
           <div className="space-y-1">
-            <p className="text-[20px] md:text-[24px] font-light font-serif text-zinc-800 dark:text-white tabular-nums tracking-tighter leading-none">
+            <p className="text-[20px] md:text-[24px] font-light font-serif text-[#251101] dark:text-white tabular-nums tracking-tighter leading-none">
               {displayTime}
             </p>
-            <p className="text-[9px] uppercase text-zinc-400 tracking-[0.2em] font-serif italic">
+            <p className="text-[9px] uppercase text-[#595f72] tracking-[0.2em] font-serif ">
               {displayDate}
             </p>
           </div>
@@ -158,11 +158,11 @@ function AppointmentTicket({ apt }: { apt: any }) {
 
         <div className="flex flex-col justify-between h-full lg:pr-10">
           <div className="space-y-2">
-            <h3 className="text-[16px] md:text-[18px] font-light font-serif text-zinc-800 dark:text-zinc-100 tracking-tight capitalize leading-none">
+            <h3 className="text-[16px] md:text-[18px] font-light font-serif text-[#251101] dark:text-[#595f72] tracking-tight capitalize leading-none">
               {apt.firstName} {apt.surname}
             </h3>
-            <p className="text-[9px] text-zinc-400 font-serif tracking-widest uppercase italic opacity-80">
-              {apt.email} <span className="mx-1 text-zinc-100 dark:text-zinc-800">/</span>{' '}
+            <p className="text-[9px] text-[#595f72] font-serif tracking-widest uppercase  opacity-80">
+              {apt.email} <span className="mx-1 text-[#595f72] dark:text-[#251101]">/</span>{' '}
               {apt.phone}
             </p>
           </div>
@@ -170,7 +170,7 @@ function AppointmentTicket({ apt }: { apt: any }) {
             {apt.services.map((s: string, i: number) => (
               <span
                 key={i}
-                className="text-[7px] md:text-[8px] uppercase tracking-[0.25em] text-zinc-400 border border-zinc-100 dark:border-zinc-800 px-2.5 py-1 font-serif italic"
+                className="text-[7px] md:text-[8px] uppercase tracking-[0.25em] text-[#595f72] border border-zinc-100 dark:border-zinc-800 px-2.5 py-1 font-serif "
               >
                 {s}
               </span>
@@ -193,7 +193,7 @@ function StatusDot({ label, active }: { label: string; active?: boolean }) {
         className={`w-6 h-[1px] transition-all duration-700 ${active ? 'bg-emerald-600/60' : 'bg-zinc-100 dark:bg-zinc-800'}`}
       />
       <span
-        className={`text-[6px] md:text-[7px] uppercase tracking-widest font-bold font-serif ${active ? 'text-zinc-800 dark:text-zinc-300' : 'text-zinc-200 dark:text-zinc-800'}`}
+        className={`text-[6px] md:text-[7px] uppercase tracking-widest font-bold font-serif ${active ? 'text-[#251101] dark:text-[#595f72]' : 'text-[#595f72] dark:text-[#251101]'}`}
       >
         {label}
       </span>
@@ -204,8 +204,8 @@ function StatusDot({ label, active }: { label: string; active?: boolean }) {
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="py-24 flex flex-col items-center justify-center border border-dashed border-zinc-100 dark:border-zinc-900">
-      <ClockIcon className="w-5 h-5 text-zinc-100 dark:text-zinc-900 mb-4" />
-      <p className="text-[9px] uppercase tracking-[0.4em] text-zinc-300 font-serif italic text-center px-4">
+      <ClockIcon className="w-5 h-5 text-[#595f72] dark:text-[#251101] mb-4" />
+      <p className="text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif text-center px-4">
         {message}
       </p>
     </div>

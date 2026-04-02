@@ -314,7 +314,7 @@ function BookingFormContent({
     services.find((s) => String(s.id) === id)?.title || 'Service'
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#050505] text-zinc-900 dark:text-zinc-100 pt-24 md:pt-32 pb-32 selection:bg-zinc-100 overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 selection:bg-zinc-100 overflow-x-hidden">
       {errorToast && (
         <Notification message={errorToast} type="error" onClose={() => setErrorToast(null)} />
       )}
@@ -336,7 +336,7 @@ function BookingFormContent({
                   </button>
                   <button
                     onClick={() => setShowModal(false)}
-                    className="w-full py-5 border border-zinc-100 dark:border-zinc-900 text-zinc-400 text-[8px] font-medium uppercase tracking-[0.4em] font-serif transition-all hover:text-zinc-900 dark:hover:text-white"
+                    className="w-full py-5 border border-zinc-100 dark:border-zinc-900 text-[#595f72] text-[8px] font-medium uppercase tracking-[0.4em] font-serif transition-all hover:text-[#251101] dark:hover:text-white"
                   >
                     No, I am new customer
                   </button>
@@ -348,7 +348,7 @@ function BookingFormContent({
                   Confirm Email
                 </h3>
                 {modalError && (
-                  <p className="text-[9px] text-rose-500 mb-6 font-serif italic">{modalError}</p>
+                  <p className="text-[9px] text-rose-500 mb-6 font-serif ">{modalError}</p>
                 )}
                 <input
                   type="email"
@@ -367,7 +367,7 @@ function BookingFormContent({
                 </button>
                 <button
                   onClick={() => setIsExisting(null)}
-                  className="text-[8px] uppercase tracking-[0.4em] text-zinc-400 font-serif"
+                  className="text-[8px] uppercase tracking-[0.4em] text-[#595f72] font-serif"
                 >
                   [ Go Back ]
                 </button>
@@ -387,7 +387,7 @@ function BookingFormContent({
                   setPersonalInfo({ firstName: '', surname: '', phone: '', email: '' })
                   router.replace('/booking')
                 }}
-                className="text-[8px] uppercase tracking-[0.35em] text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors font-serif italic"
+                className="text-[8px] uppercase tracking-[0.35em] text-[#595f72] hover:text-[#251101] dark:hover:text-white transition-colors font-serif "
               >
                 &larr; Switch User
               </button>
@@ -396,7 +396,7 @@ function BookingFormContent({
             )}
             <button
               onClick={handleClearSession}
-              className="flex items-center gap-3 text-[8px] uppercase tracking-[0.35em] text-zinc-300 hover:text-rose-500 transition-colors font-serif italic"
+              className="flex items-center gap-3 text-[8px] uppercase tracking-[0.35em] text-[#595f72] hover:text-rose-500 transition-colors font-serif "
             >
               <ArrowPathIcon className="w-3 h-3" />
               Clear Session
@@ -408,7 +408,7 @@ function BookingFormContent({
               className={`w-[1px] bg-zinc-900 dark:bg-white transition-all duration-1000 ease-out origin-top will-change-[height,opacity] ${drawLine ? 'h-10 md:h-12 opacity-100' : 'h-0 opacity-0'}`}
             />
             <div className="space-y-1">
-              <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-zinc-400 font-serif">
+              <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
                 {bookings.length > 0 ? 'Guest Session' : 'Appointment'}
               </p>
               <h1 className="text-[20px] md:text-[24px] font-light tracking-tight font-serif uppercase leading-none">
@@ -422,7 +422,7 @@ function BookingFormContent({
               <div className="grid grid-cols-1 gap-px bg-zinc-50 dark:bg-zinc-900 border-y border-zinc-100 dark:border-zinc-900">
                 <div className="bg-white dark:bg-black py-8 space-y-10">
                   <div className="relative group">
-                    <label className="block text-[8px] md:text-[9px] font-medium uppercase tracking-[0.4em] text-zinc-400 mb-3 font-serif italic">
+                    <label className="block text-[8px] md:text-[9px] font-medium uppercase tracking-[0.4em] text-[#595f72] mb-3 font-serif ">
                       Service
                     </label>
                     <div className="relative">
@@ -441,13 +441,13 @@ function BookingFormContent({
                           </option>
                         ))}
                       </select>
-                      <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-300 pointer-events-none" />
+                      <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#595f72] pointer-events-none" />
                     </div>
                     {!showExtraService && (
                       <button
                         type="button"
                         onClick={() => setShowExtraService(true)}
-                        className="mt-4 text-[7px] md:text-[8px] uppercase tracking-[0.35em] text-zinc-400 font-serif"
+                        className="mt-4 text-[7px] md:text-[8px] uppercase tracking-[0.35em] text-[#595f72] font-serif"
                       >
                         + Add second service
                       </button>
@@ -457,7 +457,7 @@ function BookingFormContent({
                   {showExtraService && (
                     <div className="relative animate-in fade-in duration-500">
                       <div className="flex justify-between mb-3">
-                        <label className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-zinc-400 font-serif italic">
+                        <label className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif ">
                           Additional Treatment
                         </label>
                         <button
@@ -491,7 +491,7 @@ function BookingFormContent({
                             </option>
                           ))}
                         </select>
-                        <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-300 pointer-events-none" />
+                        <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#595f72] pointer-events-none" />
                       </div>
                     </div>
                   )}
@@ -524,7 +524,7 @@ function BookingFormContent({
                         placeholder="hello@example.com"
                       />
                       <div className="relative">
-                        <label className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-zinc-400 mb-3 block font-serif italic">
+                        <label className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-3 block font-serif ">
                           Date
                         </label>
                         <input
@@ -543,7 +543,7 @@ function BookingFormContent({
                   )}
 
                   <div className="relative">
-                    <label className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-zinc-400 mb-3 block font-serif italic">
+                    <label className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-3 block font-serif ">
                       Time Slot
                     </label>
                     <div className="relative">
@@ -576,14 +576,14 @@ function BookingFormContent({
                           )
                         })}
                       </select>
-                      <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-300 pointer-events-none" />
+                      <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#595f72] pointer-events-none" />
                     </div>
                   </div>
 
                   <button
                     type="button"
                     onClick={handleAddPerson}
-                    className="w-full py-8 border border-dashed border-zinc-100 dark:border-zinc-900 text-[8px] uppercase tracking-[0.45em] text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all font-serif italic"
+                    className="w-full py-8 border border-dashed border-zinc-100 dark:border-zinc-900 text-[8px] uppercase tracking-[0.45em] text-[#595f72] hover:text-[#251101] dark:hover:text-white transition-all font-serif "
                   >
                     + Add Guest
                   </button>
@@ -593,10 +593,10 @@ function BookingFormContent({
 
             <div className="lg:col-span-6 space-y-12">
               <div className="flex items-baseline justify-between mb-8 border-b border-zinc-900 dark:border-white pb-3">
-                <h2 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] font-medium font-serif italic flex items-center gap-3">
+                <h2 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] font-medium font-serif  flex items-center gap-3">
                   Booking Summary
                 </h2>
-                <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-zinc-400 font-serif tabular-nums whitespace-nowrap">
+                <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-[#595f72] font-serif tabular-nums whitespace-nowrap">
                   Entry Count: {bookings.length + (currentTime ? 1 : 0)}
                 </span>
               </div>
@@ -618,7 +618,7 @@ function BookingFormContent({
                   >
                     <div className="space-y-6">
                       <div className="space-y-1">
-                        <p className="text-[8px] uppercase tracking-[0.35em] text-zinc-400 font-serif italic mb-2">
+                        <p className="text-[8px] uppercase tracking-[0.35em] text-[#595f72] font-serif  mb-2">
                           {group.date} • {group.time}
                         </p>
                         <h4 className="text-[16px] md:text-[18px] font-light font-serif uppercase tracking-tight">
@@ -629,7 +629,7 @@ function BookingFormContent({
                         {group.services.map((sId: string, idx: number) => (
                           <div key={idx} className="flex items-center gap-3">
                             <div className="w-0.5 h-[1px] bg-zinc-200 dark:bg-zinc-800" />
-                            <span className="text-[8px] md:text-[9px] uppercase tracking-[0.2em] text-zinc-400 font-serif italic">
+                            <span className="text-[8px] md:text-[9px] uppercase tracking-[0.2em] text-[#595f72] font-serif ">
                               {getServiceTitle(sId)}
                             </span>
                           </div>
@@ -639,7 +639,7 @@ function BookingFormContent({
                     <button
                       type="button"
                       onClick={() => setBookings(bookings.filter((b) => b.time !== group.time))}
-                      className="text-zinc-200 hover:text-rose-500 transition-colors"
+                      className="text-[#595f72] hover:text-rose-500 transition-colors"
                     >
                       <XMarkIcon className="w-4 h-4" />
                     </button>
@@ -649,8 +649,8 @@ function BookingFormContent({
                   <div className="bg-zinc-900 text-white dark:bg-white dark:text-black p-8 md:p-12 flex flex-col justify-between min-h-[220px] shadow-sm relative overflow-hidden animate-in fade-in duration-500">
                     <div className="absolute top-0 left-0 w-full h-[1px] bg-emerald-500/30" />
                     <div className="flex justify-between items-start">
-                      <p className="text-[8px] uppercase tracking-[0.4em] font-serif italic opacity-50">
-                        Session Draft
+                      <p className="text-[8px] uppercase tracking-[0.4em] font-serif  opacity-50">
+                        Booking Draft
                       </p>
                       <p className="text-[20px] md:text-[24px] font-light font-serif tabular-nums tracking-tighter">
                         {currentTime}
@@ -661,11 +661,11 @@ function BookingFormContent({
                         {personalInfo.firstName || 'New'} {personalInfo.surname || 'Patient'}
                       </h4>
                       <div className="flex flex-wrap gap-3">
-                        <span className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] font-serif border border-white/20 dark:border-black/20 px-2.5 py-0.5 italic">
+                        <span className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] font-serif border border-white/20 dark:border-black/20 px-2.5 py-0.5 ">
                           {getServiceTitle(currentServiceId)}
                         </span>
                         {showExtraService && extraServiceId && (
-                          <span className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] font-serif border border-white/20 dark:border-black/20 px-2.5 py-0.5 italic">
+                          <span className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] font-serif border border-white/20 dark:border-black/20 px-2.5 py-0.5 ">
                             {getServiceTitle(extraServiceId)}
                           </span>
                         )}
@@ -714,7 +714,7 @@ function Field({
 }) {
   return (
     <div className="group relative">
-      <label className="block text-[8px] md:text-[9px] font-medium uppercase tracking-[0.4em] text-zinc-400 mb-3 font-serif italic">
+      <label className="block text-[8px] md:text-[9px] font-medium uppercase tracking-[0.4em] text-[#595f72] mb-3 font-serif ">
         {label}
       </label>
       <input
@@ -722,7 +722,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required
-        className="w-full bg-transparent text-[14px] md:text-[15px] font-serif outline-none py-1 border-b border-zinc-100 dark:border-zinc-900 focus:border-zinc-900 dark:focus:border-white transition-colors placeholder:text-zinc-200"
+        className="w-full bg-transparent text-[14px] md:text-[15px] font-serif outline-none py-1 border-b border-zinc-100 dark:border-zinc-900 focus:border-zinc-900 dark:focus:border-white transition-colors placeholder:text-[#595f72]"
       />
     </div>
   )

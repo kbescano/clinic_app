@@ -155,13 +155,13 @@ export default function Services() {
 
                 <div className="flex flex-col flex-grow p-8 md:p-12">
                   <div className="mb-10">
-                    <h3 className="text-[15px] md:text-[14px] font-normal tracking-[0.01em] font-serif text-zinc-800 dark:text-zinc-100 mb-6 leading-tight">
+                    <h3 className="text-[15px] md:text-[14px] font-normal tracking-[0.01em] font-serif text-[#251101] dark:text-zinc-100 mb-6 leading-tight">
                       {service.title}
                     </h3>
 
                     <div className="relative">
                       <p
-                        className={`text-[13px] md:text-[12px] font-light text-zinc-500 dark:text-zinc-400 leading-[1.7] tracking-wide font-serif ${
+                        className={`text-[13px] md:text-[12px] font-light text-[#595f72] dark:text-zinc-400 leading-[1.7] tracking-wide font-serif ${
                           expandedId === service.id ? 'line-clamp-none' : 'line-clamp-3'
                         }`}
                       >
@@ -172,7 +172,7 @@ export default function Services() {
                           onClick={() =>
                             setExpandedId(expandedId === service.id ? null : service.id)
                           }
-                          className="mt-4 text-[10px] font-light text-zinc-800 dark:text-zinc-200 font-serif underline underline-offset-[4px] decoration-zinc-200 dark:decoration-zinc-800 hover:decoration-zinc-800 dark:hover:decoration-zinc-200 transition-colors"
+                          className="mt-4 text-[10px] font-light text-[#595f72] dark:text-zinc-200 font-serif underline underline-offset-[4px] decoration-zinc-200 dark:decoration-zinc-800 hover:decoration-zinc-800 dark:hover:decoration-zinc-200 transition-colors"
                         >
                           {expandedId === service.id ? 'Read less' : 'Read more'}
                         </button>
@@ -193,13 +193,13 @@ export default function Services() {
                           >
                             <button
                               onClick={() => setDetailsOpenId(isOpen ? null : uniqueDetailId)}
-                              className="w-full flex items-center justify-between py-5 text-[13px] font-light text-zinc-800 dark:text-zinc-200 font-serif hover:opacity-60 transition-opacity text-left"
+                              className="w-full flex items-center justify-between py-5 text-[13px] font-light text-[#251101] dark:text-zinc-200 font-serif hover:opacity-60 transition-opacity text-left"
                             >
                               <span>{item.title}</span>
                               <div className="relative w-3 h-3 flex items-center justify-center">
-                                <div className="absolute w-3 h-[1px] bg-current" />
+                                <div className="absolute w-3 h-[1px] bg-[#251101]" />
                                 <div
-                                  className={`absolute w-[1px] h-3 bg-current transition-transform duration-500 ${isOpen ? 'rotate-90 scale-y-0' : ''}`}
+                                  className={`absolute w-[1px] h-3 bg-[#251101] transition-transform duration-500 ${isOpen ? 'rotate-90 scale-y-0' : ''}`}
                                 />
                               </div>
                             </button>
@@ -210,7 +210,7 @@ export default function Services() {
                               }`}
                             >
                               <div className="pl-0 border-l border-zinc-900 dark:border-zinc-100 ml-0 pl-4">
-                                <p className="text-[12px] font-light text-zinc-500 dark:text-zinc-400 tracking-normal whitespace-pre-line font-serif leading-relaxed">
+                                <p className="text-[12px] font-light text-[#595f72] dark:text-zinc-400 tracking-normal whitespace-pre-line font-serif leading-relaxed">
                                   {item.description}
                                 </p>
                               </div>
@@ -221,12 +221,12 @@ export default function Services() {
                     </div>
                   )}
 
-                  <div className="mt-auto flex items-end justify-between pt-8 border-t border-zinc-900 dark:border-white">
+                  <div className="mt-auto flex items-end justify-between pt-8 border-t border-[#595f72] dark:border-white">
                     <div className="space-y-1">
-                      <span className="block text-[7px] uppercase tracking-[0.5em] text-zinc-400 font-serif font-bold">
+                      <span className="block text-[7px] uppercase tracking-[0.5em] text-[#595f72] font-serif font-bold">
                         Price
                       </span>
-                      <p className="text-[13px] font-light tracking-tighter text-zinc-900 dark:text-white tabular-nums font-serif">
+                      <p className="text-[13px] font-light tracking-tighter text-[#251101] dark:text-white tabular-nums font-serif">
                         PHP {service.price?.toLocaleString() || '0'}
                       </p>
                     </div>
@@ -236,7 +236,7 @@ export default function Services() {
                       className="group/book flex items-center gap-3 text-[9px] font-bold uppercase tracking-[0.3em] transition-all hover:opacity-50 pb-1 font-serif"
                     >
                       <span>Book now</span>
-                      <ArrowUpRightIcon className="w-3 h-3 text-zinc-900 dark:text-white transition-transform group-hover/book:translate-x-1 group-hover/book:-translate-y-1" />
+                      <ArrowUpRightIcon className="w-3 h-3 text-[#251101] dark:text-white transition-transform group-hover/book:translate-x-1 group-hover/book:-translate-y-1" />
                     </Link>
                   </div>
                 </div>

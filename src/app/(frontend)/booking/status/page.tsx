@@ -13,7 +13,7 @@ export default function BookingStatusPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-screen bg-white dark:bg-[#050505]">
-          <div className="animate-pulse text-zinc-400 font-serif text-[8px] md:text-[9px] uppercase tracking-[0.5em] italic">
+          <div className="animate-pulse text-[#595f72] font-serif text-[8px] md:text-[9px] uppercase tracking-[0.5em] ">
             Loading ...
           </div>
         </div>
@@ -82,7 +82,7 @@ function StatusContent() {
   const formatPHDate = (d: string) => dayjs(d).tz('Asia/Manila').format('MMM D, YYYY')
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#050505] text-zinc-900 dark:text-zinc-100 pt-24 md:pt-32 pb-32 selection:bg-zinc-100 overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-[#595f72] pt-24 md:pt-32 pb-32 selection:bg-zinc-100 overflow-x-hidden">
       <FadeIn>
         {/* ATELIER CONTAINER: Standardized max-w-5xl used on Dashboard and Registry pages */}
         <div className="max-w-5xl mx-auto px-4 md:px-8">
@@ -94,11 +94,11 @@ function StatusContent() {
                 }`}
               />
               <div className="space-y-1">
-                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-zinc-400 font-serif italic">
-                  Session Confirmation
+                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif ">
+                  Booking Confirmation
                 </p>
-                <h1 className="text-[20px] md:text-[24px] font-light tracking-tight font-serif text-zinc-900 dark:text-white leading-none uppercase">
-                  Hello, <span className="text-zinc-400 italic">{firstName}</span>
+                <h1 className="text-[20px] md:text-[24px] font-light tracking-tight font-serif text-[#251101] dark:text-white leading-none uppercase">
+                  Hello, <span className="text-[#595f72] ">{firstName}</span>
                 </h1>
               </div>
             </div>
@@ -108,7 +108,7 @@ function StatusContent() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
               </div>
-              <p className="text-[8px] md:text-[9px] text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.3em] font-medium font-serif italic">
+              <p className="text-[8px] md:text-[9px] text-emerald-600 dark:text-emerald-400 uppercase tracking-[0.3em] font-medium font-serif ">
                 Confirmed
               </p>
             </div>
@@ -118,10 +118,10 @@ function StatusContent() {
             {/* MAIN QUEUE: Registry Ledger View */}
             <section className="lg:col-span-7">
               <div className="flex items-baseline justify-between mb-8 border-b border-zinc-900 dark:border-white pb-3">
-                <h2 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] font-medium font-serif italic flex items-center gap-3">
+                <h2 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] font-medium font-serif  flex items-center gap-3">
                   Scheduled Sessions
                 </h2>
-                <span className="text-[8px] uppercase tracking-widest text-zinc-400 font-serif tabular-nums italic">
+                <span className="text-[8px] uppercase tracking-widest text-[#595f72] font-serif tabular-nums ">
                   Entry Count: {consolidatedAppointments.length}
                 </span>
               </div>
@@ -135,23 +135,23 @@ function StatusContent() {
                     >
                       <div className="flex flex-col md:flex-row justify-between gap-8">
                         <div className="w-32 shrink-0 space-y-1">
-                          <p className="text-[20px] md:text-[24px] font-light font-serif text-zinc-800 dark:text-white tracking-tighter tabular-nums leading-none">
+                          <p className="text-[20px] md:text-[24px] font-light font-serif text-[#251101] dark:text-white tracking-tighter tabular-nums leading-none">
                             {formatPHTime(apt.date)}
                           </p>
-                          <p className="text-[8px] md:text-[9px] uppercase tracking-[0.3em] text-zinc-400 font-serif italic">
+                          <p className="text-[8px] md:text-[9px] uppercase tracking-[0.3em] text-[#595f72] font-serif ">
                             {formatPHDate(apt.date)}
                           </p>
                         </div>
 
                         <div className="flex-1 space-y-6">
                           <div className="flex items-center gap-3">
-                            <h3 className="text-[15px] md:text-[16px] font-light font-serif text-zinc-800 dark:text-zinc-100 capitalize tracking-tight">
+                            <h3 className="text-[15px] md:text-[16px] font-light font-serif text-[#251101] dark:text-[#595f72] capitalize tracking-tight">
                               {apt.isGuest
                                 ? `${apt.firstName} ${apt.surname}`
                                 : `${firstName} ${userSurname}`}
                             </h3>
                             {apt.isGuest && (
-                              <span className="text-[6px] px-1.5 py-0.5 border border-zinc-100 dark:border-zinc-800 text-zinc-400 uppercase tracking-widest font-serif italic">
+                              <span className="text-[6px] px-1.5 py-0.5 border border-zinc-100 dark:border-zinc-800 text-[#595f72] uppercase tracking-widest font-serif ">
                                 Guest
                               </span>
                             )}
@@ -161,7 +161,7 @@ function StatusContent() {
                             {apt.services.map((s: string, idx: number) => (
                               <div key={idx} className="flex items-center gap-3">
                                 <div className="w-0.5 h-[1px] bg-zinc-200 dark:bg-zinc-800" />
-                                <span className="text-[9px] uppercase tracking-[0.2em] text-zinc-400 font-serif italic">
+                                <span className="text-[9px] uppercase tracking-[0.2em] text-[#595f72] font-serif ">
                                   {s}
                                 </span>
                               </div>
@@ -173,7 +173,7 @@ function StatusContent() {
                   ))
                 ) : (
                   <div className="py-24 flex flex-col items-center justify-center bg-white dark:bg-black">
-                    <p className="text-[9px] uppercase tracking-[0.5em] text-zinc-300 font-serif italic">
+                    <p className="text-[9px] uppercase tracking-[0.5em] text-[#595f72] font-serif ">
                       Registry Clear
                     </p>
                   </div>
@@ -186,7 +186,7 @@ function StatusContent() {
               <div className="sticky top-32 space-y-12">
                 <section>
                   <div className="flex items-baseline justify-between mb-8 border-b border-zinc-50 dark:border-zinc-900/50 pb-3">
-                    <h2 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-zinc-400 font-serif italic">
+                    <h2 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif ">
                       Next Steps
                     </h2>
                   </div>
