@@ -161,7 +161,7 @@ function AppointmentTicket({ apt }: { apt: any }) {
             <h3 className="text-[16px] md:text-[18px] font-light font-serif text-[#251101] dark:text-[#595f72] tracking-tight capitalize leading-none">
               {apt.firstName} {apt.surname}
             </h3>
-            <p className="text-[9px] text-[#595f72] font-serif tracking-widest uppercase  opacity-80">
+            <p className="text-[9px] text-[#595f72] font-serif tracking-widest lowercase opacity-80">
               {apt.email} <span className="mx-1 text-[#595f72] dark:text-[#251101]">/</span>{' '}
               {apt.phone}
             </p>

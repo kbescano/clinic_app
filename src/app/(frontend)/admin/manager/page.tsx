@@ -2,8 +2,6 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import AdminManagementClient from './AdminManagementClient'
 import dayjs from '@/lib/dayjs'
-import { Suspense } from 'react'
-import { RegistrySkeleton } from '../../components/RegistrySkeleton'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,20 +55,18 @@ export default async function AdminManagementPage(props: { searchParams?: Promis
   )
 
   return (
-    <Suspense fallback={<RegistrySkeleton />}>
-      <AdminManagementClient
-        todayData={todayRaw.map((a: any) => ({
-          ...a,
-          services: [a.service?.title || 'General Consultation'],
-        }))}
-        otherData={otherRaw.map((a: any) => ({
-          ...a,
-          services: [a.service?.title || 'General Consultation'],
-        }))}
-        range={range}
-        status={status}
-        secondaryLabel={secondaryLabel}
-      />
-    </Suspense>
+    <AdminManagementClient
+      todayData={todayRaw.map((a: any) => ({
+        ...a,
+        services: [a.service?.title || 'General Consultation'],
+      }))}
+      otherData={otherRaw.map((a: any) => ({
+        ...a,
+        services: [a.service?.title || 'General Consultation'],
+      }))}
+      range={range}
+      status={status}
+      secondaryLabel={secondaryLabel}
+    />
   )
 }

@@ -32,7 +32,6 @@ interface DashboardProps {
 }
 
 const formatPHTime = (dateStr: string) => dayjs(dateStr).tz('Asia/Manila').format('hh:mm A')
-const formatPHDate = (dateStr: string) => dayjs(dateStr).tz('Asia/Manila').format('MMM D, YYYY')
 
 export default function SpecialistDashboardClient({
   todayData,
@@ -193,79 +192,83 @@ function BentoTable({ data, showDate }: { data: MergedAppointment[]; showDate: b
 
   return (
     <div className="w-full relative overflow-visible">
-      {/* GRADIENT MASK (Mobile Only) */}
-      <div className="md:hidden absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-white dark:from-[#050505] to-transparent z-40 pointer-events-none opacity-60" />
-
-      <table className="w-full text-left border-collapse block md:table">
-        <tbody className="block md:table-row-group divide-y divide-zinc-50 dark:divide-zinc-900/50">
+      <table className="w-full text-left border-collapse block md:table overflow-visible">
+        <tbody className="block md:table-row-group divide-y divide-zinc-50 dark:divide-zinc-900/50 overflow-visible">
           {data.map((apt, index) => {
             const isOngoing = index === ongoingIndex
             const isUpcoming = index === upcomingIndex
-            const isSticky = !showDate && (isOngoing || isUpcoming)
 
-            let stickyTop = '80px'
-            if (isUpcoming && ongoingIndex !== -1) stickyTop = '135px'
+            // Exclusive sticky logic: Ongoing priority, then Upcoming
+            const hasOngoing = ongoingIndex !== -1
+            const isSticky = !showDate && (isOngoing || (!hasOngoing && isUpcoming))
 
             return (
               <tr
                 key={apt.id}
                 style={
                   isSticky
-                    ? { position: 'sticky', top: stickyTop, zIndex: isOngoing ? 30 : 20 }
+                    ? {
+                        position: 'sticky',
+                        top: '80px',
+                        zIndex: 50,
+                        transform: 'translateZ(0)', // Fixes mobile sticky flickering
+                      }
                     : {}
                 }
-                className={`block md:table-row group transition-all duration-700 ${
-                  isSticky
-                    ? 'bg-white/95 dark:bg-[#050505]/95 backdrop-blur-sm shadow-xl z-30'
-                    : 'bg-transparent'
-                } hover:bg-zinc-50/30 dark:hover:bg-zinc-900/10`}
+                className={`
+                  flex flex-col justify-around min-h-[160px] 
+                  py-2 md:py-0 md:min-h-0 md:table-row group transition-all duration-700 
+                  ${
+                    isSticky
+                      ? 'bg-white/95 dark:bg-[#050505]/95 backdrop-blur-sm shadow-xl border-b border-zinc-100 dark:border-zinc-800'
+                      : 'bg-transparent'
+                  } 
+                  hover:bg-zinc-50/30 dark:hover:bg-zinc-900/10
+                `}
               >
-                {/* TIME COLUMN: Using relative to contain the absolute status label */}
-                <td className="block md:table-cell py-4 md:py-8 pr-4 md:pr-8 align-baseline pl-4 md:pl-6 relative">
-                  {isSticky && (
+                {/* TIME COLUMN */}
+                <td className="block md:table-cell py-0 md:py-8 pr-4 md:pr-8 align-baseline pl-4 md:pl-6 relative">
+                  {(isOngoing || isUpcoming) && (
                     <div
-                      className={`absolute left-0 top-0 bottom-0 w-[1.5px] ${isOngoing ? 'bg-[#248232]' : isUpcoming ? 'bg-[#48a9a6]' : 'bg-zinc-300 dark:bg-zinc-700'}`}
+                      className={`absolute left-0 top-0 bottom-0 w-[1.5px] ${isOngoing ? 'bg-[#248232]' : 'bg-[#48a9a6]'}`}
                     />
                   )}
 
                   <div className="relative flex items-baseline">
-                    {/* ABSOLUTE STATUS: Floats above without pushing the Time text down */}
                     <div className="absolute -top-4 md:-top-5 left-0 flex items-center gap-1.5 whitespace-nowrap">
-                      {!showDate && isOngoing && (
+                      {isOngoing && (
                         <span className="text-[6px] md:text-[7px] text-[#248232] uppercase tracking-[0.2em] font-bold font-serif animate-pulse">
                           ● Ongoing
                         </span>
                       )}
-                      {!showDate && isUpcoming && (
+                      {isUpcoming && (
                         <span className="text-[6px] md:text-[7px] text-[#48a9a6] uppercase tracking-[0.2em] font-medium font-serif">
                           Upcoming
                         </span>
                       )}
                     </div>
-
                     <span
-                      className={`text-[11px] md:text-[13px] font-light tracking-widest tabular-nums ${isOngoing ? 'text-[#248232] font-medium' : 'text-zinc-900 dark:text-zinc-100'}`}
+                      className={`text-[11px] md:text-[13px] font-light tracking-widest tabular-nums leading-none ${isOngoing ? 'text-[#248232] font-medium' : 'text-zinc-900 dark:text-zinc-100'}`}
                     >
                       {formatPHTime(apt.appointmentDate)}
                     </span>
                   </div>
                 </td>
 
-                {showDate && (
-                  <td className="block md:table-cell py-4 md:py-8 px-4 md:px-8 align-baseline">
-                    <span className="text-[10px] md:text-[11px] text-[#595f72] tracking-wider text-zinc-400 font-serif block">
-                      {formatPHDate(apt.appointmentDate)}
+                {/* NAME & EMAIL COLUMN */}
+                <td className="block md:table-cell py-0 md:py-8 px-4 md:px-8 align-baseline">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[12px] md:text-[14px] text-[#251101] font-serif tracking-wide capitalize dark:text-zinc-100 leading-none">
+                      {apt.firstName} {apt.surname}
                     </span>
-                  </td>
-                )}
-
-                <td className="block md:table-cell py-4 md:py-8 px-4 md:px-8 align-baseline">
-                  <span className="text-[12px] md:text-[14px] text-[#251101] font-serif tracking-wide capitalize dark:text-zinc-100 block">
-                    {apt.firstName} {apt.surname}
-                  </span>
+                    <span className="text-[9px] md:hidden text-zinc-400 font-serif lowercase tracking-tight leading-none">
+                      {apt.email}
+                    </span>
+                  </div>
                 </td>
 
-                <td className="block md:table-cell py-4 md:py-8 px-4 md:px-8 align-baseline">
+                {/* SERVICES COLUMN */}
+                <td className="block md:table-cell py-0 md:py-8 px-4 md:px-8 align-baseline">
                   <div className="flex flex-wrap gap-1.5 items-baseline">
                     {apt.services.map((s, i) => (
                       <span
@@ -278,7 +281,8 @@ function BentoTable({ data, showDate }: { data: MergedAppointment[]; showDate: b
                   </div>
                 </td>
 
-                <td className="block md:table-cell pb-4 md:pb-8 pl-4 md:pl-8 align-baseline text-left md:text-right pr-4 md:pr-6">
+                {/* STATUS COLUMN */}
+                <td className="block md:table-cell py-0 md:py-8 pl-4 md:pl-8 align-baseline text-left md:text-right pr-4 md:pr-6">
                   <div className="flex md:justify-end items-baseline">
                     <StatusBadge status={apt.status} />
                   </div>

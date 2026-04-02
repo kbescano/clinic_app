@@ -2,8 +2,6 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import SpecialistDashboardClient from './DashboardClient'
 import dayjs from '@/lib/dayjs'
-import { Suspense } from 'react'
-import { RegistrySkeleton } from '../components/RegistrySkeleton'
 
 export default async function SpecialistDashboardPage() {
   const payload = await getPayload({ config })
@@ -58,21 +56,19 @@ export default async function SpecialistDashboardPage() {
   )
 
   return (
-    <Suspense fallback={<RegistrySkeleton />}>
-      <SpecialistDashboardClient
-        todayData={groupAppointments(todayRaw.docs as any)}
-        weekData={groupAppointments(weekRaw.docs as any)}
-        metrics={{
-          ...metrics,
-          pendingRevenue: metrics.projectedRevenue - metrics.settledRevenue,
-          completionRate:
-            totalManifestWorkload > 0
-              ? Math.round((metrics.totalCompletedServices / totalManifestWorkload) * 100)
-              : 0,
-          totalManifestWorkload,
-        }}
-      />
-    </Suspense>
+    <SpecialistDashboardClient
+      todayData={groupAppointments(todayRaw.docs as any)}
+      weekData={groupAppointments(weekRaw.docs as any)}
+      metrics={{
+        ...metrics,
+        pendingRevenue: metrics.projectedRevenue - metrics.settledRevenue,
+        completionRate:
+          totalManifestWorkload > 0
+            ? Math.round((metrics.totalCompletedServices / totalManifestWorkload) * 100)
+            : 0,
+        totalManifestWorkload,
+      }}
+    />
   )
 }
 
