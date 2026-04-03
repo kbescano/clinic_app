@@ -51,12 +51,10 @@ function BookingFormContent({
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // --- INITIALIZATION ---
   const hasPrefillData = !!(initialData.email && initialData.fn)
   const [showModal, setShowModal] = useState(!hasPrefillData)
   const [existingEmail, setExistingEmail] = useState(initialData.email)
 
-  // Initialize state with prefilled data immediately
   const [personalInfo, setPersonalInfo] = useState({
     firstName: initialData.fn || '',
     surname: initialData.sn || '',
@@ -64,7 +62,6 @@ function BookingFormContent({
     email: initialData.email || '',
   })
 
-  // --- CORE STATE ---
   const [isExisting, setIsExisting] = useState<boolean | null>(null)
   const [isVerifying, setIsVerifying] = useState(false)
   const [errorToast, setErrorToast] = useState<string | null>(null)
@@ -82,7 +79,6 @@ function BookingFormContent({
   const [busySlots, setBusySlots] = useState<string[]>([])
   const [loadingSlots, setLoadingSlots] = useState(false)
 
-  // --- DENTAL CALENDAR LOGIC (6 MONTHS) ---
   const { todayStr, manilaTimeNow, minSelectableDate } = useMemo(() => {
     const nowPHT = dayjs().tz('Asia/Manila')
     const isAfterCutoff = nowPHT.hour() >= 15
@@ -107,7 +103,7 @@ function BookingFormContent({
     return [...Array(35)].map((_, i) => startOfMonth.subtract(startDay, 'day').add(i, 'day'))
   }, [viewDate])
 
-  // --- PROGRESSIVE DISCLOSURE ---
+  // --- PROGRESSIVE DISCLOSURE LOGIC ---
   const isAddingGuest = bookings.length > 0
   const showIdentitySection = !hasPrefillData || isAddingGuest
   const showFirstName = currentServiceId !== ''
@@ -118,6 +114,7 @@ function BookingFormContent({
     (initialData.ph ? showSurname : showPhone && isValidPHPhone(personalInfo.phone)) &&
     !initialData.email
 
+  // FIX: Identity check for primary or guest
   const identitySatisfied =
     hasPrefillData && !isAddingGuest
       ? currentServiceId !== ''
@@ -126,7 +123,8 @@ function BookingFormContent({
         (initialData.ph || isValidPHPhone(personalInfo.phone)) &&
         (initialData.email || isValidEmail(personalInfo.email))
 
-  const showDate = identitySatisfied && bookings.length === 0
+  // BUG FIX: Removed bookings.length === 0 constraint so guest can see calendar
+  const showDate = identitySatisfied
 
   const timeSlots = [
     '09:00',
@@ -140,10 +138,10 @@ function BookingFormContent({
     '17:00',
   ]
 
-  // --- EFFECTS ---
   useEffect(() => {
     if (state?.error) setErrorToast(state.error)
   }, [state])
+
   useEffect(() => {
     if (!showModal || hasPrefillData) {
       const timer = setTimeout(() => setDrawLine(true), 500)
@@ -153,7 +151,8 @@ function BookingFormContent({
 
   useEffect(() => {
     async function updateAvailability() {
-      const activeDate = bookings.length > 0 ? bookings[0].date : currentDate
+      // Use currentDate or fallback to existing booking date if adding guest
+      const activeDate = currentDate || (bookings.length > 0 ? bookings[0].date : null)
       if (activeDate) {
         setLoadingSlots(true)
         const taken = await getBusySlots(activeDate)
@@ -164,7 +163,6 @@ function BookingFormContent({
     updateAvailability()
   }, [currentDate, bookings])
 
-  // --- HANDLERS ---
   const handleLookup = async () => {
     if (!isValidEmail(existingEmail)) {
       setModalError('Invalid email format.')
@@ -185,10 +183,7 @@ function BookingFormContent({
         ph: data.phone,
       })
       if (currentServiceId) params.append('serviceId', currentServiceId)
-      startTransition(() => {
-        setShowModal(false)
-        router.replace(`/booking?${params.toString()}`)
-      })
+      window.location.href = `/booking?${params.toString()}`
     } catch {
       setModalError('Server error.')
       setIsVerifying(false)
@@ -205,11 +200,18 @@ function BookingFormContent({
     const batch = [entry]
     if (showExtraService && extraServiceId) batch.push({ ...entry, serviceId: extraServiceId })
     setBookings([...bookings, ...batch])
-    setPersonalInfo((p) => ({ ...p, firstName: '', surname: '' }))
+
+    // Reset inputs for the next person
+    setPersonalInfo({
+      ...personalInfo, // Keep email/phone if they are the same group, or reset if preferred
+      firstName: '',
+      surname: '',
+    })
     setCurrentServiceId('')
     setExtraServiceId('')
     setShowExtraService(false)
     setCurrentTime('')
+    // We keep currentDate so the group stays on the same day
   }
 
   const handleFinalSubmit = (e: React.FormEvent) => {
@@ -249,7 +251,7 @@ function BookingFormContent({
         <Notification message={errorToast} type="error" onClose={() => setErrorToast(null)} />
       )}
 
-      {/* --- MODAL (ROUNDED-2XL) --- */}
+      {/* --- MODAL --- */}
       {showModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/80 dark:bg-black/80 backdrop-blur-xl p-4">
           <div className="w-full max-w-lg bg-white dark:bg-[#050505] p-10 md:p-16 border border-zinc-100 dark:border-zinc-900 rounded-2xl shadow-2xl text-center">
@@ -284,10 +286,16 @@ function BookingFormContent({
                 <h3 className="text-[24px] md:text-[32px] font-light mb-4 font-serif tracking-tighter leading-none">
                   Confirm Email
                 </h3>
+                {modalError && (
+                  <p className="text-[10px] text-red-500 mb-4 font-serif">{modalError}</p>
+                )}
                 <input
                   type="email"
                   value={existingEmail}
-                  onChange={(e) => setExistingEmail(e.target.value)}
+                  onChange={(e) => {
+                    setExistingEmail(e.target.value)
+                    setModalError(null)
+                  }}
                   className="w-full bg-transparent border-b border-zinc-100 dark:border-zinc-800 outline-none py-6 mb-12 text-center text-[18px] md:text-[22px] font-serif"
                   placeholder="email@example.com"
                 />
@@ -313,9 +321,10 @@ function BookingFormContent({
       <FadeIn>
         <div className="max-w-4xl mx-auto flex flex-col gap-14 md:gap-20">
           <div className="flex items-center justify-between">
+            {/* FIX: Use window.location.href to hard-reset the session */}
             <button
               onClick={() => {
-                if (confirm('Clear session?')) router.replace('/booking')
+                if (confirm('Clear session?')) window.location.href = '/booking'
               }}
               className="flex items-center gap-3 text-[7px] md:text-[8px] uppercase tracking-[0.4em] text-[#595f72] hover:text-[#d7263d] transition-colors font-serif"
             >
@@ -345,7 +354,7 @@ function BookingFormContent({
               <div className="grid grid-cols-1 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 rounded-2xl overflow-hidden shadow-sm">
                 <div className="bg-white dark:bg-[#050505] p-6 md:p-8 space-y-10">
                   {/* SERVICE SELECT */}
-                  <div className="relative group animate-in fade-in duration-700">
+                  <div className="relative animate-in fade-in duration-700">
                     <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-3 block font-serif">
                       Service
                     </label>
@@ -371,7 +380,7 @@ function BookingFormContent({
                       <button
                         type="button"
                         onClick={() => setShowExtraService(true)}
-                        className="mt-4 text-[6px] md:text-[7px] uppercase tracking-[0.3em] text-[#595f72] font-serif hover:text-[#251101] dark:hover:text-zinc-100 animate-in fade-in slide-in-from-top-1"
+                        className="mt-4 text-[6px] md:text-[7px] uppercase tracking-[0.3em] text-[#595f72] font-serif hover:text-[#251101] animate-in fade-in"
                       >
                         + Add second service
                       </button>
@@ -456,7 +465,7 @@ function BookingFormContent({
                     </div>
                   )}
 
-                  {/* DENTAL SCHEDULING ENGINE */}
+                  {/* CALENDAR SECTION */}
                   {showDate && (
                     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
                       <div className="relative">
@@ -469,8 +478,6 @@ function BookingFormContent({
                               {viewDate.format('MMMM YYYY')}
                             </h3>
                           </div>
-
-                          {/* COMPACT MONTH PICKER PILL */}
                           <div className="inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative overflow-hidden">
                             <div
                               className="absolute top-1 bottom-1 w-[42px] md:w-[35px] bg-white dark:bg-zinc-800 rounded-full shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
@@ -490,62 +497,54 @@ function BookingFormContent({
                             ))}
                           </div>
                         </div>
-
-                        <div className="max-h-auto overflow-y-hidden custom-scrollbar">
-                          <div className="grid grid-cols-7 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 rounded-2xl overflow-hidden">
-                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-                              <div
-                                key={d}
-                                className="bg-zinc-50/50 dark:bg-zinc-900/30 py-3 text-center"
+                        <div className="grid grid-cols-7 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 rounded-2xl overflow-hidden">
+                          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                            <div
+                              key={d}
+                              className="bg-zinc-50/50 dark:bg-zinc-900/30 py-3 text-center"
+                            >
+                              <span className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] font-serif text-[#595f72] opacity-60">
+                                {d}
+                              </span>
+                            </div>
+                          ))}
+                          {calendarGrid.map((date, i) => {
+                            const dateStr = date.format('YYYY-MM-DD')
+                            const isSelected = currentDate === dateStr
+                            const isToday = dateStr === todayStr
+                            const isDisabled = date.isBefore(dayjs(minSelectableDate), 'day')
+                            return (
+                              <button
+                                key={i}
+                                type="button"
+                                disabled={isDisabled}
+                                onClick={() => {
+                                  setCurrentDate(dateStr)
+                                  setCurrentTime('')
+                                }}
+                                className={`relative h-14 md:h-20 flex flex-col items-center justify-center transition-all duration-500 ${isSelected ? 'bg-[#251101] dark:bg-white z-10' : 'bg-white dark:bg-[#050505] hover:bg-zinc-50 dark:hover:bg-zinc-900/40'} ${!date.isSame(viewDate, 'month') ? 'opacity-[0.15]' : ''} ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                               >
-                                <span className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] font-serif text-[#595f72] opacity-60">
-                                  {d}
-                                </span>
-                              </div>
-                            ))}
-                            {calendarGrid.map((date, i) => {
-                              const dateStr = date.format('YYYY-MM-DD')
-                              const isSelected = currentDate === dateStr
-                              const isToday = dateStr === todayStr
-                              const isDisabled = date.isBefore(dayjs(minSelectableDate), 'day')
-                              return (
-                                <button
-                                  key={i}
-                                  type="button"
-                                  disabled={isDisabled}
-                                  onClick={() => {
-                                    setCurrentDate(dateStr)
-                                    setCurrentTime('')
-                                  }}
-                                  className={`relative h-14 md:h-20 flex flex-col items-center justify-center transition-all duration-500 ${isSelected ? 'bg-[#251101] dark:bg-white z-10' : 'bg-white dark:bg-[#050505] hover:bg-zinc-50 dark:hover:bg-zinc-900/40'} ${!date.isSame(viewDate, 'month') ? 'opacity-[0.15]' : ''} ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                                <span
+                                  className={`text-[13px] md:text-[16px] font-serif tabular-nums tracking-tight ${isSelected ? 'text-white dark:text-[#251101]' : 'text-[#251101] dark:text-zinc-100'}`}
                                 >
-                                  <span
-                                    className={`text-[13px] md:text-[16px] font-serif tabular-nums tracking-tight ${isSelected ? 'text-white dark:text-[#251101]' : 'text-[#251101] dark:text-zinc-100'}`}
-                                  >
-                                    {date.date()}
-                                  </span>
-                                  {isToday && (
-                                    <div
-                                      className={`absolute bottom-2 md:bottom-3 w-1 h-1 rounded-full ${isSelected ? 'bg-white dark:bg-[#251101]' : 'bg-[#48a9a6]'}`}
-                                    />
-                                  )}
-                                </button>
-                              )
-                            })}
-                          </div>
+                                  {date.date()}
+                                </span>
+                                {isToday && (
+                                  <div
+                                    className={`absolute bottom-2 md:bottom-3 w-1 h-1 rounded-full ${isSelected ? 'bg-white dark:bg-[#251101]' : 'bg-[#48a9a6]'}`}
+                                  />
+                                )}
+                              </button>
+                            )
+                          })}
                         </div>
                       </div>
 
                       {currentDate && (
                         <div className="relative animate-in fade-in slide-in-from-top-6 duration-700">
-                          <div className="flex items-center justify-between mb-6 px-1">
-                            <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] block font-serif">
-                              {loadingSlots ? 'Consulting Archive...' : 'Available Time Slots'}
-                            </label>
-                            <span className="text-[10px] font-serif tabular-nums text-[#251101] dark:text-zinc-100 uppercase tracking-widest">
-                              {dayjs(currentDate).format('MMM DD, YYYY')}
-                            </span>
-                          </div>
+                          <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] block font-serif mb-6">
+                            {loadingSlots ? 'Consulting Archive...' : 'Available Time Slots'}
+                          </label>
                           <div className="grid grid-cols-3 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 rounded-2xl overflow-hidden">
                             {timeSlots.map((slot) => {
                               const isFull =
@@ -582,7 +581,7 @@ function BookingFormContent({
                         <button
                           type="button"
                           onClick={handleAddPerson}
-                          className="w-full py-6 md:py-10 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] hover:text-[#251101] dark:hover:text-zinc-100 transition-all font-serif animate-in fade-in slide-in-from-top-4"
+                          className="w-full py-6 md:py-10 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] hover:text-[#251101] transition-all font-serif"
                         >
                           + Add Guest
                         </button>
@@ -592,6 +591,8 @@ function BookingFormContent({
                 </div>
               </div>
             </div>
+
+            {/* SUMMARY PANEL */}
             <div className="lg:col-span-6 flex flex-col gap-10">
               <div className="flex items-baseline justify-between border-b border-zinc-100 dark:border-zinc-900/50 pb-3 px-1">
                 <h2 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
@@ -603,47 +604,26 @@ function BookingFormContent({
               </div>
 
               <div className="flex flex-col gap-6">
-                {Object.values(
-                  bookings.reduce(
-                    (acc, b) => {
-                      const key = `${b.firstName}-${b.surname}-${b.time}`
-                      if (!acc[key]) acc[key] = { ...b, services: [b.serviceId] }
-                      else acc[key].services.push(b.serviceId)
-                      return acc
-                    },
-                    {} as Record<string, any>,
-                  ),
-                ).map((group, i) => (
+                {bookings.map((b, i) => (
                   <div
                     key={i}
-                    className="bg-white dark:bg-[#050505] border border-zinc-100 dark:border-zinc-800 p-6 md:p-8 flex items-start justify-between shadow-sm rounded-2xl animate-in slide-in-from-right-4 duration-500"
+                    className="bg-white dark:bg-[#050505] border border-zinc-100 dark:border-zinc-800 p-6 md:p-8 flex items-start justify-between rounded-2xl"
                   >
                     <div className="space-y-4">
                       <p className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] text-[#595f72] font-serif">
-                        {group.date} • {group.time}
+                        {b.date} • {b.time}
                       </p>
                       <h4 className="text-[16px] md:text-[18px] font-serif tracking-tight text-[#251101] dark:text-zinc-100 capitalize">
-                        {group.firstName} {group.surname}
+                        {b.firstName} {b.surname}
                       </h4>
-                      <div className="flex flex-wrap items-center gap-y-1">
-                        {[...group.services].sort().map((sId, idx, arr) => (
-                          <React.Fragment key={idx}>
-                            <span className="text-[10px] md:text-[11px] capitalize tracking-tight text-[#595f72] dark:text-zinc-400 font-serif leading-none">
-                              {getServiceTitle(sId)}
-                            </span>
-                            {idx < arr.length - 1 && (
-                              <span className="mx-2 text-[8px] text-zinc-300 dark:text-zinc-800 font-light">
-                                |
-                              </span>
-                            )}
-                          </React.Fragment>
-                        ))}
-                      </div>
+                      <span className="text-[10px] md:text-[11px] capitalize tracking-tight text-[#595f72] font-serif">
+                        {getServiceTitle(b.serviceId)}
+                      </span>
                     </div>
                     <button
                       type="button"
-                      onClick={() => setBookings(bookings.filter((b) => b.time !== group.time))}
-                      className="text-[#595f72] hover:text-[#d7263d] transition-colors p-1"
+                      onClick={() => setBookings(bookings.filter((_, idx) => idx !== i))}
+                      className="text-[#595f72] hover:text-[#d7263d] p-1"
                     >
                       <XMarkIcon className="w-4 h-4" />
                     </button>
@@ -651,7 +631,7 @@ function BookingFormContent({
                 ))}
 
                 {currentTime && (
-                  <div className="bg-[#251101] dark:bg-white text-white dark:text-[#251101] p-8 md:p-10 flex flex-col justify-between min-h-[200px] shadow-sm rounded-2xl relative overflow-hidden animate-in fade-in duration-500">
+                  <div className="bg-[#251101] dark:bg-white text-white dark:text-[#251101] p-8 md:p-10 flex flex-col justify-between min-h-[200px] rounded-2xl relative overflow-hidden animate-in fade-in">
                     <div className="absolute top-0 left-0 w-full h-[1.5px] bg-[#48a9a6]/50" />
                     <div className="flex justify-between items-start">
                       <p className="text-[7px] md:text-[8px] uppercase tracking-[0.4em] font-serif opacity-60">
@@ -663,21 +643,11 @@ function BookingFormContent({
                     </div>
                     <div className="space-y-4">
                       <h4 className="text-[20px] md:text-[24px] font-serif tracking-tight leading-none capitalize">
-                        {personalInfo.firstName ||
-                          (hasPrefillData && bookings.length === 0 ? initialData.fn : 'New')}{' '}
-                        {personalInfo.surname ||
-                          (hasPrefillData && bookings.length === 0 ? initialData.sn : 'Patient')}
+                        {personalInfo.firstName || 'New'} {personalInfo.surname || 'Patient'}
                       </h4>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] font-serif border border-white/20 dark:border-[#251101]/20 px-2 py-0.5 rounded-full">
-                          {getServiceTitle(currentServiceId)}
-                        </span>
-                        {showExtraService && extraServiceId && (
-                          <span className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] font-serif border border-white/20 dark:border-[#251101]/20 px-2 py-0.5 rounded-full">
-                            {getServiceTitle(extraServiceId)}
-                          </span>
-                        )}
-                      </div>
+                      <span className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] font-serif border border-white/20 dark:border-[#251101]/20 px-2 py-0.5 rounded-full">
+                        {getServiceTitle(currentServiceId)}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -687,7 +657,7 @@ function BookingFormContent({
                 <button
                   type="submit"
                   disabled={isPendingTransition || (!currentTime && bookings.length === 0)}
-                  className="w-full bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[8px] md:text-[10px] font-serif py-6 uppercase tracking-[0.4em] rounded-full transition-all hover:tracking-[0.5em] shadow-sm disabled:opacity-20 flex items-center justify-center gap-4"
+                  className="w-full bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[8px] md:text-[10px] font-serif py-6 uppercase tracking-[0.4em] rounded-full transition-all hover:tracking-[0.5em] disabled:opacity-20 flex items-center justify-center gap-4"
                 >
                   {isPendingTransition ? (
                     <>
