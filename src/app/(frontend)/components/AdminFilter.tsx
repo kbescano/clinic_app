@@ -24,7 +24,7 @@ export default function AdminFilter({
   }
 
   return (
-    <div className="flex flex-col items-end gap-3 md:gap-4 shrink-0 relative">
+    <div className="flex flex-col items-end gap-6 shrink-0 relative">
       {/* 1. DATE RANGE FILTER (Pill - Aligned center with 'Management') */}
       <div className="inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative">
         {isPending && (

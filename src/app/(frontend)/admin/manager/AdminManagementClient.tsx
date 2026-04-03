@@ -35,7 +35,7 @@ export default function AdminManagementClient({
     <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 px-4 md:px-8 selection:bg-zinc-100 overflow-x-hidden font-sans">
       <FadeIn>
         {/* UNIFORM SPACING WRAPPER: Locked to max-w-4xl */}
-        <div className="max-w-4xl mx-auto flex flex-col gap-14 md:gap-20">
+        <div className="max-w-4xl mx-auto flex flex-col gap-10 md:gap-20">
           {/* COUTURE HEADER */}
           {/* COUTURE HEADER */}
           <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 md:gap-12">
@@ -70,7 +70,7 @@ export default function AdminManagementClient({
                   Today&apos;s Sessions
                 </h2>
                 <span className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] text-[#595f72] font-serif">
-                  {todayData.length} Registry Entries
+                  {todayData.length} Entries
                 </span>
               </div>
 

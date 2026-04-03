@@ -162,7 +162,7 @@ export default function MedicalHistoryClient({
 
       <FadeIn>
         {/* UNIFORM SPACING WRAPPER */}
-        <div className="max-w-4xl mx-auto flex flex-col gap-14 md:gap-20">
+        <div className="max-w-4xl mx-auto flex flex-col gap-10 md:gap-20">
           {/* HEADER SECTION */}
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 md:gap-12">
             <div className="space-y-4 relative">
@@ -232,7 +232,7 @@ export default function MedicalHistoryClient({
           {/* LIST SECTION */}
           <section className="animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-150 ease-out fill-mode-both flex flex-col gap-6 md:gap-8">
             {/* Database Filter Header (UPGRADED TO SEGMENTED PILL) */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-4 border-b border-zinc-100 dark:border-zinc-900/50 pb-5 md:pb-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-4 ">
               <h3 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
                 Database
               </h3>

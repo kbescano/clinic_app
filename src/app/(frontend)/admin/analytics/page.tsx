@@ -57,7 +57,7 @@ export default function AdminAnalytics() {
     <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 px-4 md:px-8 selection:bg-zinc-100 overflow-x-hidden font-sans">
       <FadeIn>
         {/* UNIFORM SPACING WRAPPER: Locked to max-w-4xl for focused reading width */}
-        <div className="max-w-4xl mx-auto flex flex-col gap-14 md:gap-20">
+        <div className="max-w-4xl mx-auto flex flex-col gap-10 md:gap-20">
           {/* HEADER SECTION */}
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 md:gap-12">
             <div className="space-y-4 relative">
