@@ -77,7 +77,7 @@ export default function AdminAnalytics() {
             </div>
 
             {/* LUXURY SEGMENTED CONTROL (4-Way Slider) */}
-            <div className="self-center md:self-auto relative flex items-center">
+            <div className="self-end md:self-auto relative flex items-center">
               {loading && (
                 <div className="absolute -left-4 top-1/2 -translate-y-1/2">
                   <RegistrySkeleton />
