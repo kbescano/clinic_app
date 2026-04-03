@@ -1,7 +1,6 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ChevronDownIcon } from '@heroicons/react/24/outline'
 import { useTransition } from 'react'
 import { RegistrySkeleton } from './RegistrySkeleton'
 
@@ -24,12 +23,15 @@ export default function AdminFilter({
     })
   }
 
+  const statusOptions = ['all', 'pending', 'confirmed', 'completed', 'cancelled']
+  const rangeOptions = ['today', '7days', 'thisMonth', 'all']
+
   return (
-    <div className="flex flex-col items-end gap-6 shrink-0 relative">
-      {/* 1. DATE RANGE FILTER (Pill - Aligned center with 'Management') */}
+    <div className="flex flex-col items-end gap-4 shrink-0 relative">
+      {/* 1. DATE RANGE FILTER */}
       <div className="inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative">
         {isPending && (
-          <div className="absolute -left-6 top-1/2 -translate-y-1/2">
+          <div className="absolute -left-4 top-1/2 -translate-y-1/2">
             <RegistrySkeleton />
           </div>
         )}
@@ -37,18 +39,11 @@ export default function AdminFilter({
         <div
           className="absolute top-1.5 bottom-1.5 w-[76px] sm:w-[88px] md:w-32 bg-white dark:bg-zinc-800 rounded-full shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
           style={{
-            transform:
-              initialRange === 'today'
-                ? 'translateX(0)'
-                : initialRange === '7days'
-                  ? 'translateX(100%)'
-                  : initialRange === 'thisMonth'
-                    ? 'translateX(200%)'
-                    : 'translateX(300%)',
+            transform: `translateX(${rangeOptions.indexOf(initialRange) * 100}%)`,
           }}
         />
 
-        {['today', '7days', 'thisMonth', 'all'].map((r) => (
+        {rangeOptions.map((r) => (
           <button
             key={r}
             onClick={() => handleFilterChange('range', r)}
@@ -67,30 +62,26 @@ export default function AdminFilter({
         ))}
       </div>
 
-      {/* 2. STATUS FILTER (Tucked Bottom-Left) */}
-      <div className="relative group flex items-center pl-4 md:pl-2">
-        <select
-          value={initialStatus}
-          onChange={(e) => handleFilterChange('status', e.target.value)}
-          className="appearance-none bg-transparent border-none py-0 pl-0 pr-6 text-[7px] md:text-[9px] uppercase tracking-[0.35em] font-medium font-serif text-[#595f72] hover:text-[#251101] dark:hover:text-zinc-100 cursor-pointer outline-none transition-colors text-left"
-        >
-          <option value="all" className="bg-white dark:bg-[#050505]">
-            All Status
-          </option>
-          <option value="pending" className="bg-white dark:bg-[#050505]">
-            Pending
-          </option>
-          <option value="confirmed" className="bg-white dark:bg-[#050505]">
-            Confirmed
-          </option>
-          <option value="completed" className="bg-white dark:bg-[#050505]">
-            Completed
-          </option>
-          <option value="cancelled" className="bg-white dark:bg-[#050505]">
-            Cancelled
-          </option>
-        </select>
-        <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-[#595f72] pointer-events-none" />
+      {/* 2. STATUS FILTER (Now identical to Range Filter) */}
+      <div className="inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative">
+        <div
+          className="absolute top-1 bottom-1 w-[60px] sm:w-[70px] md:w-24 bg-white dark:bg-zinc-800 rounded-full shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+          style={{
+            transform: `translateX(${statusOptions.indexOf(initialStatus) * 100}%)`,
+          }}
+        />
+
+        {statusOptions.map((s) => (
+          <button
+            key={s}
+            onClick={() => handleFilterChange('status', s)}
+            className={`relative z-10 w-[60px] sm:w-[70px] md:w-24 py-1.5 text-[6px] md:text-[7px] uppercase tracking-[0.2em] font-medium transition-colors duration-300 font-serif ${
+              initialStatus === s ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'
+            }`}
+          >
+            {s === 'all' ? 'All Status' : s}
+          </button>
+        ))}
       </div>
     </div>
   )

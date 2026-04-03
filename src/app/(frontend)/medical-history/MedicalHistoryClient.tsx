@@ -279,7 +279,7 @@ export default function MedicalHistoryClient({
                             {patient.firstName} {patient.surname}
                           </h3>
                           {patient.isGuestPatient && (
-                            <span className="text-[6px] px-1.5 py-0.5 rounded-sm border border-zinc-200 dark:border-zinc-800 text-[#595f72] uppercase tracking-[0.2em] font-serif">
+                            <span className="text-[6px] px-1.5 py-0.5 text-[#595f72] uppercase tracking-[0.2em] font-serif">
                               Guest
                             </span>
                           )}
@@ -353,7 +353,7 @@ export default function MedicalHistoryClient({
                                       {visit.services?.map((serviceName: string, idx: number) => (
                                         <span
                                           key={idx}
-                                          className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] border border-zinc-200 dark:border-zinc-800 px-1.5 py-0.5 font-medium text-[#595f72] font-serif"
+                                          className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] px-1.5 py-0.5 font-medium text-[#595f72] font-serif"
                                         >
                                           {serviceName}
                                         </span>

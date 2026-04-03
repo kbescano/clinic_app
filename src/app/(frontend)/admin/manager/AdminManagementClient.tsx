@@ -166,7 +166,7 @@ function AppointmentTicket({ apt }: { apt: any }) {
         </div>
 
         {/* COL 2: Patient Info & Services */}
-        <div className="flex flex-col justify-between h-full lg:pr-8">
+        <div className="flex flex-col justify-around h-full lg:pr-8">
           <div className="space-y-1.5 md:space-y-1">
             <h3 className="text-[15px] md:text-[16px] font-serif text-[#251101] dark:text-zinc-100 tracking-tight capitalize leading-none">
               {apt.firstName} {apt.surname}
@@ -179,7 +179,7 @@ function AppointmentTicket({ apt }: { apt: any }) {
             {apt.services.map((s: string, i: number) => (
               <span
                 key={i}
-                className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] text-[#595f72] border border-zinc-200 dark:border-zinc-800 px-1.5 py-0.5 font-medium font-serif"
+                className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] text-[#595f72] px-1.5 py-0.5 font-medium font-serif"
               >
                 {s}
               </span>

@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminManagementPage(props: { searchParams?: Promise<any> | any }) {
   const searchParams = await props.searchParams
-  const range = searchParams?.range || '7days'
+  const range = searchParams?.range || 'today'
   const status = searchParams?.status || 'all'
 
   const payload = await getPayload({ config })

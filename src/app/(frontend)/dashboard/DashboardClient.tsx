@@ -275,7 +275,7 @@ function BentoTable({ data, showDate }: { data: MergedAppointment[]; showDate: b
                 `}
               >
                 {/* TIME COLUMN */}
-                <td className="block md:table-cell w-16 md:w-32 shrink-0 pt-0.5 md:pt-0 py-0 md:py-8 pr-2 md:pr-8 align-top md:align-baseline pl-0 md:pl-6 relative">
+                <td className="block md:table-cell w-20 md:w-32 shrink-0 pt-0.5 md:pt-0 py-0 md:py-8 pr-2 md:pr-8 align-top md:align-baseline pl-0 md:pl-6 relative">
                   {isSticky && (
                     <div
                       className={`absolute -left-5 md:left-0 top-0 bottom-0 w-[2px] ${isOngoing ? 'bg-[#248232]' : 'bg-[#48a9a6]'}`}
@@ -296,7 +296,7 @@ function BentoTable({ data, showDate }: { data: MergedAppointment[]; showDate: b
                       )}
                     </div>
                     <span
-                      className={`text-[11px] md:text-[14px] font-light tracking-widest tabular-nums leading-none font-serif ${isOngoing ? 'text-[#248232]' : 'text-[#251101] dark:text-zinc-100'}`}
+                      className={`text-[9px] md:text-[12px] whitespace-nowrap font-light tracking-widest tabular-nums leading-none font-serif ${isOngoing ? 'text-[#248232]' : 'text-[#251101] dark:text-zinc-100'}`}
                     >
                       {formatPHTime(apt.appointmentDate)}
                     </span>
@@ -328,15 +328,22 @@ function BentoTable({ data, showDate }: { data: MergedAppointment[]; showDate: b
                     </div>
 
                     {/* Services (Visible on Mobile inside Name column) */}
-                    <div className="flex md:hidden flex-wrap gap-1.5">
-                      {apt.services.map((s, i) => (
-                        <span
-                          key={i}
-                          className="text-[6px] uppercase tracking-[0.2em] border border-zinc-200 dark:border-zinc-800 px-1.5 py-0.5 font-medium text-[#595f72] font-serif"
-                        >
-                          {s}
-                        </span>
-                      ))}
+                    <div className="flex md:hidden flex-wrap items-center gap-y-1">
+                      {[...apt.services]
+                        .sort((a, b) => a.localeCompare(b))
+                        .map((s, i, array) => (
+                          <React.Fragment key={i}>
+                            <span className="text-[10px] md:text-[11px] capitalize tracking-tight text-[#595f72] dark:text-zinc-400 font-serif leading-none">
+                              {s}
+                            </span>
+                            {/* Divider logic: only show if not the last item */}
+                            {i < array.length - 1 && (
+                              <span className="mx-2 text-[8px] text-zinc-300 dark:text-zinc-800 font-light">
+                                |
+                              </span>
+                            )}
+                          </React.Fragment>
+                        ))}
                     </div>
 
                     <span className="text-[8px] md:hidden text-[#595f72] font-serif lowercase tracking-tight leading-none truncate opacity-60">
@@ -348,14 +355,21 @@ function BentoTable({ data, showDate }: { data: MergedAppointment[]; showDate: b
                 {/* SERVICES COLUMN (Desktop Only) */}
                 <td className="hidden md:table-cell py-0 md:py-8 px-0 md:px-8 align-top md:align-baseline">
                   <div className="flex flex-wrap gap-1.5 items-baseline">
-                    {apt.services.map((s, i) => (
-                      <span
-                        key={i}
-                        className="text-[8px] uppercase tracking-[0.2em] border border-zinc-200 dark:border-zinc-800 px-2 py-1 font-medium text-[#595f72] font-serif"
-                      >
-                        {s}
-                      </span>
-                    ))}
+                    {[...apt.services]
+                      .sort((a, b) => a.localeCompare(b))
+                      .map((s, i, array) => (
+                        <React.Fragment key={i}>
+                          <span className="text-[10px] md:text-[11px] capitalize tracking-tight text-[#595f72] dark:text-zinc-400 font-serif leading-none">
+                            {s}
+                          </span>
+                          {/* Divider logic: only show if not the last item */}
+                          {i < array.length - 1 && (
+                            <span className="mx-2 text-[8px] text-zinc-300 dark:text-zinc-800 font-light">
+                              |
+                            </span>
+                          )}
+                        </React.Fragment>
+                      ))}
                   </div>
                 </td>
 

@@ -246,7 +246,7 @@ export default function AdminAnalytics() {
                           {booking.firstName} {booking.surname}
                         </span>
                         <div className="flex items-center mt-0.5">
-                          <span className="text-[6px] md:text-[7px] text-[#595f72] uppercase tracking-[0.2em] border border-zinc-200 dark:border-zinc-800 px-1.5 py-0.5 font-medium font-serif">
+                          <span className="text-[6px] md:text-[7px] text-[#595f72] uppercase tracking-[0.2em] px-1.5 py-0.5 font-medium font-serif">
                             {booking.service}
                           </span>
                         </div>
