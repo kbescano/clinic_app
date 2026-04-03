@@ -9,7 +9,7 @@ export default function BookNowButton() {
 
   useEffect(() => {
     const toggleVisibility = () => {
-      // Appear after 200px scroll
+      // Logic: Appear after 200px scroll
       setIsVisible(window.scrollY > 200)
     }
     window.addEventListener('scroll', toggleVisibility)
@@ -21,35 +21,51 @@ export default function BookNowButton() {
       onClick={() => router.push('/booking')}
       className={`
         md:hidden fixed left-1/2 -translate-x-1/2 z-[100]
-        flex items-center gap-3 px-6 py-4
-        bg-black dark:bg-white text-white dark:text-black
-        rounded-full shadow-2xl
-        transition-all duration-700 cubic-bezier(0.2, 1, 0.3, 1)
+        flex items-center gap-4 px-7 py-4
+        /* GLASSMORPHISM BASE */
+        bg-black/90 dark:bg-white/90 backdrop-blur-xl
+        text-white dark:text-black
+        rounded-full 
+        /* HAIRLINE BORDER - The 'Atelier' Touch */
+        border border-white/10 dark:border-black/10
+        /* HIGH-END SHADOW */
+        shadow-[0_20px_50px_rgba(0,0,0,0.3)] dark:shadow-[0_20px_50px_rgba(255,255,255,0.1)]
+        /* KINETIC TRANSITION */
+        transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1)
         ${
           isVisible
-            ? 'bottom-[80px] opacity-70 translate-y-0'
-            : 'bottom-0 opacity-0 translate-y-10 pointer-events-none'
+            ? 'bottom-20 opacity-80 translate-y-0 scale-100'
+            : 'bottom-0 opacity-0 translate-y-20 scale-90 pointer-events-none'
         }
-        active:scale-95
+        active:scale-95 active:duration-150
       `}
     >
-      <span className="text-[8px] font-bold uppercase tracking-[0.5em] leading-none ml-1">
+      {/* GLOW EFFECT (Subtle background pulse) */}
+      <span className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_3s_infinite] pointer-events-none" />
+
+      <span className="relative text-[9px] font-medium uppercase tracking-[0.5em] leading-none ml-1 font-serif">
         Book Now
       </span>
 
-      {/* Minimalist Arrow */}
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M5 12h14M12 5l7 7-7 7" />
-      </svg>
+      {/* REFINED MINIMALIST ARROW */}
+      <div className="relative flex items-center justify-center">
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="transition-transform duration-500 group-active:translate-x-1"
+        >
+          <path d="M7 17L17 7M17 7H7M17 7V17" />
+        </svg>
+      </div>
+
+      {/* KEYBOARD ACCESSIBILITY RING */}
+      <span className="sr-only">Book an appointment</span>
     </button>
   )
 }

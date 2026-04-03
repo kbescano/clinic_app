@@ -5,32 +5,9 @@ import dayjs from '@/lib/dayjs'
 
 export const dynamic = 'force-dynamic'
 
-export default async function SpecialistDashboardPage() {
-  const payload = await getPayload({ config })
-  const now = dayjs().tz('Asia/Manila')
-  const todayStart = now.startOf('day').toISOString()
-  const todayEnd = now.endOf('day').toISOString()
-  const next7Days = now.add(7, 'day').endOf('day').toISOString()
-
-  const [todayRaw, weekRaw] = await Promise.all([
-    payload.find({
-      collection: 'appointments',
-      where: { appointmentDate: { greater_than_equal: todayStart, less_than_equal: todayEnd } },
-      sort: 'appointmentDate',
-      depth: 1,
-      limit: 100,
-    }),
-    payload.find({
-      collection: 'appointments',
-      where: { appointmentDate: { greater_than: todayEnd, less_than_equal: next7Days } },
-      sort: 'appointmentDate',
-      depth: 1,
-      limit: 100,
-    }),
-  ])
-
-  // --- REVENUE LOGIC ---
-  const metrics = (todayRaw.docs as any[]).reduce(
+// --- 1. NEW HELPER: Reusable Metrics Logic ---
+function calculateMetrics(docs: any[]) {
+  const metrics = docs.reduce(
     (acc, raw) => {
       const status = raw.status
       const price = Number(raw.service?.price) || 0
@@ -57,24 +34,56 @@ export default async function SpecialistDashboardPage() {
     0,
   )
 
+  return {
+    ...metrics,
+    pendingRevenue: metrics.projectedRevenue - metrics.settledRevenue,
+    completionRate:
+      totalManifestWorkload > 0
+        ? Math.round((metrics.totalCompletedServices / totalManifestWorkload) * 100)
+        : 0,
+    totalManifestWorkload,
+  }
+}
+
+export default async function SpecialistDashboardPage() {
+  const payload = await getPayload({ config })
+  const now = dayjs().tz('Asia/Manila')
+  const todayStart = now.startOf('day').toISOString()
+  const todayEnd = now.endOf('day').toISOString()
+  const next7Days = now.add(7, 'day').endOf('day').toISOString()
+
+  const [todayRaw, weekRaw] = await Promise.all([
+    payload.find({
+      collection: 'appointments',
+      where: { appointmentDate: { greater_than_equal: todayStart, less_than_equal: todayEnd } },
+      sort: 'appointmentDate',
+      depth: 1,
+      limit: 100,
+    }),
+    payload.find({
+      collection: 'appointments',
+      where: { appointmentDate: { greater_than: todayEnd, less_than_equal: next7Days } },
+      sort: 'appointmentDate',
+      depth: 1,
+      limit: 100,
+    }),
+  ])
+
+  // --- 2. CALCULATE BOTH SETS OF METRICS ---
+  const todayMetrics = calculateMetrics(todayRaw.docs)
+  const weekMetrics = calculateMetrics(weekRaw.docs)
+
   return (
     <SpecialistDashboardClient
       todayData={groupAppointments(todayRaw.docs as any)}
       weekData={groupAppointments(weekRaw.docs as any)}
-      metrics={{
-        ...metrics,
-        pendingRevenue: metrics.projectedRevenue - metrics.settledRevenue,
-        completionRate:
-          totalManifestWorkload > 0
-            ? Math.round((metrics.totalCompletedServices / totalManifestWorkload) * 100)
-            : 0,
-        totalManifestWorkload,
-      }}
+      todayMetrics={todayMetrics}
+      weekMetrics={weekMetrics}
     />
   )
 }
 
-// --- HELPER (Same as provided logic) ---
+// --- HELPER (Untouched) ---
 function groupAppointments(docs: any[]): any[] {
   const grouped = docs.reduce((acc: any, curr) => {
     const key = `${curr.firstName}-${curr.surname}-${curr.phone}-${dayjs(curr.appointmentDate).toISOString()}`

@@ -151,7 +151,7 @@ export default function MedicalHistoryClient({
   if (!isMounted) return <DirectorySkeleton />
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 selection:bg-zinc-100 overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 px-4 md:px-8 selection:bg-zinc-100 overflow-x-hidden font-sans">
       {showNotification && (
         <Notification
           message="Clinical record updated successfully"
@@ -161,118 +161,149 @@ export default function MedicalHistoryClient({
       )}
 
       <FadeIn>
-        <div className="max-w-5xl mx-auto px-4 md:px-8">
-          {/* HEADER (REDUCED FONT SCALE) */}
-          <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 md:mb-16">
-            <div className="flex items-start gap-4 md:gap-5">
+        {/* UNIFORM SPACING WRAPPER */}
+        <div className="max-w-4xl mx-auto flex flex-col gap-14 md:gap-20">
+          {/* HEADER SECTION */}
+          <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 md:gap-12">
+            <div className="space-y-4 relative">
               <div
-                className={`w-[1px] bg-zinc-900 dark:bg-white transition-all duration-1000 ease-out origin-top ${
-                  drawLine ? 'h-10 md:h-12 opacity-100' : 'h-0 opacity-0'
+                className={`absolute -left-4 md:-left-8 top-0 w-[1px] bg-zinc-900 dark:bg-white transition-all duration-1000 ease-out origin-top ${
+                  drawLine ? 'h-full opacity-100' : 'h-0 opacity-0'
                 }`}
               />
-              <div className="space-y-1">
-                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif ">
+              <div className="flex items-center gap-4">
+                <p className="text-[8px] md:text-[10px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
                   Clinical
                 </p>
-                <h1 className="text-[20px] md:text-[24px] font-light tracking-tight text-[#251101] dark:text-white font-serif uppercase leading-none">
-                  Patient Records
-                </h1>
               </div>
+              <h1 className="text-[28px] md:text-[48px] font-light tracking-tighter font-serif leading-none">
+                Patient Records
+              </h1>
             </div>
-
-            {/* SEARCH (REDUCED FONT SCALE) */}
-            <div className="relative w-full sm:w-64 group">
-              <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-300" />
-              <input
-                type="text"
-                placeholder="SEARCH DATABASE..."
-                value={search}
-                onChange={(e) => {
-                  const val = e.target.value
-                  setSearch(val)
-                  updateFilters(1, val)
+            {/* 3-WAY LUXURY SEGMENTED CONTROL */}
+            <div className="self-end md:self-auto inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative">
+              <div
+                className="absolute top-1.5 bottom-1.5 w-20 sm:w-24 md:w-28 bg-white dark:bg-zinc-800 rounded-full shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                style={{
+                  transform:
+                    sortBy === 'latest'
+                      ? 'translateX(0)'
+                      : sortBy === 'oldest'
+                        ? 'translateX(100%)'
+                        : 'translateX(200%)',
                 }}
-                className="w-full bg-transparent border border-zinc-100 dark:border-zinc-900 rounded-full py-2.5 pl-10 pr-4 text-[9px] tracking-[0.2em] uppercase focus:outline-none focus:border-zinc-900 dark:focus:border-white transition-all placeholder:text-zinc-300"
               />
+              <button
+                onClick={() => {
+                  setSortBy('latest')
+                  updateFilters(1)
+                }}
+                className={`relative z-10 w-20 sm:w-24 md:w-28 py-2.5 md:py-2 text-[7px] md:text-[8px] uppercase tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${
+                  sortBy === 'latest' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'
+                }`}
+              >
+                Latest
+              </button>
+              <button
+                onClick={() => {
+                  setSortBy('oldest')
+                  updateFilters(1)
+                }}
+                className={`relative z-10 w-20 sm:w-24 md:w-28 py-2.5 md:py-2 text-[7px] md:text-[8px] uppercase tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${
+                  sortBy === 'oldest' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'
+                }`}
+              >
+                Oldest
+              </button>
+              <button
+                onClick={() => {
+                  setSortBy('name')
+                  updateFilters(1)
+                }}
+                className={`relative z-10 w-20 sm:w-24 md:w-28 py-2.5 md:py-2 text-[7px] md:text-[8px] uppercase tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${
+                  sortBy === 'name' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'
+                }`}
+              >
+                A - Z
+              </button>
             </div>
           </header>
 
           {/* LIST SECTION */}
-          <section className="space-y-4">
-            <div className="flex items-baseline justify-between mb-8 md:mb-10 border-b border-zinc-900 dark:border-white pb-3">
-              <h3 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] font-medium text-[#251101] dark:text-white font-serif ">
+          <section className="animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-150 ease-out fill-mode-both flex flex-col gap-6 md:gap-8">
+            {/* Database Filter Header (UPGRADED TO SEGMENTED PILL) */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-4 border-b border-zinc-100 dark:border-zinc-900/50 pb-5 md:pb-4">
+              <h3 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
                 Database
               </h3>
 
-              <div className="relative group">
-                <select
-                  value={sortBy}
+              {/* SEARCH INPUT */}
+              <div className="self-end md:self-auto w-full md:w-64 relative group">
+                <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#595f72]" />
+                <input
+                  type="text"
+                  placeholder="Search Database..."
+                  value={search}
                   onChange={(e) => {
-                    setSortBy(e.target.value as 'latest' | 'oldest' | 'name')
-                    updateFilters(1)
+                    const val = e.target.value
+                    setSearch(val)
+                    updateFilters(1, val)
                   }}
-                  className="appearance-none bg-transparent border-none py-0 pl-0 pr-4 text-[8px] md:text-[9px] uppercase tracking-[0.3em] font-medium font-serif text-[#595f72] hover:text-zinc-900 dark:hover:text-white cursor-pointer outline-none transition-colors text-right"
-                >
-                  <option value="latest" className="text-right bg-white dark:bg-black">
-                    Latest Visit
-                  </option>
-                  <option value="oldest" className="text-right bg-white dark:bg-black">
-                    Oldest Visit
-                  </option>
-                  <option value="name" className="text-right bg-white dark:bg-black">
-                    Sort by Name
-                  </option>
-                </select>
-
-                <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-zinc-400 pointer-events-none group-hover:text-zinc-900 dark:group-hover:text-white transition-colors" />
+                  className="w-full bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800/50 rounded-full py-3 md:py-2.5 pl-10 pr-4 text-[9px] md:text-[10px] font-serif placeholder:text-[#595f72] text-[#251101] dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-200 dark:focus:ring-zinc-700 transition-all shadow-sm"
+                />
               </div>
             </div>
 
-            <div className="divide-y divide-zinc-50 dark:divide-zinc-900/50">
+            {/* List Rows */}
+            <div className="flex flex-col border-b border-zinc-100 dark:border-zinc-900/50">
               {paginatedData.length > 0 ? (
                 paginatedData.map((patient) => (
                   <div
                     key={patient.uniqueId}
-                    className="group transition-colors hover:bg-zinc-50/30 dark:hover:bg-zinc-900/10"
+                    className="group transition-all duration-500 border-t border-zinc-100 dark:border-zinc-900/50"
                   >
-                    {/* VISIBLE ROW (REDUCED FONT SCALE) */}
+                    {/* VISIBLE ROW */}
                     <div
                       onClick={() =>
                         setExpandedId(expandedId === patient.uniqueId ? null : patient.uniqueId)
                       }
-                      className="py-6 md:py-7 cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4"
+                      className={`py-5 px-5 md:px-2 cursor-pointer flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-8 transition-colors ${
+                        expandedId === patient.uniqueId
+                          ? 'bg-zinc-50 dark:bg-zinc-900/20'
+                          : 'hover:bg-zinc-50/50 dark:hover:bg-zinc-900/10'
+                      }`}
                     >
-                      <div className="flex-1 space-y-1">
+                      <div className="flex-1 space-y-1.5 md:space-y-1">
                         <div className="flex items-center gap-3">
-                          <h3 className="text-[14px] md:text-[15px] capitalize font-serif tracking-wide text-[#251101] dark:text-zinc-100">
+                          <h3 className="text-[15px] md:text-[16px] capitalize font-serif tracking-tight text-[#251101] dark:text-zinc-100 leading-none">
                             {patient.firstName} {patient.surname}
                           </h3>
                           {patient.isGuestPatient && (
-                            <span className="text-[6px] px-1.5 py-0.5 rounded-sm border border-zinc-100 dark:border-zinc-800 text-[#595f72] uppercase tracking-widest font-serif ">
+                            <span className="text-[6px] px-1.5 py-0.5 rounded-sm border border-zinc-200 dark:border-zinc-800 text-[#595f72] uppercase tracking-[0.2em] font-serif">
                               Guest
                             </span>
                           )}
                         </div>
-                        <p className="text-[8px] md:text-[9px] text-[#595f72] font-serif tracking-wider lowercase ">
+                        <p className="text-[9px] md:text-[10px] text-[#595f72] font-serif tracking-tight lowercase">
                           {patient.email}
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-between md:justify-end gap-10 md:gap-14">
+                      <div className="flex items-end md:items-center justify-between w-full md:w-auto gap-8 md:gap-14">
                         <div className="text-left md:text-center">
-                          <p className="text-[8px] uppercase tracking-[0.3em] text-[#595f72] font-serif mb-1 ">
+                          <p className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] text-[#595f72] font-serif mb-1 md:mb-1.5">
                             Sessions
                           </p>
-                          <p className="text-[9px] md:text-[10px] font-light font-serif text-[#595f72] whitespace-nowrap uppercase tracking-widest0">
+                          <p className="text-[12px] md:text-[14px] font-light font-serif text-[#251101] dark:text-zinc-100 tabular-nums leading-none">
                             {patient.visitCount.toString().padStart(2, '0')}
                           </p>
                         </div>
-                        <div className="flex gap-4">
+                        <div className="flex items-end md:items-center gap-6">
                           <div className="text-right">
-                            <p className="text-[8px] uppercase tracking-[0.3em] text-[#595f72] font-serif mb-1 ">
+                            <p className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] text-[#595f72] font-serif mb-1 md:mb-1.5">
                               Latest
                             </p>
-                            <p className="text-[9px] md:text-[10px] font-light font-serif text-[#595f72] whitespace-nowrap uppercase tracking-widest">
+                            <p className="text-[10px] md:text-[11px] font-serif text-[#251101] dark:text-zinc-100 whitespace-nowrap tracking-wider leading-none">
                               {new Date(patient.appointmentDate).toLocaleDateString('en-PH', {
                                 month: 'short',
                                 day: 'numeric',
@@ -280,27 +311,35 @@ export default function MedicalHistoryClient({
                               })}
                             </p>
                           </div>
-                          <div className="md:pl-4">
-                            {expandedId === patient.uniqueId ? (
-                              <ChevronUpIcon className="w-3.5 h-3.5 text-[#251101] dark:text-white" />
-                            ) : (
-                              <ChevronDownIcon className="w-3.5 h-3.5 text-[#595f72]" />
-                            )}
+                          <div className="pl-2">
+                            <div className="w-6 h-6 rounded-full border border-zinc-200 dark:border-zinc-800 flex items-center justify-center transition-colors group-hover:bg-zinc-100 dark:group-hover:bg-zinc-800">
+                              {expandedId === patient.uniqueId ? (
+                                <ChevronUpIcon className="w-3 h-3 text-[#251101] dark:text-white" />
+                              ) : (
+                                <ChevronDownIcon className="w-3 h-3 text-[#595f72]" />
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* EXPANDED PANEL (REDUCED FONT SCALE) */}
-                    {expandedId === patient.uniqueId && (
-                      <div className="pb-8 pt-2 animate-in fade-in slide-in-from-top-2 duration-500">
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-px bg-zinc-50 dark:bg-zinc-900 border border-zinc-50 dark:border-zinc-900 overflow-hidden shadow-sm">
+                    {/* EXPANDED PANEL (Atelier Grid Design) */}
+                    <div
+                      className={`overflow-hidden transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                        expandedId === patient.uniqueId
+                          ? 'max-h-[1500px] opacity-100'
+                          : 'max-h-0 opacity-0'
+                      }`}
+                    >
+                      <div className="p-5 md:p-6 pb-8 md:pb-10">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 shadow-sm">
                           {/* Left: History */}
-                          <div className="lg:col-span-5 bg-white dark:bg-black p-6 md:p-8 space-y-6">
-                            <h4 className="text-[8px] md:text-[9px] uppercase tracking-[0.3em] text-[#595f72] font-medium font-serif  flex items-center gap-2">
-                              <CalendarIcon className="w-3 h-3" /> Visit Count
+                          <div className="lg:col-span-5 bg-white dark:bg-[#050505] p-5 md:p-8 space-y-6 md:space-y-8">
+                            <h4 className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif flex items-center gap-2">
+                              <CalendarIcon className="w-3.5 h-3.5" /> Visit History
                             </h4>
-                            <div className="flex flex-col gap-3">
+                            <div className="flex flex-col gap-4 md:gap-5">
                               {patient.history
                                 .filter(
                                   (v: any) => v.status === 'completed' || v.status === 'confirmed',
@@ -308,30 +347,25 @@ export default function MedicalHistoryClient({
                                 .map((visit: any, index: number) => (
                                   <div
                                     key={visit.id || index}
-                                    className="flex justify-between items-end gap-4 border-b border-zinc-50 dark:border-zinc-900/30 pb-3"
+                                    className="flex justify-between items-start gap-4 border-b border-zinc-100 dark:border-zinc-900/50 pb-4"
                                   >
-                                    <div className="flex flex-wrap gap-2">
+                                    <div className="flex flex-wrap gap-1.5">
                                       {visit.services?.map((serviceName: string, idx: number) => (
                                         <span
                                           key={idx}
-                                          className="text-[7px] md:text-[8px] uppercase tracking-widest border border-zinc-50 dark:border-zinc-800 px-2 py-1 rounded-sm  font-light text-[#595f72]"
+                                          className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] border border-zinc-200 dark:border-zinc-800 px-1.5 py-0.5 font-medium text-[#595f72] font-serif"
                                         >
                                           {serviceName}
                                         </span>
                                       ))}
                                     </div>
 
-                                    <span className="text-[8px] text-[#595f72] font-serif tabular-nums uppercase">
-                                      <p className="text-[9px] md:text-[10px] font-light font-serif text-[#595f72] whitespace-nowrap uppercase tracking-widest">
-                                        {new Date(patient.appointmentDate).toLocaleDateString(
-                                          'en-PH',
-                                          {
-                                            month: 'short',
-                                            day: 'numeric',
-                                            year: 'numeric',
-                                          },
-                                        )}
-                                      </p>
+                                    <span className="text-[9px] md:text-[10px] font-serif text-[#251101] dark:text-zinc-100 whitespace-nowrap tracking-wider text-right mt-0.5">
+                                      {new Date(visit.appointmentDate).toLocaleDateString('en-PH', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                      })}
                                     </span>
                                   </div>
                                 ))}
@@ -339,30 +373,30 @@ export default function MedicalHistoryClient({
                               {patient.history.filter(
                                 (v: any) => v.status === 'completed' || v.status === 'confirmed',
                               ).length === 0 && (
-                                <p className="text-[9px] text-[#595f72] font-serif  py-1">
-                                  No records found.
+                                <p className="text-[10px] md:text-[12px] text-zinc-400 font-serif ">
+                                  No confirmed visits.
                                 </p>
                               )}
                             </div>
                           </div>
 
                           {/* Right: Notes */}
-                          <div className="lg:col-span-7 bg-white dark:bg-black p-6 md:p-8 space-y-6">
+                          <div className="lg:col-span-7 bg-white dark:bg-[#050505] p-5 md:p-8 space-y-6 md:space-y-8 flex flex-col">
                             <div className="flex items-center justify-between">
-                              <h4 className="text-[8px] md:text-[9px] uppercase tracking-[0.3em] text-[#595f72] font-medium font-serif  flex items-center gap-2">
-                                <PencilSquareIcon className="w-3 h-3" /> Clinical Observation
+                              <h4 className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif flex items-center gap-2">
+                                <PencilSquareIcon className="w-3.5 h-3.5" /> Clinical Observation
                               </h4>
                               {savingId === patient.id && (
-                                <span className="text-[7px] uppercase tracking-[0.3em] animate-pulse text-[#595f72] font-medium">
+                                <span className="text-[6px] md:text-[7px] uppercase tracking-[0.3em] animate-pulse text-[#48a9a6] font-medium font-serif">
                                   Saving...
                                 </span>
                               )}
                             </div>
                             <textarea
                               onClick={(e) => e.stopPropagation()}
-                              className="w-full bg-zinc-50/30 dark:bg-zinc-900/20 border border-zinc-50 dark:border-zinc-800 p-5 text-[12px] font-light dark:text-zinc-200 focus:outline-none focus:border-zinc-200 transition-all min-h-[160px] leading-relaxed font-serif"
+                              className="flex-1 w-full bg-zinc-50/50 dark:bg-zinc-900/20 border border-zinc-100 dark:border-zinc-800/50 p-5 text-[13px] md:text-[14px] text-[#251101] dark:text-zinc-200 focus:outline-none focus:border-zinc-300 dark:focus:border-zinc-600 transition-all min-h-[180px] leading-relaxed font-serif resize-none"
                               value={patient.specialistNotes || ''}
-                              placeholder="Directives and observations..."
+                              placeholder="Add directives and observations here..."
                               onChange={(e) => {
                                 const val = e.target.value
                                 setAppointments((prev) =>
@@ -372,14 +406,14 @@ export default function MedicalHistoryClient({
                                 )
                               }}
                             />
-                            <div className="flex justify-end">
+                            <div className="flex justify-end pt-2">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation()
                                   handleSaveNote(patient.id, patient.specialistNotes)
                                 }}
                                 disabled={savingId === patient.id}
-                                className="px-8 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black text-[9px] uppercase tracking-[0.3em] font-medium transition-all hover:bg-black dark:hover:bg-zinc-200 disabled:opacity-50"
+                                className="px-8 py-3 bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[7px] md:text-[8px] uppercase tracking-[0.3em] font-serif transition-all hover:opacity-80 disabled:opacity-50"
                               >
                                 {savingId === patient.id ? 'Processing...' : 'Save Record'}
                               </button>
@@ -387,43 +421,44 @@ export default function MedicalHistoryClient({
                           </div>
                         </div>
                       </div>
-                    )}
+                    </div>
                   </div>
                 ))
               ) : (
-                <div className="py-20 flex items-center justify-center border border-dashed border-zinc-100 dark:border-zinc-900">
-                  <p className="text-[9px] md:text-[10px] uppercase tracking-[0.3em] font-light text-[#595f72] ">
-                    No records
+                <div className="py-24 flex items-center justify-center border border-dashed border-zinc-200 dark:border-zinc-800 mt-4">
+                  <p className="text-[8px] md:text-[10px] uppercase tracking-widest text-[#595f72] font-serif">
+                    No records found
                   </p>
                 </div>
               )}
             </div>
           </section>
 
-          {/* PAGINATION (REDUCED FONT SCALE) */}
+          {/* PAGINATION */}
           {totalPages > 1 && (
-            <div className="mt-16 flex items-center justify-between pt-8 border-t border-zinc-50 dark:border-zinc-900">
+            <div className="flex items-center justify-between pt-8 border-t border-zinc-100 dark:border-zinc-900/50">
               <button
                 disabled={currentPage <= 1}
                 onClick={() => updateFilters(currentPage - 1)}
-                className="flex items-center gap-3 text-[9px] font-medium uppercase tracking-[0.3em] text-[#595f72] hover:text-zinc-900 dark:hover:text-white disabled:opacity-10 transition-all"
+                className="flex items-center gap-3 text-[7px] md:text-[8px] font-medium uppercase tracking-[0.3em] text-[#595f72] hover:text-[#251101] dark:hover:text-white disabled:opacity-20 transition-all font-serif"
               >
                 <ChevronLeftIcon className="w-3.5 h-3.5" /> Previous
               </button>
-              <div className="text-[10px] font-medium font-serif text-[#595f72] dark:text-zinc-400 tracking-widest">
+              <div className="text-[10px] md:text-[11px] font-serif text-[#595f72] tracking-widest">
                 {currentPage} / {totalPages}
               </div>
               <button
                 disabled={currentPage >= totalPages}
                 onClick={() => updateFilters(currentPage + 1)}
-                className="flex items-center gap-3 text-[9px] font-medium uppercase tracking-[0.3em] text-[#595f72] hover:text-zinc-900 dark:hover:text-white disabled:opacity-10 transition-all"
+                className="flex items-center gap-3 text-[7px] md:text-[8px] font-medium uppercase tracking-[0.3em] text-[#595f72] hover:text-[#251101] dark:hover:text-white disabled:opacity-20 transition-all font-serif"
               >
                 Next <ChevronRightIcon className="w-3.5 h-3.5" />
               </button>
             </div>
           )}
 
-          <div className="mt-20 pt-10 flex justify-center border-t border-zinc-50 dark:border-zinc-900 opacity-40 hover:opacity-100 transition-opacity">
+          {/* FOOTER */}
+          <div className="pt-8 md:pt-12 flex justify-center border-t border-zinc-50 dark:border-zinc-900/50 opacity-40 hover:opacity-100 transition-opacity">
             <BackToHome />
           </div>
         </div>
@@ -435,11 +470,15 @@ export default function MedicalHistoryClient({
 function DirectorySkeleton() {
   return (
     <div className="min-h-screen bg-white dark:bg-black pt-32 px-6">
-      <div className="max-w-5xl mx-auto animate-pulse">
-        <div className="h-[1px] bg-zinc-100 dark:bg-zinc-900 mb-12 w-full" />
+      <div className="max-w-4xl mx-auto flex flex-col gap-20 animate-pulse">
+        <div className="space-y-4">
+          <div className="h-[1px] bg-zinc-100 dark:bg-zinc-900 w-12" />
+          <div className="h-4 bg-zinc-100 dark:bg-zinc-900 w-24" />
+          <div className="h-10 bg-zinc-100 dark:bg-zinc-900 w-64" />
+        </div>
         <div className="space-y-6">
-          <div className="h-20 border-b border-zinc-50 w-full" />
-          <div className="h-20 border-b border-zinc-50 w-full" />
+          <div className="h-20 border-b border-zinc-50 dark:border-zinc-900/50 w-full" />
+          <div className="h-20 border-b border-zinc-50 dark:border-zinc-900/50 w-full" />
         </div>
       </div>
     </div>

@@ -15,7 +15,7 @@ const SlideItem = ({ url, priority }: { url: string; priority: boolean }) => {
 
   if (error || !finalImageUrl) {
     return (
-      <div className="w-full h-full bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-center text-[8px] uppercase tracking-[0.4em] text-zinc-400 font-serif italic">
+      <div className="w-full h-full bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-center text-[8px] uppercase tracking-[0.4em] text-zinc-400 font-serif ">
         Media Unavailable
       </div>
     )
@@ -127,7 +127,7 @@ export default function Services() {
   if (loading)
     return (
       <div className="bg-white dark:bg-[#050505] py-60 text-center flex items-center justify-center">
-        <span className="text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.5em] text-[9px] font-serif italic animate-pulse">
+        <span className="text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.5em] text-[9px] font-serif  animate-pulse">
           Loading ...
         </span>
       </div>
@@ -147,7 +147,7 @@ export default function Services() {
                   {service.images && service.images.length > 0 ? (
                     <ServiceSlider images={service.images} />
                   ) : (
-                    <div className="h-[450px] w-full bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-center text-[8px] uppercase tracking-[0.4em] text-zinc-400 font-serif italic">
+                    <div className="h-[450px] w-full bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-center text-[8px] uppercase tracking-[0.4em] text-zinc-400 font-serif ">
                       Media Offline
                     </div>
                   )}

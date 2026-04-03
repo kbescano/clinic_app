@@ -55,7 +55,7 @@ export default function MassUpload() {
                 }`}
               />
               <div className="space-y-1">
-                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-zinc-400 font-serif italic">
+                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-zinc-400 font-serif ">
                   Data Integration
                 </p>
                 <h2 className="text-[20px] md:text-[24px] font-light tracking-tight dark:text-white uppercase font-serif leading-tight">
@@ -71,7 +71,7 @@ export default function MassUpload() {
                   <p className="text-[8px] md:text-[9px] font-medium uppercase tracking-[0.3em] dark:text-zinc-300 font-serif">
                     Format Requirement
                   </p>
-                  <p className="text-[9px] md:text-[10px] text-zinc-400 mt-2 leading-relaxed font-serif italic opacity-70">
+                  <p className="text-[9px] md:text-[10px] text-zinc-400 mt-2 leading-relaxed font-serif  opacity-70">
                     Ensure your data is a valid JSON array of appointment objects.
                   </p>
                 </div>
@@ -87,7 +87,7 @@ export default function MassUpload() {
                 >
                   <div className="flex items-center gap-3">
                     <CheckCircleIcon className="w-3 h-3" />
-                    <span className="text-[8px] md:text-[9px] uppercase tracking-[0.2em] font-medium font-serif italic">
+                    <span className="text-[8px] md:text-[9px] uppercase tracking-[0.2em] font-medium font-serif ">
                       {status.msg}
                     </span>
                   </div>

@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react'
 import FadeIn from '../../components/FadeIn'
 import { ClockIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
-import { ChevronDownIcon } from '@heroicons/react/24/solid'
 import BackToHome from '../../components/BackToHome'
+import { RegistrySkeleton } from '../../components/RegistrySkeleton'
 
 export const dynamic = 'force-dynamic'
 
@@ -54,129 +54,170 @@ export default function AdminAnalytics() {
   if (error) return <ErrorState />
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 selection:bg-zinc-100 overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 px-4 md:px-8 selection:bg-zinc-100 overflow-x-hidden font-sans">
       <FadeIn>
-        <div className="max-w-5xl mx-auto px-4 md:px-8">
-          {/* HEADER (REDUCED FONT SCALE) */}
-          <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 md:mb-16">
-            <div className="flex items-start gap-4 md:gap-5">
+        {/* UNIFORM SPACING WRAPPER: Locked to max-w-4xl for focused reading width */}
+        <div className="max-w-4xl mx-auto flex flex-col gap-14 md:gap-20">
+          {/* HEADER SECTION */}
+          <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 md:gap-12">
+            <div className="space-y-4 relative">
               <div
-                className={`w-[1px] bg-zinc-900 dark:bg-white transition-all duration-1000 ease-out origin-top ${
-                  drawLine ? 'h-10 md:h-12 opacity-100' : 'h-0 opacity-0'
+                className={`absolute -left-4 md:-left-8 top-0 w-[1px] bg-zinc-900 dark:bg-white transition-all duration-1000 ease-out origin-top ${
+                  drawLine ? 'h-full opacity-100' : 'h-0 opacity-0'
                 }`}
               />
-              <div className="space-y-1">
-                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif ">
+              <div className="flex items-center gap-4">
+                <p className="text-[8px] md:text-[10px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
                   Clinical Metrics
                 </p>
-                <h1 className="text-[20px] md:text-[24px] font-light tracking-tight font-serif uppercase leading-none">
-                  Analytics
-                </h1>
               </div>
+              <h1 className="text-[28px] md:text-[48px] font-light tracking-tighter font-serif leading-none">
+                Analytics
+              </h1>
             </div>
-            <div className="flex items-center gap-4 self-end md:self-auto justify-end">
-              <div className="relative group">
-                <select
-                  value={range}
-                  onChange={(e) => setRange(e.target.value)}
-                  className="appearance-none bg-transparent border-none py-0 pl-0 pr-4 text-[8px] md:text-[9px] uppercase tracking-[0.25em] font-medium font-serif text-[#595f72] hover:text-[#251101] dark:hover:text-white cursor-pointer outline-none transition-colors text-right"
+
+            {/* LUXURY SEGMENTED CONTROL (4-Way Slider) */}
+            <div className="self-center md:self-auto relative flex items-center">
+              {loading && (
+                <div className="absolute -left-4 top-1/2 -translate-y-1/2">
+                  <RegistrySkeleton />
+                </div>
+              )}
+              <div className="inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative">
+                <div
+                  className="absolute top-1.5 bottom-1.5 w-[72px] sm:w-[84px] md:w-28 bg-white dark:bg-zinc-800 rounded-full shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                  style={{
+                    transform:
+                      range === 'today'
+                        ? 'translateX(0)'
+                        : range === '7days'
+                          ? 'translateX(100%)'
+                          : range === 'thisMonth'
+                            ? 'translateX(200%)'
+                            : 'translateX(300%)',
+                  }}
+                />
+                <button
+                  onClick={() => setRange('today')}
+                  className={`relative z-10 w-[72px] sm:w-[84px] md:w-28 py-2.5 md:py-2 text-[6px] sm:text-[7px] md:text-[8px] uppercase tracking-[0.2em] md:tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${
+                    range === 'today' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'
+                  }`}
                 >
-                  <option value="today" className="text-right bg-white dark:bg-black">
-                    Today
-                  </option>
-                  <option value="7days" className="text-right bg-white dark:bg-black">
-                    Last 7 Days
-                  </option>
-                  <option value="thisMonth" className="text-right bg-white dark:bg-black">
-                    This Month
-                  </option>
-                  <option value="all" className="text-right bg-white dark:bg-black">
-                    All Time
-                  </option>
-                </select>
-
-                <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-[#595f72] pointer-events-none" />
-
-                {loading && (
-                  <div className="absolute -left-6 top-1/2 -translate-y-1/2">
-                    <ArrowPathIcon className="h-2 w-2 text-[#595f72] animate-spin" />
-                  </div>
-                )}
+                  Today
+                </button>
+                <button
+                  onClick={() => setRange('7days')}
+                  className={`relative z-10 w-[72px] sm:w-[84px] md:w-28 py-2.5 md:py-2 text-[6px] sm:text-[7px] md:text-[8px] uppercase tracking-[0.2em] md:tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${
+                    range === '7days' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'
+                  }`}
+                >
+                  Last 7 Days
+                </button>
+                <button
+                  onClick={() => setRange('thisMonth')}
+                  className={`relative z-10 w-[72px] sm:w-[84px] md:w-28 py-2.5 md:py-2 text-[6px] sm:text-[7px] md:text-[8px] uppercase tracking-[0.2em] md:tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${
+                    range === 'thisMonth' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'
+                  }`}
+                >
+                  This Month
+                </button>
+                <button
+                  onClick={() => setRange('all')}
+                  className={`relative z-10 w-[72px] sm:w-[84px] md:w-28 py-2.5 md:py-2 text-[6px] sm:text-[7px] md:text-[8px] uppercase tracking-[0.2em] md:tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${
+                    range === 'all' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'
+                  }`}
+                >
+                  All Time
+                </button>
               </div>
             </div>
           </header>
-          <div className="animate-in fade-in duration-700">
-            {/* PRIMARY METRIC GRID (PATTERN MATCHED) */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-px bg-zinc-100 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-900 mb-16 md:mb-20 overflow-hidden shadow-sm">
-              {/* Revenue Slot: Scaled down from 7xl */}
-              <div className="lg:col-span-6 bg-white dark:bg-black p-8 md:p-12 flex flex-col justify-center">
-                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.35em] text-[#595f72] mb-4 font-serif ">
+
+          <section
+            className={`animate-in fade-in duration-700 delay-150 ease-out fill-mode-both flex flex-col gap-10 md:gap-14 ${loading ? 'opacity-50 blur-[2px] transition-all' : 'opacity-100 blur-0 transition-all'}`}
+          >
+            {/* PRIMARY METRIC GRID (Atelier Hairline Design) */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 shadow-sm">
+              {/* Revenue Slot */}
+              <div className="md:col-span-6 bg-white dark:bg-[#050505] p-6 md:p-10 flex flex-col justify-between group transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/20">
+                <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-6 md:mb-8 font-serif">
                   Period Revenue
                 </p>
-                <div className="flex items-baseline gap-2 mb-8">
-                  <span className="text-2xl md:text-3xl font-light tracking-tighter font-serif">
-                    ₱{data?.periodRevenue?.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex gap-6">
-                  <div className="flex flex-col border-l border-zinc-100 dark:border-zinc-800 pl-4">
-                    <span className="text-[7px] md:text-[8px] uppercase tracking-widest text-[#595f72] mb-1 ">
-                      Previous
-                    </span>
-                    <span className="text-[13px] md:text-[14px] font-light font-serif">
-                      ₱{data?.prevPeriodRevenue?.toLocaleString()}
+                <div>
+                  <div className="flex items-baseline gap-2 mb-6 md:mb-8">
+                    <span className="text-[28px] md:text-[40px] font-light tracking-tight font-serif tabular-nums text-[#251101] dark:text-zinc-100">
+                      ₱{data?.periodRevenue?.toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex flex-col border-l border-zinc-100 dark:border-zinc-800 pl-4">
-                    <span className="text-[7px] md:text-[8px] uppercase tracking-widest text-[#595f72] mb-1 ">
-                      Growth
-                    </span>
-                    <span
-                      className={`text-[13px] md:text-[14px] font-light font-serif ${(data?.growth ?? 0) >= 0 ? 'text-emerald-700/70' : 'text-rose-700/70'}`}
-                    >
-                      {(data?.growth ?? 0) > 0 ? '+' : ''}
-                      {data?.growth}%
-                    </span>
+                  <div className="flex gap-6 md:gap-10">
+                    <div className="flex flex-col border-l border-zinc-200 dark:border-zinc-800/50 pl-4 md:pl-5">
+                      <span className="text-[6px] md:text-[8px] uppercase tracking-[0.3em] text-[#595f72] mb-1.5 font-serif">
+                        Previous
+                      </span>
+                      <span className="text-[12px] md:text-[14px] font-serif tabular-nums text-[#251101] dark:text-zinc-100">
+                        ₱{data?.prevPeriodRevenue?.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex flex-col border-l border-zinc-200 dark:border-zinc-800/50 pl-4 md:pl-5">
+                      <span className="text-[6px] md:text-[8px] uppercase tracking-[0.3em] text-[#595f72] mb-1.5 font-serif">
+                        Growth
+                      </span>
+                      <span
+                        className={`text-[12px] md:text-[14px] font-serif tabular-nums ${(data?.growth ?? 0) >= 0 ? 'text-[#248232] dark:text-[#48a9a6]' : 'text-[#d7263d]'}`}
+                      >
+                        {(data?.growth ?? 0) > 0 ? '+' : ''}
+                        {data?.growth}%
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Efficiency Slot: Scaled down from 5xl */}
-              <div className="lg:col-span-3 bg-white dark:bg-black p-8 md:p-12 flex flex-col justify-center border-t lg:border-t-0 lg:border-l border-zinc-100 dark:border-zinc-900">
-                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.35em] text-[#595f72] mb-4 font-serif ">
+              {/* Efficiency Slot */}
+              <div className="md:col-span-3 bg-white dark:bg-[#050505] p-6 md:p-10 flex flex-col justify-between group transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/20">
+                <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-6 md:mb-8 font-serif">
                   Growth Index
                 </p>
-                <span className="text-xl md:text-2xl font-light tracking-tighter font-serif mb-6">
-                  {data?.growth}%
-                </span>
-                <div className="w-full h-[1px] bg-zinc-50 dark:bg-zinc-900">
-                  <div
-                    className="h-full bg-zinc-900 dark:bg-white transition-all duration-1000"
-                    style={{ width: `${Math.min(Math.max(data?.growth || 0, 0), 100)}%` }}
-                  />
+                <div>
+                  <span className="text-[20px] md:text-[28px] font-light tracking-tight font-serif mb-4 md:mb-6 block text-[#251101] dark:text-zinc-100 tabular-nums">
+                    {data?.growth}%
+                  </span>
+                  <div className="w-full h-[1px] bg-zinc-100 dark:bg-zinc-900 mt-2">
+                    <div
+                      className={`h-full transition-all duration-1000 ${(data?.growth ?? 0) >= 0 ? 'bg-[#251101] dark:bg-white' : 'bg-[#d7263d]'}`}
+                      style={{
+                        width: `${Math.min(Math.max(Math.abs(data?.growth || 0), 0), 100)}%`,
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
-              {/* Category List Slot: Scaled down from 5xl */}
-              <div className="lg:col-span-3 bg-white dark:bg-black p-8 md:p-12 flex flex-col justify-between border-t lg:border-t-0 lg:border-l border-zinc-100 dark:border-zinc-900">
+              {/* Category List Slot */}
+              <div className="md:col-span-3 bg-white dark:bg-[#050505] p-6 md:p-10 flex flex-col justify-between group transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/20">
                 <div>
-                  <p className="text-[8px] md:text-[9px] uppercase tracking-[0.35em] text-[#595f72] mb-4 font-serif ">
+                  <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-4 md:mb-6 font-serif">
                     Total Sessions
                   </p>
-                  <span className="text-xl md:text-2xl font-light tracking-tighter font-serif">
+                  <span className="text-[20px] md:text-[28px] font-light tracking-tight font-serif text-[#251101] dark:text-zinc-100 tabular-nums">
                     {data?.totalAppointments}
                   </span>
                 </div>
-                <div className="flex flex-col gap-2 mt-8">
+                <div className="flex flex-col gap-2.5 mt-6 md:mt-8">
+                  {Object.entries(data?.categorySales || {}).length === 0 && (
+                    <span className="text-[9px] md:text-[10px] text-[#595f72] font-serif ">
+                      No data
+                    </span>
+                  )}
                   {Object.entries(data?.categorySales || {}).map(([name, val]) => (
                     <div
                       key={name}
-                      className="flex justify-between items-end gap-2 border-b border-zinc-50 dark:border-zinc-900/50 py-1.5"
+                      className="flex justify-between items-start gap-4 border-b border-zinc-100 dark:border-zinc-900/50 py-2"
                     >
-                      <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-[#595f72] font-serif">
+                      <span className="text-[7px] md:text-[8px] uppercase tracking-[0.2em] text-[#595f72] font-serif text-wrap leading-[1.5]">
                         {name}
                       </span>
-                      <span className="text-[9px] font-serif tabular-nums text-[#595f72]">
+                      <span className="text-[9px] md:text-[10px] font-serif tabular-nums text-[#251101] dark:text-zinc-100 shrink-0 mt-0.5">
                         ₱{val.toLocaleString()}
                       </span>
                     </div>
@@ -185,51 +226,55 @@ export default function AdminAnalytics() {
               </div>
             </div>
 
-            {/* SECONDARY SECTION: RECENT FEED (REDUCED FONT SCALE) */}
-            <div className="max-w-5xl">
-              <div className="flex items-center justify-between mb-8 border-b border-zinc-900 dark:border-white pb-3">
-                <h2 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] text-[#595f72] font-serif flex items-center gap-3  font-medium">
-                  <ClockIcon className="w-3 h-3 opacity-40" /> Recent Activity
+            {/* SECONDARY SECTION: RECENT FEED */}
+            <div className="w-full flex flex-col gap-6 md:gap-8">
+              <div className="flex items-baseline justify-between border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
+                <h2 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif flex items-center gap-2">
+                  <ClockIcon className="w-3.5 h-3.5" /> Recent Activity
                 </h2>
               </div>
 
-              <div className="divide-y divide-zinc-50 dark:divide-zinc-900/50">
+              <div className="flex flex-col border-b border-zinc-100 dark:border-zinc-900/50">
                 {data?.recent && data.recent.length > 0 ? (
                   data.recent.map((booking) => (
                     <div
                       key={booking.id}
-                      className="group py-6 md:py-7 transition-colors flex justify-between items-center hover:bg-zinc-50/30 dark:hover:bg-zinc-900/10"
+                      className="group py-5 px-5 md:px-2 transition-all duration-500 flex flex-row justify-between items-center hover:bg-zinc-50/50 dark:hover:bg-zinc-900/10 border-t border-zinc-100 dark:border-zinc-900/50 first:border-t-0"
                     >
-                      <div className="space-y-1">
-                        <span className="text-[13px] md:text-[14px] font-serif tracking-wide text-[#251101] dark:text-zinc-100 capitalize block">
+                      <div className="flex flex-col gap-1 md:gap-1.5">
+                        <span className="text-[14px] md:text-[16px] font-serif tracking-tight text-[#251101] dark:text-zinc-100 capitalize leading-none">
                           {booking.firstName} {booking.surname}
                         </span>
-                        <span className="text-[8px] md:text-[9px] text-[#595f72] uppercase tracking-[0.3em] font-medium font-serif ">
-                          {booking.service}
-                        </span>
+                        <div className="flex items-center mt-0.5">
+                          <span className="text-[6px] md:text-[7px] text-[#595f72] uppercase tracking-[0.2em] border border-zinc-200 dark:border-zinc-800 px-1.5 py-0.5 font-medium font-serif">
+                            {booking.service}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-[12px] md:text-[13px] font-light font-serif text-[#248232] dark:text-zinc-100 tabular-nums block">
+
+                      <div className="flex flex-col items-end gap-1.5 md:gap-1 text-right">
+                        <span className="text-[13px] md:text-[14px] font-light font-serif text-[#248232] dark:text-[#48a9a6] tabular-nums leading-none">
                           +₱{booking.price?.toLocaleString()}
                         </span>
-                        <span className="text-[8px] md:text-[9px] text-[#595f72] uppercase tracking-[0.2em] font-serif ">
+                        <span className="text-[8px] md:text-[9px] text-[#595f72] uppercase tracking-[0.2em] font-serif leading-none mt-0.5">
                           {booking.date}
                         </span>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div className="py-20 flex flex-col items-center justify-center border border-dashed border-zinc-100 dark:border-zinc-900">
-                    <p className="text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif ">
+                  <div className="py-24 flex items-center justify-center border border-dashed border-zinc-200 dark:border-zinc-800 mt-2">
+                    <p className="text-[8px] md:text-[10px] uppercase tracking-widest text-[#595f72] font-serif">
                       Archive Clear
                     </p>
                   </div>
                 )}
               </div>
             </div>
-          </div>
+          </section>
 
-          <div className="mt-24 pt-10 flex justify-center border-t border-zinc-50 dark:border-zinc-900 opacity-40 hover:opacity-100 transition-opacity">
+          {/* FOOTER */}
+          <div className="pt-8 md:pt-12 flex justify-center border-t border-zinc-50 dark:border-zinc-900/50 opacity-40 hover:opacity-100 transition-opacity">
             <BackToHome />
           </div>
         </div>
@@ -240,14 +285,14 @@ export default function AdminAnalytics() {
 
 function ErrorState() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-black">
-      <div className="text-center space-y-8">
-        <p className="text-[9px] uppercase tracking-[0.5em] text-[#595f72] font-serif ">
+    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#050505]">
+      <div className="text-center space-y-8 animate-in fade-in zoom-in duration-700">
+        <p className="text-[9px] uppercase tracking-[0.5em] text-[#595f72] font-serif">
           Data Stream Error
         </p>
         <button
           onClick={() => window.location.reload()}
-          className="px-8 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black text-[9px] uppercase tracking-[0.4em] font-medium transition-all"
+          className="px-8 py-3 bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[8px] uppercase tracking-[0.3em] font-serif transition-all hover:opacity-80"
         >
           Retry Sync
         </button>

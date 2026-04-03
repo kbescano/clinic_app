@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation' // Added for route detection
 import ContactTrigger from './ContactTrigger'
 import FadeIn from './FadeIn'
 
@@ -13,11 +14,11 @@ interface NavbarProps {
 export default function Navbar({ contactData, headerData }: NavbarProps) {
   const [isVisible, setIsVisible] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
+  const pathname = usePathname() // Capture current route
 
   // --- SCROLL LOGIC ---
   useEffect(() => {
     const controlNavbar = () => {
-      // Show navbar if at the top, or if scrolling up. Hide on scroll down.
       if (typeof window !== 'undefined') {
         if (window.scrollY > lastScrollY && window.scrollY > 100) {
           setIsVisible(false) // Scrolling Down
@@ -40,13 +41,25 @@ export default function Navbar({ contactData, headerData }: NavbarProps) {
     >
       <FadeIn>
         <div className="max-w-[1440px] mx-auto px-6 md:px-10 h-20 md:h-24 flex items-center justify-between">
-          {/* LEFT PILLAR (Empty to balance the layout) */}
-          <div className="flex-1 hidden md:block" />
+          {/* LEFT PILLAR: THE GAME CHANGER BUTTON (Home Page + Desktop Only) */}
+          <div className="flex-1 hidden md:flex items-center justify-start">
+            {pathname === '/' && (
+              <Link
+                href="/booking"
+                className="group relative py-2 overflow-hidden animate-in fade-in slide-in-from-left-4 duration-1000 ease-out"
+              >
+                <span className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] font-medium text-[#595f72] group-hover:text-[#251101] dark:group-hover:text-white transition-all duration-500 ease-out font-serif inline-block transform group-hover:-translate-y-[1px]">
+                  Book Appointment
+                </span>
+                {/* KINETIC LINE ANIMATION */}
+                <span className="absolute bottom-0 left-0 w-0 h-[1px] bg-[#251101] dark:bg-zinc-400 transition-all duration-500 ease-out group-hover:w-full" />
+              </Link>
+            )}
+          </div>
 
           {/* CENTER PILLAR: BRANDING */}
           <div className="flex-none text-center">
             <Link href="/" className="flex flex-col items-center group">
-              {/* ATELIER LOGO: Small, High Tracking */}
               <span className="text-[10px] uppercase tracking-[0.6em] font-bold text-[#251101] dark:text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors font-serif">
                 {headerData?.clinicName || 'Clinic Registry'}
               </span>

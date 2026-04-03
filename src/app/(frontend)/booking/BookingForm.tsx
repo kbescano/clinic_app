@@ -51,19 +51,20 @@ function BookingFormContent({
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // --- 1. INSTANT INITIALIZATION (Bypasses useSearchParams lag) ---
+  // --- INITIALIZATION ---
   const hasPrefillData = !!(initialData.email && initialData.fn)
-
   const [showModal, setShowModal] = useState(!hasPrefillData)
   const [existingEmail, setExistingEmail] = useState(initialData.email)
+
+  // Initialize state with prefilled data immediately
   const [personalInfo, setPersonalInfo] = useState({
-    firstName: initialData.fn,
-    surname: initialData.sn,
-    phone: initialData.ph,
-    email: initialData.email,
+    firstName: initialData.fn || '',
+    surname: initialData.sn || '',
+    phone: initialData.ph || '',
+    email: initialData.email || '',
   })
 
-  // --- 2. CORE STATE ---
+  // --- CORE STATE ---
   const [isExisting, setIsExisting] = useState<boolean | null>(null)
   const [isVerifying, setIsVerifying] = useState(false)
   const [errorToast, setErrorToast] = useState<string | null>(null)
@@ -73,13 +74,37 @@ function BookingFormContent({
   const [bookings, setBookings] = useState<BookingEntry[]>([])
   const [drawLine, setDrawLine] = useState(false)
 
-  const [currentServiceId, setCurrentServiceId] = useState('')
+  const [currentServiceId, setCurrentServiceId] = useState(searchParams.get('serviceId') || '')
   const [extraServiceId, setExtraServiceId] = useState('')
   const [showExtraService, setShowExtraService] = useState(false)
   const [currentDate, setCurrentDate] = useState('')
   const [currentTime, setCurrentTime] = useState('')
   const [busySlots, setBusySlots] = useState<string[]>([])
   const [loadingSlots, setLoadingSlots] = useState(false)
+
+  // --- PROGRESSIVE DISCLOSURE LOGIC ---
+  const isAddingGuest = bookings.length > 0
+  const showIdentitySection = !hasPrefillData || isAddingGuest
+
+  const showFirstName = currentServiceId !== ''
+  const showSurname = showFirstName && personalInfo.firstName.trim().length > 0
+
+  const showPhone = showIdentitySection && showSurname && !initialData.ph
+  const showEmail =
+    showIdentitySection &&
+    (initialData.ph ? showSurname : showPhone && isValidPHPhone(personalInfo.phone)) &&
+    !initialData.email
+
+  const identitySatisfied =
+    hasPrefillData && !isAddingGuest
+      ? currentServiceId !== ''
+      : personalInfo.firstName.trim().length > 0 &&
+        personalInfo.surname.trim().length > 0 &&
+        (initialData.ph || isValidPHPhone(personalInfo.phone)) &&
+        (initialData.email || isValidEmail(personalInfo.email))
+
+  const showDate = identitySatisfied && bookings.length === 0
+  const showTime = bookings.length > 0 || currentDate !== ''
 
   const timeSlots = [
     '09:00',
@@ -107,15 +132,15 @@ function BookingFormContent({
 
   const activeDate = bookings.length > 0 ? bookings[0].date : currentDate
 
-  // --- 3. EFFECTS ---
+  // --- EFFECTS ---
   useEffect(() => {
     if (state?.error) setErrorToast(state.error)
   }, [state])
 
-  // Trigger DrawLine immediately for prefilled users
   useEffect(() => {
     if (!showModal || hasPrefillData) {
-      setDrawLine(true)
+      const timer = setTimeout(() => setDrawLine(true), 500)
+      return () => clearTimeout(timer)
     } else {
       setDrawLine(false)
     }
@@ -133,46 +158,37 @@ function BookingFormContent({
     updateAvailability()
   }, [activeDate])
 
-  // Handles dynamic URL changes (Back button, etc.)
+  // Sync from URL only if we are on the first booking and fields are empty
   useEffect(() => {
-    // --- FIX: Prevent URL params from overwriting the blank form when adding a guest ---
     if (bookings.length > 0) return
-
-    const email = searchParams.get('email') || ''
-    const fn = searchParams.get('fn') || ''
-
-    if (email && fn && (email !== personalInfo.email || fn !== personalInfo.firstName)) {
-      setPersonalInfo({
+    const fn = searchParams.get('fn')
+    const sn = searchParams.get('sn')
+    if (fn && !personalInfo.firstName) {
+      setPersonalInfo((prev) => ({
+        ...prev,
         firstName: fn,
-        surname: searchParams.get('sn') || '',
-        phone: searchParams.get('ph') || '',
-        email: email,
-      })
-      setExistingEmail(email)
-      setShowModal(false)
+        surname: sn || prev.surname,
+        email: searchParams.get('email') || prev.email,
+        phone: searchParams.get('ph') || prev.phone,
+      }))
     }
-  }, [searchParams, personalInfo.email, personalInfo.firstName, bookings.length])
+  }, [searchParams, bookings.length])
 
-  // --- 4. HANDLERS ---
   const handleLookup = async () => {
     if (!isValidEmail(existingEmail)) {
       setModalError('Invalid email format.')
       return
     }
-
     setIsVerifying(true)
     setModalError(null)
-
     try {
       const normalizedEmail = existingEmail.trim().toLowerCase()
       const data = (await getCustomerByEmail(normalizedEmail)) as any
-
       if (!data) {
         setModalError('No record found with this email.')
         setIsVerifying(false)
         return
       }
-
       if (data.appointments && data.appointments.length > 0) {
         const simplifiedApts = data.appointments.map((apt: any) => ({
           date: apt.date || apt.appointmentDate,
@@ -181,7 +197,6 @@ function BookingFormContent({
           surname: apt.surname,
           isGuest: apt.isGuest,
         }))
-
         const statusParams = new URLSearchParams({
           fn: data.firstName || '',
           sn: data.surname || '',
@@ -189,35 +204,29 @@ function BookingFormContent({
           ph: data.phone || '',
           apts: JSON.stringify(simplifiedApts),
         })
-
+        if (currentServiceId) statusParams.append('serviceId', currentServiceId)
         startTransition(() => {
           setShowModal(false)
           router.push(`/booking/status?${statusParams.toString()}`)
         })
         return
       }
-
       const bookingParams = new URLSearchParams({
         fn: data.firstName || '',
         sn: data.surname || '',
         email: normalizedEmail,
         ph: data.phone || '',
       })
-
+      if (currentServiceId) bookingParams.append('serviceId', currentServiceId)
       startTransition(() => {
         setShowModal(false)
         router.replace(`/booking?${bookingParams.toString()}`)
       })
     } catch (err) {
-      console.error('Lookup Error:', err)
       setModalError('Server error. Please try again.')
       setIsVerifying(false)
     }
   }
-
-  useEffect(() => {
-    router.prefetch('/booking/status')
-  }, [])
 
   const handleAddPerson = () => {
     setErrorToast(null)
@@ -228,18 +237,9 @@ function BookingFormContent({
       !activeDate ||
       !currentTime
     ) {
-      setErrorToast('Complete Name, Service, and Time.')
+      setErrorToast('Complete missing fields.')
       return
     }
-    if (!isValidEmail(personalInfo.email)) {
-      setErrorToast('Invalid email.')
-      return
-    }
-    if (!isValidPHPhone(personalInfo.phone)) {
-      setErrorToast('Invalid PH phone format.')
-      return
-    }
-
     const entry: BookingEntry = {
       ...personalInfo,
       serviceId: currentServiceId,
@@ -249,6 +249,8 @@ function BookingFormContent({
     const batch = [entry]
     if (showExtraService && extraServiceId) batch.push({ ...entry, serviceId: extraServiceId })
     setBookings([...bookings, ...batch])
+
+    // Clear name but keep primary contact info for next guest
     setPersonalInfo((prev) => ({ ...prev, firstName: '', surname: '' }))
     setCurrentServiceId('')
     setExtraServiceId('')
@@ -261,14 +263,6 @@ function BookingFormContent({
     setErrorToast(null)
     const finalEntries = [...bookings]
     if (personalInfo.firstName && currentTime) {
-      if (!isValidEmail(personalInfo.email)) {
-        setErrorToast('Valid email required.')
-        return
-      }
-      if (!isValidPHPhone(personalInfo.phone)) {
-        setErrorToast('Valid PH phone required.')
-        return
-      }
       const currentPerson = {
         ...personalInfo,
         serviceId: currentServiceId,
@@ -279,11 +273,6 @@ function BookingFormContent({
       if (showExtraService && extraServiceId)
         finalEntries.push({ ...currentPerson, serviceId: extraServiceId })
     }
-    if (finalEntries.length === 0) {
-      setErrorToast('Add at least one appointment.')
-      return
-    }
-
     const finalData = new FormData()
     startTransition(() => {
       finalEntries.forEach((b) => {
@@ -306,7 +295,6 @@ function BookingFormContent({
       setShowExtraService(false)
       setCurrentDate('')
       setCurrentTime('')
-      setErrorToast(null)
       setPersonalInfo({ firstName: '', surname: '', phone: '', email: '' })
       setIsExisting(null)
       setShowModal(true)
@@ -318,62 +306,65 @@ function BookingFormContent({
     services.find((s) => String(s.id) === id)?.title || 'Service'
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 selection:bg-zinc-100 overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 px-4 md:px-8 selection:bg-zinc-100 overflow-x-hidden font-sans">
       {errorToast && (
         <Notification message={errorToast} type="error" onClose={() => setErrorToast(null)} />
       )}
 
       {showModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
-          <div className="w-full max-w-md bg-white dark:bg-black p-10 md:p-14 border border-zinc-50 dark:border-zinc-900 shadow-2xl text-center">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/80 dark:bg-black/80 backdrop-blur-xl p-4">
+          <div className="w-full max-w-lg bg-white dark:bg-[#050505] p-10 md:p-16 border border-zinc-100 dark:border-zinc-900 shadow-2xl text-center">
             {isExisting === null ? (
-              <div className="animate-in fade-in zoom-in-95 duration-300">
-                <h3 className="text-[20px] md:text-[22px] font-light mb-12 font-serif uppercase tracking-tight">
+              <div className="animate-in fade-in zoom-in-95 duration-500 flex flex-col items-center">
+                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.5em] text-[#595f72] font-serif mb-4">
+                  Welcome!
+                </p>
+                <h3 className="text-[24px] md:text-[32px] font-light mb-14 font-serif tracking-tighter text-[#251101] dark:text-zinc-100 leading-none">
                   Visited us before?
                 </h3>
-                <div className="space-y-4">
+                <div className="flex flex-col gap-4 w-full">
                   <button
                     onClick={() => setIsExisting(true)}
-                    className="w-full py-5 bg-zinc-900 dark:bg-white text-white dark:text-black text-[8px] font-medium uppercase tracking-[0.4em] font-serif transition-all hover:bg-zinc-800 dark:hover:bg-zinc-100"
+                    className="w-full py-5 bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[8px] md:text-[9px] font-medium uppercase tracking-[0.4em] font-serif transition-all hover:opacity-90"
                   >
                     Yes, I&apos;m a current customer
                   </button>
                   <button
                     onClick={() => setShowModal(false)}
-                    className="w-full py-5 border border-zinc-100 dark:border-zinc-900 text-[#595f72] text-[8px] font-medium uppercase tracking-[0.4em] font-serif transition-all hover:text-[#251101] dark:hover:text-white"
+                    className="w-full py-5 border border-zinc-100 dark:border-zinc-900 text-[#595f72] text-[8px] md:text-[9px] font-medium uppercase tracking-[0.4em] font-serif transition-all hover:text-[#251101] dark:hover:text-white"
                   >
                     No, I am new customer
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <h3 className="text-[18px] md:text-[20px] font-light mb-4 font-serif uppercase tracking-tight">
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col items-center">
+                <p className="text-[8px] md:text-[9px] uppercase tracking-[0.5em] text-[#595f72] font-serif mb-4">
+                  Verification
+                </p>
+                <h3 className="text-[24px] md:text-[32px] font-light mb-4 font-serif tracking-tighter text-[#251101] dark:text-zinc-100 leading-none">
                   Confirm Email
                 </h3>
-                {modalError && (
-                  <p className="text-[9px] text-rose-500 mb-6 font-serif ">{modalError}</p>
-                )}
                 <input
                   type="email"
                   value={existingEmail}
                   onChange={(e) => setExistingEmail(e.target.value)}
-                  className="w-full bg-transparent border-b border-zinc-100 dark:border-zinc-800 outline-none py-4 mb-10 text-center text-[16px] md:text-[18px] font-serif tracking-tight"
+                  className="w-full bg-transparent border-b border-zinc-100 dark:border-zinc-800 outline-none py-6 mb-12 text-center text-[18px] md:text-[22px] font-serif tracking-tight"
                   placeholder="email@example.com"
                   autoFocus
                 />
                 <button
                   onClick={handleLookup}
                   disabled={isVerifying}
-                  className="w-full py-5 bg-zinc-900 dark:bg-white text-white dark:text-black text-[9px] font-medium uppercase tracking-[0.4em] font-serif mb-8 disabled:opacity-50"
+                  className="w-full py-5 bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[9px] font-medium uppercase tracking-[0.4em] font-serif mb-10 disabled:opacity-50"
                 >
-                  {isVerifying ? 'Searching...' : 'Check Schedule'}
+                  {isVerifying ? 'Searching Archive...' : 'Access Records'}
                 </button>
                 <button
                   onClick={() => setIsExisting(null)}
-                  className="text-[8px] uppercase tracking-[0.4em] text-[#595f72] font-serif"
+                  className="text-[7px] md:text-[8px] uppercase tracking-[0.4em] text-[#595f72] font-serif hover:text-[#251101] transition-colors"
                 >
-                  [ Go Back ]
+                  [ Return ]
                 </button>
               </div>
             )}
@@ -382,51 +373,41 @@ function BookingFormContent({
       )}
 
       <FadeIn>
-        <div className="max-w-5xl mx-auto px-4 md:px-8">
-          <div className="flex items-center justify-between mb-12">
-            {hasPrefillData ? (
-              <button
-                onClick={() => {
-                  setShowModal(true)
-                  setPersonalInfo({ firstName: '', surname: '', phone: '', email: '' })
-                  router.replace('/booking')
-                }}
-                className="text-[8px] uppercase tracking-[0.35em] text-[#595f72] hover:text-[#251101] dark:hover:text-white transition-colors font-serif "
-              >
-                &larr; Switch User
-              </button>
-            ) : (
-              <div />
-            )}
+        <div className="max-w-4xl mx-auto flex flex-col gap-14 md:gap-20">
+          <div className="flex items-center justify-between">
             <button
               onClick={handleClearSession}
-              className="flex items-center gap-3 text-[8px] uppercase tracking-[0.35em] text-[#595f72] hover:text-rose-500 transition-colors font-serif "
+              className="flex items-center gap-3 text-[7px] md:text-[8px] uppercase tracking-[0.4em] text-[#595f72] hover:text-[#d7263d] transition-colors font-serif"
             >
-              <ArrowPathIcon className="w-3 h-3" />
+              <ArrowPathIcon className="w-3.5 h-3.5" />
               Clear Session
             </button>
           </div>
 
-          <header className="mb-16 md:mb-24 flex items-start gap-5">
-            <div
-              className={`w-[1px] bg-zinc-900 dark:bg-white transition-all duration-1000 ease-out origin-top will-change-[height,opacity] ${drawLine ? 'h-10 md:h-12 opacity-100' : 'h-0 opacity-0'}`}
-            />
-            <div className="space-y-1">
-              <p className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
-                {bookings.length > 0 ? 'Guest Session' : 'Appointment'}
+          <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 md:gap-12">
+            <div className="space-y-4 relative">
+              <div
+                className={`absolute -left-4 md:-left-8 top-0 w-[1px] bg-zinc-900 dark:bg-white transition-all duration-1000 ease-out origin-top ${drawLine ? 'h-full opacity-100' : 'h-0 opacity-0'}`}
+              />
+              <p className="text-[8px] md:text-[10px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
+                {bookings.length > 0 ? 'Guest Session' : 'Appointment Registry'}
               </p>
-              <h1 className="text-[20px] md:text-[24px] font-light tracking-tight font-serif uppercase leading-none">
+              <h1 className="text-[28px] md:text-[48px] font-light tracking-tighter font-serif leading-none">
                 {bookings.length > 0 ? 'Adding Another' : 'New Visit'}
               </h1>
             </div>
           </header>
 
-          <form onSubmit={handleFinalSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-16">
-            <div className="lg:col-span-6">
-              <div className="grid grid-cols-1 gap-px bg-zinc-50 dark:bg-zinc-900 border-y border-zinc-100 dark:border-zinc-900">
-                <div className="bg-white dark:bg-black py-8 space-y-10">
-                  <div className="relative group">
-                    <label className="block text-[8px] md:text-[9px] font-medium uppercase tracking-[0.4em] text-[#595f72] mb-3 font-serif ">
+          <form
+            onSubmit={handleFinalSubmit}
+            className="grid grid-cols-1 lg:grid-cols-12 gap-12 md:gap-20"
+          >
+            <div className="lg:col-span-6 flex flex-col gap-10">
+              <div className="grid grid-cols-1 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 shadow-sm">
+                <div className="bg-white dark:bg-[#050505] p-6 md:p-8 space-y-10">
+                  {/* STEP 1: SERVICE */}
+                  <div className="relative group animate-in fade-in duration-700">
+                    <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-3 block font-serif">
                       Service
                     </label>
                     <div className="relative">
@@ -434,24 +415,24 @@ function BookingFormContent({
                         required
                         value={currentServiceId}
                         onChange={(e) => setCurrentServiceId(e.target.value)}
-                        className="w-full bg-transparent text-[14px] md:text-[15px] font-serif outline-none py-1 appearance-none border-b border-zinc-100 dark:border-zinc-900 focus:border-zinc-900 dark:focus:border-white transition-colors"
+                        className="w-full bg-transparent text-[15px] md:text-[16px] font-serif outline-none py-1.5 appearance-none border-b border-zinc-100 dark:border-zinc-900 focus:border-zinc-300 transition-colors text-[#251101] dark:text-zinc-100"
                       >
-                        <option value="" className="bg-white dark:bg-black">
+                        <option value="" className="bg-white dark:bg-[#050505]">
                           Select Service...
                         </option>
                         {services.map((s) => (
-                          <option key={s.id} value={s.id} className="bg-white dark:bg-black">
+                          <option key={s.id} value={s.id} className="bg-white dark:bg-[#050505]">
                             {s.title}
                           </option>
                         ))}
                       </select>
                       <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#595f72] pointer-events-none" />
                     </div>
-                    {!showExtraService && (
+                    {currentServiceId && !showExtraService && (
                       <button
                         type="button"
                         onClick={() => setShowExtraService(true)}
-                        className="mt-4 text-[7px] md:text-[8px] uppercase tracking-[0.35em] text-[#595f72] font-serif"
+                        className="mt-4 text-[6px] md:text-[7px] uppercase tracking-[0.3em] text-[#595f72] font-serif hover:text-[#251101] dark:hover:text-zinc-100 animate-in fade-in slide-in-from-top-1"
                       >
                         + Add second service
                       </button>
@@ -459,9 +440,9 @@ function BookingFormContent({
                   </div>
 
                   {showExtraService && (
-                    <div className="relative animate-in fade-in duration-500">
+                    <div className="relative animate-in fade-in slide-in-from-top-2 duration-500">
                       <div className="flex justify-between mb-3">
-                        <label className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif ">
+                        <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
                           Additional Treatment
                         </label>
                         <button
@@ -470,7 +451,7 @@ function BookingFormContent({
                             setShowExtraService(false)
                             setExtraServiceId('')
                           }}
-                          className="text-[7px] text-rose-500 uppercase tracking-widest font-serif"
+                          className="text-[7px] text-[#d7263d] uppercase tracking-[0.2em] font-serif"
                         >
                           [ Remove ]
                         </button>
@@ -479,9 +460,9 @@ function BookingFormContent({
                         <select
                           value={extraServiceId}
                           onChange={(e) => setExtraServiceId(e.target.value)}
-                          className="w-full bg-transparent text-[14px] md:text-[15px] font-serif outline-none py-1 appearance-none border-b border-zinc-100 dark:border-zinc-900"
+                          className="w-full bg-transparent text-[15px] md:text-[16px] font-serif outline-none py-1.5 appearance-none border-b border-zinc-100 dark:border-zinc-900 focus:border-zinc-300 transition-colors"
                         >
-                          <option value="" className="bg-white dark:bg-black">
+                          <option value="" className="bg-white dark:bg-[#050505]">
                             Select Service...
                           </option>
                           {services.map((s) => (
@@ -489,7 +470,7 @@ function BookingFormContent({
                               key={s.id}
                               value={s.id}
                               disabled={String(s.id) === currentServiceId}
-                              className="bg-white dark:bg-black"
+                              className="bg-white dark:bg-[#050505]"
                             >
                               {s.title}
                             </option>
@@ -500,111 +481,125 @@ function BookingFormContent({
                     </div>
                   )}
 
-                  <Field
-                    label={bookings.length > 0 ? 'Guest First Name' : 'First Name'}
-                    value={personalInfo.firstName}
-                    onChange={(v) => setPersonalInfo({ ...personalInfo, firstName: v })}
-                    placeholder="Juan"
-                  />
-                  <Field
-                    label={bookings.length > 0 ? 'Guest Surname' : 'Surname'}
-                    value={personalInfo.surname}
-                    onChange={(v) => setPersonalInfo({ ...personalInfo, surname: v })}
-                    placeholder="Dela Cruz"
-                  />
-
-                  {bookings.length === 0 && (
-                    <>
+                  {/* STEP 2: IDENTITY (Skipped for prefilled patients) */}
+                  {showIdentitySection && showFirstName && (
+                    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-700">
                       <Field
-                        label="Phone"
-                        value={personalInfo.phone}
-                        onChange={(v) => setPersonalInfo({ ...personalInfo, phone: v })}
-                        placeholder="0917 123 4567"
+                        label={isAddingGuest ? 'Guest First Name' : 'First Name'}
+                        value={personalInfo.firstName}
+                        onChange={(v) => setPersonalInfo({ ...personalInfo, firstName: v })}
+                        placeholder="Juan"
                       />
-                      <Field
-                        label="Email"
-                        value={personalInfo.email}
-                        onChange={(v) => setPersonalInfo({ ...personalInfo, email: v })}
-                        placeholder="hello@example.com"
-                      />
-                      <div className="relative">
-                        <label className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-3 block font-serif ">
-                          Date
-                        </label>
-                        <input
-                          type="date"
-                          min={minSelectableDate}
-                          required
-                          value={currentDate}
-                          onChange={(e) => {
-                            setCurrentDate(e.target.value)
-                            setCurrentTime('')
-                          }}
-                          className="w-full bg-transparent text-[14px] md:text-[15px] font-serif dark:text-white outline-none py-1 border-b border-zinc-100 dark:border-zinc-900"
+                      {showSurname && (
+                        <Field
+                          label={isAddingGuest ? 'Guest Surname' : 'Surname'}
+                          value={personalInfo.surname}
+                          onChange={(v) => setPersonalInfo({ ...personalInfo, surname: v })}
+                          placeholder="Dela Cruz"
                         />
-                      </div>
-                    </>
+                      )}
+                      {showPhone && (
+                        <Field
+                          label="Phone"
+                          value={personalInfo.phone}
+                          onChange={(v) => setPersonalInfo({ ...personalInfo, phone: v })}
+                          placeholder="0917 123 4567"
+                        />
+                      )}
+                      {showEmail && (
+                        <Field
+                          label="Email"
+                          value={personalInfo.email}
+                          onChange={(v) => setPersonalInfo({ ...personalInfo, email: v })}
+                          placeholder="hello@example.com"
+                        />
+                      )}
+                    </div>
                   )}
 
-                  <div className="relative">
-                    <label className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-3 block font-serif ">
-                      Time Slot
-                    </label>
-                    <div className="relative">
-                      <select
+                  {/* STEP 3: DATE & TIME */}
+                  {showDate && (
+                    <div className="relative animate-in fade-in slide-in-from-bottom-2 duration-700">
+                      <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-3 block font-serif">
+                        Date
+                      </label>
+                      <input
+                        type="date"
+                        min={minSelectableDate}
                         required
-                        value={currentTime}
-                        onChange={(e) => setCurrentTime(e.target.value)}
-                        disabled={!activeDate || loadingSlots}
-                        className="w-full bg-transparent text-[14px] md:text-[15px] font-serif outline-none py-1 appearance-none border-b border-zinc-100 dark:border-zinc-900 disabled:opacity-30"
-                      >
-                        <option value="" className="bg-white dark:bg-black">
-                          {loadingSlots ? 'Refreshing...' : 'Select Slot'}
-                        </option>
-                        {timeSlots.map((slot) => {
-                          const isPast = activeDate === todayStr && slot <= manilaTimeNow
-                          const isBusyInDB = busySlots.includes(slot)
-                          const isBusyInSession = bookings.some(
-                            (b) => b.date === activeDate && b.time === slot,
-                          )
-                          const isFull = isPast || isBusyInDB || isBusyInSession
-                          return (
-                            <option
-                              key={slot}
-                              value={slot}
-                              disabled={isFull}
-                              className="bg-white dark:bg-black"
-                            >
-                              {slot} {isFull ? (isPast ? '— PASSED' : '— FULLY BOOKED') : ''}
-                            </option>
-                          )
-                        })}
-                      </select>
-                      <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#595f72] pointer-events-none" />
+                        value={currentDate}
+                        onChange={(e) => {
+                          setCurrentDate(e.target.value)
+                          setCurrentTime('')
+                        }}
+                        className="w-full bg-transparent text-[15px] md:text-[16px] font-serif outline-none py-1.5 border-b border-zinc-100 dark:border-zinc-900 focus:border-zinc-300 transition-colors text-[#251101] dark:text-zinc-100"
+                      />
                     </div>
-                  </div>
+                  )}
 
-                  <button
-                    type="button"
-                    onClick={handleAddPerson}
-                    className="w-full py-8 border border-dashed border-zinc-100 dark:border-zinc-900 text-[8px] uppercase tracking-[0.45em] text-[#595f72] hover:text-[#251101] dark:hover:text-white transition-all font-serif "
-                  >
-                    + Add Guest
-                  </button>
+                  {showTime && (
+                    <div className="relative animate-in fade-in slide-in-from-bottom-2 duration-700">
+                      <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-3 block font-serif">
+                        Time Slot
+                      </label>
+                      <div className="relative">
+                        <select
+                          required
+                          value={currentTime}
+                          onChange={(e) => setCurrentTime(e.target.value)}
+                          disabled={!activeDate || loadingSlots}
+                          className="w-full bg-transparent text-[15px] md:text-[16px] font-serif outline-none py-1.5 appearance-none border-b border-zinc-100 dark:border-zinc-900 disabled:opacity-30 text-[#251101] dark:text-zinc-100"
+                        >
+                          <option value="" className="bg-white dark:bg-[#050505]">
+                            {loadingSlots ? 'Checking Availability...' : 'Select Slot'}
+                          </option>
+                          {timeSlots.map((slot) => {
+                            const isFull =
+                              (activeDate === todayStr && slot <= manilaTimeNow) ||
+                              busySlots.includes(slot) ||
+                              bookings.some((b) => b.date === activeDate && b.time === slot)
+                            return (
+                              <option
+                                key={slot}
+                                value={slot}
+                                disabled={isFull}
+                                className="bg-white dark:bg-[#050505]"
+                              >
+                                {slot} {isFull ? '— FULL' : ''}
+                              </option>
+                            )
+                          })}
+                        </select>
+                        <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#595f72] pointer-events-none" />
+                      </div>
+                    </div>
+                  )}
+
+                  {currentTime && (
+                    <button
+                      type="button"
+                      onClick={handleAddPerson}
+                      className="w-full py-6 md:py-8 border border-dashed border-zinc-200 dark:border-zinc-800 text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] hover:text-[#251101] transition-all font-serif animate-in fade-in slide-in-from-top-2"
+                    >
+                      + Add Guest to Manifest
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div className="lg:col-span-6 space-y-12">
-              <div className="flex items-baseline justify-between mb-8 border-b border-zinc-900 dark:border-white pb-3">
-                <h2 className="text-[9px] md:text-[10px] uppercase tracking-[0.5em] font-medium font-serif  flex items-center gap-3">
-                  Booking Summary
+            {/* SUMMARY PANEL */}
+            <div className="lg:col-span-6 flex flex-col gap-10">
+              <div className="flex items-baseline justify-between border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
+                <h2 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
+                  Booking Manifest
                 </h2>
-                <span className="text-[8px] md:text-[9px] uppercase tracking-widest text-[#595f72] font-serif tabular-nums whitespace-nowrap">
-                  Entry Count: {bookings.length + (currentTime ? 1 : 0)}
+                <span className="text-[10px] md:text-[12px] font-serif text-[#251101] dark:text-zinc-100 tabular-nums">
+                  {bookings.length + (currentTime ? 1 : 0)} Entries
                 </span>
               </div>
-              <div className="space-y-6">
+
+              <div className="flex flex-col gap-6">
                 {Object.values(
                   bookings.reduce(
                     (acc, b) => {
@@ -618,58 +613,60 @@ function BookingFormContent({
                 ).map((group, i) => (
                   <div
                     key={i}
-                    className="bg-white dark:bg-black border border-zinc-50 dark:border-zinc-900 p-8 flex items-start justify-between shadow-sm animate-in slide-in-from-right-4 duration-500"
+                    className="bg-white dark:bg-[#050505] border border-zinc-100 dark:border-zinc-800 p-6 md:p-8 flex items-start justify-between shadow-sm animate-in slide-in-from-right-4 duration-500"
                   >
-                    <div className="space-y-6">
-                      <div className="space-y-1">
-                        <p className="text-[8px] uppercase tracking-[0.35em] text-[#595f72] font-serif  mb-2">
-                          {group.date} • {group.time}
-                        </p>
-                        <h4 className="text-[16px] md:text-[18px] font-light font-serif uppercase tracking-tight">
-                          {group.firstName} {group.surname}
-                        </h4>
-                      </div>
-                      <div className="flex flex-col gap-2">
+                    <div className="space-y-4">
+                      <p className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] text-[#595f72] font-serif">
+                        {group.date} • {group.time}
+                      </p>
+                      <h4 className="text-[16px] md:text-[18px] font-serif tracking-tight text-[#251101] dark:text-zinc-100 capitalize">
+                        {group.firstName} {group.surname}
+                      </h4>
+                      <div className="flex flex-col gap-1.5">
                         {group.services.map((sId: string, idx: number) => (
-                          <div key={idx} className="flex items-center gap-3">
-                            <div className="w-0.5 h-[1px] bg-zinc-200 dark:bg-zinc-800" />
-                            <span className="text-[8px] md:text-[9px] uppercase tracking-[0.2em] text-[#595f72] font-serif ">
-                              {getServiceTitle(sId)}
-                            </span>
-                          </div>
+                          <span
+                            key={idx}
+                            className="text-[7px] md:text-[8px] uppercase tracking-[0.2em] text-[#595f72] font-serif"
+                          >
+                            / {getServiceTitle(sId)}
+                          </span>
                         ))}
                       </div>
                     </div>
                     <button
                       type="button"
                       onClick={() => setBookings(bookings.filter((b) => b.time !== group.time))}
-                      className="text-[#595f72] hover:text-rose-500 transition-colors"
+                      className="text-[#595f72] hover:text-[#d7263d] transition-colors p-1"
                     >
                       <XMarkIcon className="w-4 h-4" />
                     </button>
                   </div>
                 ))}
+
                 {currentTime && (
-                  <div className="bg-zinc-900 text-white dark:bg-white dark:text-black p-8 md:p-12 flex flex-col justify-between min-h-[220px] shadow-sm relative overflow-hidden animate-in fade-in duration-500">
-                    <div className="absolute top-0 left-0 w-full h-[1px] bg-emerald-500/30" />
+                  <div className="bg-[#251101] dark:bg-white text-white dark:text-[#251101] p-8 md:p-10 flex flex-col justify-between min-h-[200px] shadow-sm relative overflow-hidden animate-in fade-in duration-500">
+                    <div className="absolute top-0 left-0 w-full h-[1.5px] bg-[#48a9a6]/50" />
                     <div className="flex justify-between items-start">
-                      <p className="text-[8px] uppercase tracking-[0.4em] font-serif  opacity-50">
-                        Booking Draft
+                      <p className="text-[7px] md:text-[8px] uppercase tracking-[0.4em] font-serif opacity-60">
+                        Session Draft
                       </p>
-                      <p className="text-[20px] md:text-[24px] font-light font-serif tabular-nums tracking-tighter">
+                      <p className="text-[20px] md:text-[28px] font-light font-serif tabular-nums tracking-tighter">
                         {currentTime}
                       </p>
                     </div>
                     <div className="space-y-4">
-                      <h4 className="text-[18px] md:text-[22px] font-light font-serif uppercase tracking-tight leading-none">
-                        {personalInfo.firstName || 'New'} {personalInfo.surname || 'Patient'}
+                      <h4 className="text-[20px] md:text-[24px] font-serif tracking-tight leading-none capitalize">
+                        {personalInfo.firstName ||
+                          (hasPrefillData && bookings.length === 0 ? initialData.fn : 'New')}{' '}
+                        {personalInfo.surname ||
+                          (hasPrefillData && bookings.length === 0 ? initialData.sn : 'Patient')}
                       </h4>
-                      <div className="flex flex-wrap gap-3">
-                        <span className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] font-serif border border-white/20 dark:border-black/20 px-2.5 py-0.5 ">
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] font-serif border border-white/20 dark:border-[#251101]/20 px-2 py-0.5">
                           {getServiceTitle(currentServiceId)}
                         </span>
                         {showExtraService && extraServiceId && (
-                          <span className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] font-serif border border-white/20 dark:border-black/20 px-2.5 py-0.5 ">
+                          <span className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] font-serif border border-white/20 dark:border-[#251101]/20 px-2 py-0.5">
                             {getServiceTitle(extraServiceId)}
                           </span>
                         )}
@@ -678,16 +675,16 @@ function BookingFormContent({
                   </div>
                 )}
               </div>
-              <div className="pt-10">
+
+              <div className="pt-6">
                 <button
                   type="submit"
                   disabled={isPendingTransition || (!currentTime && bookings.length === 0)}
-                  className="w-full bg-zinc-900 dark:bg-white text-white dark:text-black text-[9px] md:text-[10px] font-medium py-6 uppercase tracking-[0.45em] font-serif disabled:opacity-20 shadow-sm flex items-center justify-center gap-4 transition-all hover:tracking-[0.5em]"
+                  className="w-full bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[8px] md:text-[10px] font-serif py-6 uppercase tracking-[0.4em] transition-all hover:tracking-[0.5em] disabled:opacity-20 flex items-center justify-center gap-4 shadow-sm"
                 >
                   {isPendingTransition ? (
                     <>
-                      <ArrowPathIcon className="animate-spin h-3.5 w-3.5" />
-                      Processing ...
+                      <ArrowPathIcon className="animate-spin h-3.5 w-3.5" /> Processing Registry...
                     </>
                   ) : (
                     'Confirm Appointment(s)'
@@ -696,7 +693,8 @@ function BookingFormContent({
               </div>
             </div>
           </form>
-          <div className="mt-24 flex justify-center border-t border-zinc-50 dark:border-zinc-900/50 pt-10 opacity-30 hover:opacity-100 transition-opacity">
+
+          <div className="pt-8 md:pt-12 flex justify-center border-t border-zinc-50 dark:border-zinc-900/50 opacity-40 hover:opacity-100 transition-opacity">
             <BackToHome />
           </div>
         </div>
@@ -717,8 +715,8 @@ function Field({
   placeholder: string
 }) {
   return (
-    <div className="group relative">
-      <label className="block text-[8px] md:text-[9px] font-medium uppercase tracking-[0.4em] text-[#595f72] mb-3 font-serif ">
+    <div className="group relative animate-in fade-in slide-in-from-bottom-2 duration-700">
+      <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-3 block font-serif">
         {label}
       </label>
       <input
@@ -726,7 +724,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required
-        className="w-full bg-transparent text-[14px] md:text-[15px] font-serif outline-none py-1 border-b border-zinc-100 dark:border-zinc-900 focus:border-zinc-900 dark:focus:border-white transition-colors placeholder:text-[#595f72]"
+        className="w-full bg-transparent text-[15px] md:text-[16px] font-serif outline-none py-1.5 border-b border-zinc-100 dark:border-zinc-900 focus:border-zinc-300 dark:focus:border-zinc-600 transition-colors text-[#251101] dark:text-zinc-100 placeholder:text-zinc-200"
       />
     </div>
   )

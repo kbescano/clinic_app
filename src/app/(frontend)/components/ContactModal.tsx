@@ -121,7 +121,7 @@ function ContactItem({
       </div>
       <div className="space-y-2">
         {/* SMALL LABEL: 9px High Tracking */}
-        <span className="block text-[9px] uppercase tracking-[0.35em] text-zinc-400 font-serif italic">
+        <span className="block text-[9px] uppercase tracking-[0.35em] text-zinc-400 font-serif ">
           {label}
         </span>
         {href ? (
