@@ -1,8 +1,9 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import { ArrowPathIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
+import { ChevronDownIcon } from '@heroicons/react/24/outline'
 import { useTransition } from 'react'
+import { RegistrySkeleton } from './RegistrySkeleton'
 
 export default function AdminFilter({
   initialRange,
@@ -28,8 +29,8 @@ export default function AdminFilter({
       {/* 1. DATE RANGE FILTER (Pill - Aligned center with 'Management') */}
       <div className="inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative">
         {isPending && (
-          <div className="absolute -left-8 top-1/2 -translate-y-1/2">
-            <ArrowPathIcon className="h-3.5 w-3.5 text-[#595f72] animate-spin" />
+          <div className="absolute -left-6 top-1/2 -translate-y-1/2">
+            <RegistrySkeleton />
           </div>
         )}
 

@@ -76,8 +76,7 @@ export default function SpecialistDashboardClient({
                 </p>
               </div>
               <h1 className="text-[28px] md:text-[48px] font-light tracking-tighter font-serif leading-none">
-                {now.format('dddd')},<br />
-                <span className="text-[#595f72]">{now.format('MMMM D')}</span>
+                {now.format('dddd')}, <span className="text-[#595f72]">{now.format('MMMM D')}</span>
               </h1>
             </div>
 
