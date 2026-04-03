@@ -104,7 +104,7 @@ export default function NavigationMenu() {
                 className={`relative flex items-center justify-end h-12 rounded-full overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                   isActive
                     ? 'bg-zinc-900 text-white dark:bg-white dark:text-black shadow-md'
-                    : 'text-[#595f72] hover:bg-white/80 dark:hover:bg-zinc-800/80 hover:text-[#251101] dark:hover:text-white'
+                    : 'text-[#595f72] hover:bg-black dark:hover:bg-zinc-800/80 hover:text-white dark:hover:text-white'
                 }`}
               >
                 <span
