@@ -3,6 +3,8 @@ import config from '@/payload.config'
 import SpecialistDashboardClient from './DashboardClient'
 import dayjs from '@/lib/dayjs'
 
+export const dynamic = 'force-dynamic'
+
 export default async function SpecialistDashboardPage() {
   const payload = await getPayload({ config })
   const now = dayjs().tz('Asia/Manila')
