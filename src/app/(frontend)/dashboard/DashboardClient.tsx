@@ -108,8 +108,8 @@ export default function SpecialistDashboardClient({
 
           {/* METRICS SECTION */}
           <section className="animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-150 ease-out fill-mode-both flex flex-col gap-8 md:gap-10">
-            {/* 1px Grid Borders */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50">
+            {/* 1px Grid Borders with Rounded Edges and Softened Lines */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 rounded-2xl overflow-hidden shadow-sm">
               <MetricBlock
                 label="Projected Revenue"
                 value={`₱${activeMetrics.projectedRevenue.toLocaleString()}`}
@@ -123,7 +123,7 @@ export default function SpecialistDashboardClient({
                 label="Pending Revenue"
                 value={`₱${activeMetrics.pendingRevenue.toLocaleString()}`}
               />
-              <div className="bg-white dark:bg-[#050505] p-5 md:p-8 flex flex-col justify-between min-h-[140px] md:min-h-[160px] group transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/20">
+              <div className="bg-white dark:bg-[#050505] p-5 md:p-8 flex flex-col justify-between min-h-[140px] md:min-h-[160px] group transition-all hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20">
                 <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
                   Completion Rate
                 </p>
@@ -131,13 +131,13 @@ export default function SpecialistDashboardClient({
                   <p className="text-[20px] md:text-[32px] font-light font-serif tracking-tight tabular-nums text-[#251101] dark:text-zinc-100">
                     {activeMetrics.completionRate}%
                   </p>
-                  <div className="w-full h-[1px] bg-zinc-100 dark:bg-zinc-900 mt-2 mb-1">
+                  <div className="w-full h-[1.5px] bg-zinc-100 dark:bg-zinc-900 mt-2 mb-1 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-[#251101] dark:bg-white transition-all duration-1000"
+                      className="h-full bg-[#251101] dark:bg-white transition-all duration-1000 ease-out"
                       style={{ width: `${activeMetrics.completionRate}%` }}
                     />
                   </div>
-                  <p className="text-[6px] md:text-[8px] uppercase tracking-widest text-[#595f72] font-serif mt-2">
+                  <p className="text-[6px] md:text-[8px] uppercase tracking-widest text-[#595f72] font-serif mt-2 opacity-70">
                     {activeMetrics.totalCompletedServices} / {activeMetrics.totalManifestWorkload}{' '}
                     Workloads
                   </p>
@@ -146,28 +146,27 @@ export default function SpecialistDashboardClient({
             </div>
 
             {/* Service Breakdown */}
-            <div className="flex flex-wrap gap-4 md:gap-8 pt-2">
+            <div className="flex flex-wrap gap-4 md:gap-8 pt-2 px-1">
               <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif w-full mb-1">
                 Service Manifest Breakdown
               </p>
               {Object.entries(activeMetrics.serviceCounts).length === 0 && (
-                <span className="text-[10px] md:text-[12px] font-serif text-zinc-400">
+                <span className="text-[10px] md:text-[12px] font-serif text-zinc-400 italic">
                   No workloads found.
                 </span>
               )}
               {Object.entries(activeMetrics.serviceCounts).map(([name, count]) => (
-                <div key={name} className="flex items-center gap-2 md:gap-3">
-                  <span className="text-[12px] md:text-[16px] font-serif text-[#251101] dark:text-zinc-100 tabular-nums leading-none">
+                <div key={name} className="flex items-center gap-2 md:gap-3 group">
+                  <span className="text-[12px] md:text-[16px] font-serif text-[#251101] dark:text-zinc-100 tabular-nums leading-none transition-transform group-hover:scale-110">
                     {count}
                   </span>
-                  <span className="text-[7px] md:text-[9px] uppercase tracking-widest text-[#595f72] font-serif leading-none">
+                  <span className="text-[7px] md:text-[9px] uppercase tracking-widest text-[#595f72] font-serif leading-none opacity-80 group-hover:opacity-100 transition-opacity">
                     × {name}
                   </span>
                 </div>
               ))}
             </div>
           </section>
-
           {/* TABLE SECTION */}
           <section className="animate-in fade-in duration-1000 delay-300 fill-mode-both">
             <BentoTable data={activeData} showDate={view === 'week'} />
@@ -336,12 +335,6 @@ function BentoTable({ data, showDate }: { data: MergedAppointment[]; showDate: b
                             <span className="text-[10px] md:text-[11px] capitalize tracking-tight text-[#595f72] dark:text-zinc-400 font-serif leading-none">
                               {s}
                             </span>
-                            {/* Divider logic: only show if not the last item */}
-                            {i < array.length - 1 && (
-                              <span className="mx-2 text-[8px] text-zinc-300 dark:text-zinc-800 font-light">
-                                |
-                              </span>
-                            )}
                           </React.Fragment>
                         ))}
                     </div>

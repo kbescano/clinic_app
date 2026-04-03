@@ -137,33 +137,40 @@ export default function AdminAnalytics() {
             className={`animate-in fade-in duration-700 delay-150 ease-out fill-mode-both flex flex-col gap-10 md:gap-14 ${loading ? 'opacity-50 blur-[2px] transition-all' : 'opacity-100 blur-0 transition-all'}`}
           >
             {/* PRIMARY METRIC GRID (Atelier Hairline Design) */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 rounded-2xl overflow-hidden shadow-sm">
               {/* Revenue Slot */}
-              <div className="md:col-span-6 bg-white dark:bg-[#050505] p-6 md:p-10 flex flex-col justify-between group transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/20">
+              <div className="md:col-span-6 bg-white dark:bg-[#050505] p-6 md:p-10 flex flex-col justify-between group transition-all duration-500 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20 relative">
+                {/* Subtle status indicator line */}
+                <div
+                  className={`absolute left-0 top-10 bottom-10 w-[2px] transition-opacity duration-1000 ${
+                    (data?.growth ?? 0) >= 0 ? 'bg-[#248232]/30' : 'bg-[#d7263d]/30'
+                  }`}
+                />
+
                 <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-6 md:mb-8 font-serif">
                   Period Revenue
                 </p>
                 <div>
-                  <div className="flex items-baseline gap-2 mb-6 md:mb-8">
-                    <span className="text-[28px] md:text-[40px] font-light tracking-tight font-serif tabular-nums text-[#251101] dark:text-zinc-100">
+                  <div className="flex items-baseline gap-2 mb-8 md:mb-10">
+                    <span className="text-[32px] md:text-[48px] font-light tracking-tight font-serif tabular-nums text-[#251101] dark:text-zinc-100 leading-none">
                       ₱{data?.periodRevenue?.toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex gap-6 md:gap-10">
-                    <div className="flex flex-col border-l border-zinc-200 dark:border-zinc-800/50 pl-4 md:pl-5">
-                      <span className="text-[6px] md:text-[8px] uppercase tracking-[0.3em] text-[#595f72] mb-1.5 font-serif">
+                  <div className="flex gap-8 md:gap-12">
+                    <div className="flex flex-col border-l border-zinc-200 dark:border-zinc-800/50 pl-4 md:pl-6">
+                      <span className="text-[6px] md:text-[8px] uppercase tracking-[0.3em] text-[#595f72] mb-2 font-serif opacity-70">
                         Previous
                       </span>
-                      <span className="text-[12px] md:text-[14px] font-serif tabular-nums text-[#251101] dark:text-zinc-100">
+                      <span className="text-[14px] md:text-[16px] font-serif tabular-nums text-[#251101] dark:text-zinc-100 font-light">
                         ₱{data?.prevPeriodRevenue?.toLocaleString()}
                       </span>
                     </div>
-                    <div className="flex flex-col border-l border-zinc-200 dark:border-zinc-800/50 pl-4 md:pl-5">
-                      <span className="text-[6px] md:text-[8px] uppercase tracking-[0.3em] text-[#595f72] mb-1.5 font-serif">
+                    <div className="flex flex-col border-l border-zinc-200 dark:border-zinc-800/50 pl-4 md:pl-6">
+                      <span className="text-[6px] md:text-[8px] uppercase tracking-[0.3em] text-[#595f72] mb-2 font-serif opacity-70">
                         Growth
                       </span>
                       <span
-                        className={`text-[12px] md:text-[14px] font-serif tabular-nums ${(data?.growth ?? 0) >= 0 ? 'text-[#248232] dark:text-[#48a9a6]' : 'text-[#d7263d]'}`}
+                        className={`text-[14px] md:text-[16px] font-serif tabular-nums font-light ${(data?.growth ?? 0) >= 0 ? 'text-[#248232] dark:text-[#48a9a6]' : 'text-[#d7263d]'}`}
                       >
                         {(data?.growth ?? 0) > 0 ? '+' : ''}
                         {data?.growth}%
@@ -174,17 +181,17 @@ export default function AdminAnalytics() {
               </div>
 
               {/* Efficiency Slot */}
-              <div className="md:col-span-3 bg-white dark:bg-[#050505] p-6 md:p-10 flex flex-col justify-between group transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/20">
+              <div className="md:col-span-3 bg-white dark:bg-[#050505] p-6 md:p-10 flex flex-col justify-between group transition-all duration-500 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20">
                 <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-6 md:mb-8 font-serif">
                   Growth Index
                 </p>
                 <div>
-                  <span className="text-[20px] md:text-[28px] font-light tracking-tight font-serif mb-4 md:mb-6 block text-[#251101] dark:text-zinc-100 tabular-nums">
+                  <span className="text-[24px] md:text-[32px] font-light tracking-tight font-serif mb-4 md:mb-6 block text-[#251101] dark:text-zinc-100 tabular-nums">
                     {data?.growth}%
                   </span>
-                  <div className="w-full h-[1px] bg-zinc-100 dark:bg-zinc-900 mt-2">
+                  <div className="w-full h-[1.5px] bg-zinc-100 dark:bg-zinc-900 rounded-full overflow-hidden">
                     <div
-                      className={`h-full transition-all duration-1000 ${(data?.growth ?? 0) >= 0 ? 'bg-[#251101] dark:bg-white' : 'bg-[#d7263d]'}`}
+                      className={`h-full transition-all duration-1000 ease-out ${(data?.growth ?? 0) >= 0 ? 'bg-[#251101] dark:bg-white' : 'bg-[#d7263d]'}`}
                       style={{
                         width: `${Math.min(Math.max(Math.abs(data?.growth || 0), 0), 100)}%`,
                       }}
@@ -194,38 +201,38 @@ export default function AdminAnalytics() {
               </div>
 
               {/* Category List Slot */}
-              <div className="md:col-span-3 bg-white dark:bg-[#050505] p-6 md:p-10 flex flex-col justify-between group transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/20">
-                <div>
+              <div className="md:col-span-3 bg-white dark:bg-[#050505] p-6 md:p-10 flex flex-col justify-between group transition-all duration-500 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20">
+                <div className="mb-8">
                   <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-4 md:mb-6 font-serif">
                     Total Sessions
                   </p>
-                  <span className="text-[20px] md:text-[28px] font-light tracking-tight font-serif text-[#251101] dark:text-zinc-100 tabular-nums">
+                  <span className="text-[24px] md:text-[32px] font-light tracking-tight font-serif text-[#251101] dark:text-zinc-100 tabular-nums leading-none">
                     {data?.totalAppointments}
                   </span>
                 </div>
-                <div className="flex flex-col gap-2.5 mt-6 md:mt-8">
-                  {Object.entries(data?.categorySales || {}).length === 0 && (
-                    <span className="text-[9px] md:text-[10px] text-[#595f72] font-serif ">
-                      No data
+                <div className="flex flex-col gap-1 mt-auto">
+                  {Object.entries(data?.categorySales || {}).length === 0 ? (
+                    <span className="text-[9px] text-[#595f72] font-serif italic opacity-50">
+                      No data available
                     </span>
+                  ) : (
+                    Object.entries(data?.categorySales || {}).map(([name, val]) => (
+                      <div
+                        key={name}
+                        className="flex justify-between items-end gap-4 border-b border-zinc-50 dark:border-zinc-900/50 py-2.5 last:border-0"
+                      >
+                        <span className="text-[7px] md:text-[8px] uppercase tracking-[0.15em] text-[#595f72] font-serif leading-none opacity-80">
+                          {name}
+                        </span>
+                        <span className="text-[10px] md:text-[11px] font-serif tabular-nums text-[#251101] dark:text-zinc-100 shrink-0 leading-none">
+                          ₱{val.toLocaleString()}
+                        </span>
+                      </div>
+                    ))
                   )}
-                  {Object.entries(data?.categorySales || {}).map(([name, val]) => (
-                    <div
-                      key={name}
-                      className="flex justify-between items-start gap-4 border-b border-zinc-100 dark:border-zinc-900/50 py-2"
-                    >
-                      <span className="text-[7px] md:text-[8px] uppercase tracking-[0.2em] text-[#595f72] font-serif text-wrap leading-[1.5]">
-                        {name}
-                      </span>
-                      <span className="text-[9px] md:text-[10px] font-serif tabular-nums text-[#251101] dark:text-zinc-100 shrink-0 mt-0.5">
-                        ₱{val.toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
-
             {/* SECONDARY SECTION: RECENT FEED */}
             <div className="w-full flex flex-col gap-6 md:gap-8">
               <div className="flex items-baseline justify-between border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
