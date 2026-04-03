@@ -43,7 +43,7 @@ export default async function SpecialistSection() {
           </div>
 
           {/* GRID REGISTRY: Consistent 1px Border Pattern */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 lg:gap-2 bg-white dark:bg-black">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 lg:gap-1 bg-white dark:bg-black">
             {specialistsData.docs.map((specialist: Specialist) => {
               const imageDoc = specialist.image as Media | undefined
               const rawPath = imageDoc?.url || ''

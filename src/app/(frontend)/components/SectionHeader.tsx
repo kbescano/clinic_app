@@ -67,25 +67,6 @@ export default function SectionHeader({ topLabel, clinicName, logoUrl }: Section
                 <div className="mt-4 h-[1px] w-8 bg-zinc-900 dark:bg-white opacity-10" />
               </div>
             </div>
-
-            {/* LOGO: Sharp Circle Pattern */}
-            {logoUrl && (
-              <div className="relative shrink-0 group">
-                <div className="w-16 h-16 md:w-24 md:h-24 aspect-square bg-white dark:bg-black rounded-full border border-zinc-100 dark:border-zinc-900 flex items-center justify-center p-0 backdrop-blur-md overflow-hidden transition-all duration-700 group-hover:scale-105 group-hover:border-zinc-900 dark:group-hover:border-white">
-                  <Image
-                    src={logoUrl}
-                    alt={`${clinicName} Logo`}
-                    width={100}
-                    height={100}
-                    className="object-cover w-full h-full grayscale-[0.2] group-hover:grayscale-0 transition-all duration-1000"
-                    priority
-                  />
-                </div>
-
-                {/* Visual Orbit Accent */}
-                <div className="absolute -inset-1 border border-zinc-900 dark:border-white opacity-0 group-hover:opacity-10 rounded-full scale-110 group-hover:scale-100 transition-all duration-1000 pointer-events-none" />
-              </div>
-            )}
           </div>
         </FadeIn>
       </div>

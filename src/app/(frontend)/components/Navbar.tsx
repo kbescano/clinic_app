@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation' // Added for route detection
+import { usePathname } from 'next/navigation'
 import ContactTrigger from './ContactTrigger'
 import FadeIn from './FadeIn'
 
@@ -13,19 +13,29 @@ interface NavbarProps {
 
 export default function Navbar({ contactData, headerData }: NavbarProps) {
   const [isVisible, setIsVisible] = useState(true)
+  const [isAtTop, setIsAtTop] = useState(true)
   const [lastScrollY, setLastScrollY] = useState(0)
-  const pathname = usePathname() // Capture current route
+  const pathname = usePathname()
 
-  // --- SCROLL LOGIC ---
+  // --- LOGIC GATE: ONLY TRANSPARENT ON HOMEPAGE AT TOP ---
+  const isTransparent = pathname === '/' && isAtTop
+
   useEffect(() => {
     const controlNavbar = () => {
       if (typeof window !== 'undefined') {
-        if (window.scrollY > lastScrollY && window.scrollY > 100) {
+        const currentScrollY = window.scrollY
+
+        // 1. Handle Scroll State
+        setIsAtTop(currentScrollY < 50)
+
+        // 2. Handle Show/Hide Animation
+        if (currentScrollY > lastScrollY && currentScrollY > 100) {
           setIsVisible(false) // Scrolling Down
         } else {
           setIsVisible(true) // Scrolling Up
         }
-        setLastScrollY(window.scrollY)
+
+        setLastScrollY(currentScrollY)
       }
     }
 
@@ -35,24 +45,33 @@ export default function Navbar({ contactData, headerData }: NavbarProps) {
 
   return (
     <nav
-      className={`fixed top-0 left-0 w-full bg-white dark:bg-black border-b border-zinc-100 dark:border-zinc-900 z-[100] selection:bg-zinc-100 transition-transform duration-500 ease-in-out ${
+      className={`fixed top-0 left-0 w-full z-[100] selection:bg-zinc-100 transition-all duration-700 ease-in-out ${
         isVisible ? 'translate-y-0' : '-translate-y-full'
+      } ${
+        isTransparent
+          ? 'bg-transparent border-transparent'
+          : 'bg-white/80 dark:bg-[#050505]/80 backdrop-blur-lg border-b border-zinc-100/50 dark:border-zinc-900/50 shadow-sm'
       }`}
     >
       <FadeIn>
         <div className="max-w-[1440px] mx-auto px-6 md:px-10 h-20 md:h-24 flex items-center justify-between">
-          {/* LEFT PILLAR: THE GAME CHANGER BUTTON (Home Page + Desktop Only) */}
+          {/* LEFT PILLAR: BOOKING (Home Page Only) */}
           <div className="flex-1 hidden md:flex items-center justify-start">
             {pathname === '/' && (
-              <Link
-                href="/booking"
-                className="group relative py-2 overflow-hidden animate-in fade-in slide-in-from-left-4 duration-1000 ease-out"
-              >
-                <span className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] font-medium text-[#595f72] group-hover:text-[#251101] dark:group-hover:text-white transition-all duration-500 ease-out font-serif inline-block transform group-hover:-translate-y-[1px]">
+              <Link href="/booking" className="group relative py-2 overflow-hidden">
+                <span
+                  className={`text-[8px] md:text-[9px] uppercase tracking-[0.4em] font-medium transition-all duration-500 font-serif inline-block transform group-hover:-translate-y-[1px] ${
+                    isTransparent ? 'text-white' : 'text-[#595f72] dark:text-zinc-400'
+                  }`}
+                >
                   Book Appointment
                 </span>
-                {/* KINETIC LINE ANIMATION */}
-                <span className="absolute bottom-0 left-0 w-0 h-[1px] bg-[#251101] dark:bg-zinc-400 transition-all duration-500 ease-out group-hover:w-full" />
+                {/* KINETIC LINE */}
+                <span
+                  className={`absolute bottom-0 left-0 h-[1px] transition-all duration-500 ease-out group-hover:w-full w-0 ${
+                    isTransparent ? 'bg-white' : 'bg-[#251101] dark:bg-zinc-400'
+                  }`}
+                />
               </Link>
             )}
           </div>
@@ -60,7 +79,11 @@ export default function Navbar({ contactData, headerData }: NavbarProps) {
           {/* CENTER PILLAR: BRANDING */}
           <div className="flex-none text-center">
             <Link href="/" className="flex flex-col items-center group">
-              <span className="text-[10px] uppercase tracking-[0.6em] font-bold text-[#251101] dark:text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors font-serif">
+              <span
+                className={`text-[10px] md:text-[11px] uppercase tracking-[0.7em] font-bold transition-colors duration-500 font-serif ${
+                  isTransparent ? 'text-white' : 'text-[#251101] dark:text-zinc-100'
+                }`}
+              >
                 {headerData?.clinicName || 'Clinic Registry'}
               </span>
             </Link>
@@ -68,7 +91,9 @@ export default function Navbar({ contactData, headerData }: NavbarProps) {
 
           {/* RIGHT PILLAR: CONTACT */}
           <div className="flex items-center justify-end gap-6 md:gap-10 flex-1">
-            <div className="flex items-center">
+            <div
+              className={`transition-colors duration-500 ${isTransparent ? 'text-white' : 'text-[#251101] dark:text-zinc-100'}`}
+            >
               <ContactTrigger contactData={contactData} />
             </div>
           </div>

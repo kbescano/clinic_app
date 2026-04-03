@@ -3,16 +3,13 @@ import Services from './components/Services'
 import SpecialistSection from './components/SpecialistSection'
 // import SectionHeader from './components/SectionHeader'
 import BookNowButton from './components/BookNowButton'
+import HeroVideo from './components/Hero'
 
 export default async function HomePage() {
   return (
     <main className="relative bg-white dark:bg-black w-full overflow-x-hidden min-h-screen">
       <BookNowButton />
-      {/* 
-          SUSPENSE STRATEGY: 
-          We wrap each major section in its own Suspense boundary.
-          This allows the "Clinic Operations" header to stay fixed while content flows in.
-      */}
+      <HeroVideo />
       <div className="space-y-0">
         <Suspense fallback={<SectionSkeleton items={3} />}>
           <Services />

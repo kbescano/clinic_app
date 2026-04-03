@@ -102,12 +102,12 @@ const ServiceSlider = ({ images }: { images: any[] }) => {
   )
 }
 
-// --- MAIN COMPONENT ---
 export default function Services() {
   const [services, setServices] = useState<any[]>([])
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [detailsOpenId, setDetailsOpenId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [drawLine, setDrawLine] = useState(false)
 
   useEffect(() => {
     async function fetchServices() {
@@ -119,6 +119,8 @@ export default function Services() {
         console.error('Error fetching services:', error)
       } finally {
         setLoading(false)
+        // Trigger drawline once loading is complete
+        setTimeout(() => setDrawLine(true), 500)
       }
     }
     fetchServices()
@@ -126,8 +128,8 @@ export default function Services() {
 
   if (loading)
     return (
-      <div className="bg-white dark:bg-[#050505] py-60 text-center flex items-center justify-center">
-        <span className="text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.5em] text-[9px] font-serif  animate-pulse">
+      <div className="bg-white dark:bg-[#050505] py-40 flex items-center justify-center">
+        <span className="text-zinc-400 uppercase tracking-[0.5em] text-[8px] font-serif animate-pulse">
           Loading ...
         </span>
       </div>
@@ -136,33 +138,36 @@ export default function Services() {
   return (
     <section
       id="services"
-      className="bg-white dark:bg-[#050505] pt-24 md:pt-32 text-zinc-900 dark:text-zinc-100 selection:bg-zinc-100 overflow-hidden"
+      className="bg-white dark:bg-[#050505] text-zinc-900 dark:text-zinc-100 overflow-hidden"
     >
       <div className="max-w-[1440px] mx-auto border-x border-zinc-100 dark:border-zinc-900">
         <FadeIn>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 lg:gap-2 bg-white dark:bg-black border-y border-zinc-100 dark:border-zinc-900">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-px bg-zinc-100 dark:bg-zinc-900 border-y border-zinc-100 dark:border-zinc-900">
             {services.map((service) => (
-              <div key={service.id} className="flex flex-col bg-white dark:bg-black group h-full">
+              <div
+                key={service.id}
+                className="flex flex-col bg-white dark:bg-[#050505] group h-full"
+              >
                 <div className="relative overflow-hidden grayscale-[0.3] group-hover:grayscale-0 transition-all duration-1000">
                   {service.images && service.images.length > 0 ? (
                     <ServiceSlider images={service.images} />
                   ) : (
-                    <div className="h-[450px] w-full bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-center text-[8px] uppercase tracking-[0.4em] text-zinc-400 font-serif ">
+                    <div className="h-[450px] w-full bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-center text-[8px] uppercase tracking-[0.4em] text-zinc-400 font-serif">
                       Media Offline
                     </div>
                   )}
                 </div>
 
-                <div className="flex flex-col flex-grow p-8 md:p-12">
-                  <div className="mb-10">
-                    <h3 className="text-[15px] md:text-[14px] font-normal tracking-[0.01em] font-serif text-[#251101] dark:text-zinc-100 mb-6 leading-tight">
+                <div className="flex flex-col flex-grow p-6 md:p-8">
+                  <div className="mb-6">
+                    <h3 className="text-[13px] md:text-[12px] font-normal tracking-[0.01em] font-serif text-[#251101] dark:text-zinc-100 mb-4 leading-tight">
                       {service.title}
                     </h3>
 
                     <div className="relative">
                       <p
-                        className={`text-[13px] md:text-[12px] font-light text-[#595f72] dark:text-zinc-400 leading-[1.7] tracking-wide font-serif ${
-                          expandedId === service.id ? 'line-clamp-none' : 'line-clamp-3'
+                        className={`text-[11px] font-light text-[#595f72] dark:text-zinc-400 leading-relaxed tracking-tight font-serif ${
+                          expandedId === service.id ? '' : 'line-clamp-2'
                         }`}
                       >
                         {service.description}
@@ -172,7 +177,7 @@ export default function Services() {
                           onClick={() =>
                             setExpandedId(expandedId === service.id ? null : service.id)
                           }
-                          className="mt-4 text-[10px] font-light text-[#595f72] dark:text-zinc-200 font-serif underline underline-offset-[4px] decoration-zinc-200 dark:decoration-zinc-800 hover:decoration-zinc-800 dark:hover:decoration-zinc-200 transition-colors"
+                          className="mt-2 text-[10px] font-light text-[#595f72] dark:text-zinc-200 font-serif underline underline-offset-[4px] decoration-zinc-200 dark:decoration-zinc-800 transition-colors"
                         >
                           {expandedId === service.id ? 'Read less' : 'Read more'}
                         </button>
@@ -181,36 +186,33 @@ export default function Services() {
                   </div>
 
                   {service.details && service.details.length > 0 && (
-                    <div className="border-t border-zinc-100 dark:border-zinc-900 mb-10">
+                    <div className="border-t border-zinc-100 dark:border-zinc-900/50 mb-6">
                       {service.details.map((item: any, idx: number) => {
-                        const uniqueDetailId = `${service.id}-${idx}`
-                        const isOpen = detailsOpenId === uniqueDetailId
+                        const uniqueId = `${service.id}-${idx}`
+                        const isOpen = detailsOpenId === uniqueId
 
                         return (
                           <div
                             key={idx}
-                            className="border-b border-zinc-100 dark:border-zinc-900 last:border-none"
+                            className="border-b border-zinc-100 dark:border-zinc-900/50 last:border-none"
                           >
                             <button
-                              onClick={() => setDetailsOpenId(isOpen ? null : uniqueDetailId)}
-                              className="w-full flex items-center justify-between py-5 text-[13px] font-light text-[#251101] dark:text-zinc-200 font-serif hover:opacity-60 transition-opacity text-left"
+                              onClick={() => setDetailsOpenId(isOpen ? null : uniqueId)}
+                              className="w-full flex items-center justify-between py-4 text-[11px] font-light text-[#251101] dark:text-zinc-200 font-serif hover:opacity-60 transition-opacity text-left"
                             >
                               <span>{item.title}</span>
-                              <div className="relative w-3 h-3 flex items-center justify-center">
-                                <div className="absolute w-3 h-[1px] bg-[#251101]" />
-                                <div
-                                  className={`absolute w-[1px] h-3 bg-[#251101] transition-transform duration-500 ${isOpen ? 'rotate-90 scale-y-0' : ''}`}
-                                />
-                              </div>
+                              <span className="text-[8px] font-mono opacity-40">
+                                {isOpen ? '−' : '+'}
+                              </span>
                             </button>
 
                             <div
-                              className={`overflow-hidden transition-all duration-700 ease-in-out ${
-                                isOpen ? 'max-h-[1000px] opacity-100 pb-8' : 'max-h-0 opacity-0'
+                              className={`overflow-hidden transition-all duration-500 ease-in-out ${
+                                isOpen ? 'max-h-40 pb-4 opacity-100' : 'max-h-0 opacity-0'
                               }`}
                             >
-                              <div className="pl-0 border-l border-zinc-900 dark:border-zinc-100 ml-0 pl-4">
-                                <p className="text-[12px] font-light text-[#595f72] dark:text-zinc-400 tracking-normal whitespace-pre-line font-serif leading-relaxed">
+                              <div className="pl-3 border-l border-zinc-100 dark:border-zinc-800">
+                                <p className="text-[10px] font-light text-[#595f72] dark:text-zinc-400 font-serif leading-relaxed">
                                   {item.description}
                                 </p>
                               </div>
@@ -221,22 +223,22 @@ export default function Services() {
                     </div>
                   )}
 
-                  <div className="mt-auto flex items-end justify-between pt-8 border-t border-[#595f72] dark:border-white">
+                  <div className="mt-auto flex items-end justify-between pt-6 border-t border-zinc-100 dark:border-zinc-900">
                     <div className="space-y-1">
                       <span className="block text-[7px] uppercase tracking-[0.5em] text-[#595f72] font-serif font-bold">
                         Price
                       </span>
-                      <p className="text-[13px] font-light tracking-tighter text-[#251101] dark:text-white tabular-nums font-serif">
+                      <p className="text-[12px] font-serif tracking-tight text-[#251101] dark:text-white tabular-nums">
                         PHP {service.price?.toLocaleString() || '0'}
                       </p>
                     </div>
 
                     <Link
                       href={`/booking?serviceId=${service.id}`}
-                      className="group/book flex items-center gap-3 text-[9px] font-bold uppercase tracking-[0.3em] transition-all hover:opacity-50 pb-1 font-serif"
+                      className="group/book flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.3em] transition-all hover:opacity-50 pb-1 font-serif"
                     >
                       <span>Book now</span>
-                      <ArrowUpRightIcon className="w-3 h-3 text-[#251101] dark:text-white transition-transform group-hover/book:translate-x-1 group-hover/book:-translate-y-1" />
+                      <ArrowUpRightIcon className="w-2.5 h-2.5 text-[#251101] dark:text-white transition-transform group-hover/book:translate-x-0.5 group-hover/book:-translate-y-0.5" />
                     </Link>
                   </div>
                 </div>
