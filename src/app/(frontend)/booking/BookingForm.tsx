@@ -135,8 +135,12 @@ function BookingFormContent({
 
   // Handles dynamic URL changes (Back button, etc.)
   useEffect(() => {
+    // --- FIX: Prevent URL params from overwriting the blank form when adding a guest ---
+    if (bookings.length > 0) return
+
     const email = searchParams.get('email') || ''
     const fn = searchParams.get('fn') || ''
+
     if (email && fn && (email !== personalInfo.email || fn !== personalInfo.firstName)) {
       setPersonalInfo({
         firstName: fn,
@@ -147,7 +151,7 @@ function BookingFormContent({
       setExistingEmail(email)
       setShowModal(false)
     }
-  }, [searchParams, personalInfo.email, personalInfo.firstName])
+  }, [searchParams, personalInfo.email, personalInfo.firstName, bookings.length])
 
   // --- 4. HANDLERS ---
   const handleLookup = async () => {
