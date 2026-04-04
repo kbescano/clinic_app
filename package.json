@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@eslint/eslintrc": "^3.3.5",
+    "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
     "@payloadcms/db-postgres": "3.79.0",
     "@payloadcms/email-nodemailer": "3.79.0",

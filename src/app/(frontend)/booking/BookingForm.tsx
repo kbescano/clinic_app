@@ -1,12 +1,27 @@
 'use client'
 
-import React, { useActionState, useState, useEffect, Suspense, useTransition, useMemo } from 'react'
+import React, {
+  useActionState,
+  useState,
+  useEffect,
+  Suspense,
+  useTransition,
+  useMemo,
+  Fragment,
+} from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import {
+  Listbox,
+  ListboxButton,
+  ListboxOption,
+  ListboxOptions,
+  Transition,
+} from '@headlessui/react'
 import { createBookingAction, getBusySlots, getCustomerByEmail } from './actions'
 import { Service } from '@/payload-types'
 import FadeIn from '../components/FadeIn'
 import Notification from '../components/Notification'
-import { ArrowPathIcon, ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, ChevronDownIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline'
 import BackToHome from '../components/BackToHome'
 import dayjs from '@/lib/dayjs'
 import { RegistrySkeleton } from '../components/RegistrySkeleton'
@@ -103,28 +118,30 @@ function BookingFormContent({
     return [...Array(35)].map((_, i) => startOfMonth.subtract(startDay, 'day').add(i, 'day'))
   }, [viewDate])
 
-  // --- PROGRESSIVE DISCLOSURE LOGIC ---
+  // --- REFINED PROGRESSIVE DISCLOSURE LOGIC ---
   const isAddingGuest = bookings.length > 0
   const showIdentitySection = !hasPrefillData || isAddingGuest
   const showFirstName = currentServiceId !== ''
   const showSurname = showFirstName && personalInfo.firstName.trim().length > 0
-  const showPhone = showIdentitySection && showSurname && !initialData.ph
+
+  // Logic: Only show contact fields for the primary booker
+  const showPhone = !isAddingGuest && showIdentitySection && showSurname && !initialData.ph
   const showEmail =
+    !isAddingGuest &&
     showIdentitySection &&
     (initialData.ph ? showSurname : showPhone && isValidPHPhone(personalInfo.phone)) &&
     !initialData.email
 
-  // FIX: Identity check for primary or guest
+  // Fix: Guest only needs name and service to satisfy identity
   const identitySatisfied =
     hasPrefillData && !isAddingGuest
       ? currentServiceId !== ''
       : personalInfo.firstName.trim().length > 0 &&
         personalInfo.surname.trim().length > 0 &&
-        (initialData.ph || isValidPHPhone(personalInfo.phone)) &&
-        (initialData.email || isValidEmail(personalInfo.email))
+        (isAddingGuest || initialData.ph || isValidPHPhone(personalInfo.phone)) &&
+        (isAddingGuest || initialData.email || isValidEmail(personalInfo.email))
 
-  // BUG FIX: Removed bookings.length === 0 constraint so guest can see calendar
-  const showDate = identitySatisfied
+  const showDateSection = identitySatisfied
 
   const timeSlots = [
     '09:00',
@@ -151,7 +168,6 @@ function BookingFormContent({
 
   useEffect(() => {
     async function updateAvailability() {
-      // Use currentDate or fallback to existing booking date if adding guest
       const activeDate = currentDate || (bookings.length > 0 ? bookings[0].date : null)
       if (activeDate) {
         setLoadingSlots(true)
@@ -200,10 +216,8 @@ function BookingFormContent({
     const batch = [entry]
     if (showExtraService && extraServiceId) batch.push({ ...entry, serviceId: extraServiceId })
     setBookings([...bookings, ...batch])
-
-    // Reset inputs for the next person
     setPersonalInfo({
-      ...personalInfo, // Keep email/phone if they are the same group, or reset if preferred
+      ...personalInfo,
       firstName: '',
       surname: '',
     })
@@ -211,7 +225,7 @@ function BookingFormContent({
     setExtraServiceId('')
     setShowExtraService(false)
     setCurrentTime('')
-    // We keep currentDate so the group stays on the same day
+    // currentDate is preserved so the guest stays on the same day
   }
 
   const handleFinalSubmit = (e: React.FormEvent) => {
@@ -251,7 +265,6 @@ function BookingFormContent({
         <Notification message={errorToast} type="error" onClose={() => setErrorToast(null)} />
       )}
 
-      {/* --- MODAL --- */}
       {showModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/80 dark:bg-black/80 backdrop-blur-xl p-4">
           <div className="w-full max-w-lg bg-white dark:bg-[#050505] p-10 md:p-16 border border-zinc-100 dark:border-zinc-900 rounded-2xl shadow-2xl text-center">
@@ -321,7 +334,6 @@ function BookingFormContent({
       <FadeIn>
         <div className="max-w-4xl mx-auto flex flex-col gap-14 md:gap-20">
           <div className="flex items-center justify-between">
-            {/* FIX: Use window.location.href to hard-reset the session */}
             <button
               onClick={() => {
                 if (confirm('Clear session?')) window.location.href = '/booking'
@@ -351,31 +363,64 @@ function BookingFormContent({
             className="grid grid-cols-1 lg:grid-cols-12 gap-12 md:gap-20"
           >
             <div className="lg:col-span-6 flex flex-col gap-10">
-              <div className="grid grid-cols-1 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 rounded-2xl overflow-hidden shadow-sm">
-                <div className="bg-white dark:bg-[#050505] p-6 md:p-8 space-y-10">
+              <div className="grid grid-cols-1 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 rounded-2xl overflow-visible shadow-sm">
+                <div className="bg-white dark:bg-[#050505] p-6 md:p-8 space-y-10 rounded-2xl">
                   {/* SERVICE SELECT */}
                   <div className="relative animate-in fade-in duration-700">
                     <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-3 block font-serif">
                       Service
                     </label>
-                    <div className="relative">
-                      <select
-                        required
-                        value={currentServiceId}
-                        onChange={(e) => setCurrentServiceId(e.target.value)}
-                        className="w-full bg-transparent text-[15px] md:text-[16px] font-serif outline-none py-1.5 appearance-none border-b border-zinc-100 dark:border-zinc-900 focus:border-zinc-300 transition-colors"
-                      >
-                        <option value="" className="bg-white dark:bg-[#050505]">
-                          Select Service...
-                        </option>
-                        {services.map((s) => (
-                          <option key={s.id} value={s.id} className="bg-white dark:bg-[#050505]">
-                            {s.title}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#595f72] pointer-events-none" />
-                    </div>
+
+                    <Listbox value={currentServiceId} onChange={setCurrentServiceId}>
+                      <div className="relative z-40">
+                        <ListboxButton className="w-full bg-transparent text-[16px] font-serif text-left outline-none py-1.5 border-b border-zinc-100 dark:border-zinc-900 flex items-center justify-between transition-colors focus:border-zinc-300">
+                          <span className={`truncate ${!currentServiceId ? 'opacity-40' : ''}`}>
+                            {currentServiceId
+                              ? getServiceTitle(currentServiceId)
+                              : 'Select Service...'}
+                          </span>
+                          <ChevronDownIcon className="w-3.5 h-3.5 text-[#595f72]" />
+                        </ListboxButton>
+
+                        <Transition
+                          as={Fragment}
+                          enter="transition-all duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
+                          enterFrom="opacity-0 translate-y-4 blur-md scale-95"
+                          enterTo="opacity-100 translate-y-0 blur-0 scale-100"
+                          leave="transition-all duration-300 ease-in"
+                          leaveFrom="opacity-100 blur-0"
+                          leaveTo="opacity-0 blur-sm"
+                        >
+                          <ListboxOptions className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-2xl bg-white/95 dark:bg-[#050505]/95 backdrop-blur-2xl border border-zinc-100 dark:border-zinc-900 py-2 shadow-2xl focus:outline-none ring-1 ring-black/5">
+                            {services.map((s) => (
+                              <ListboxOption
+                                key={s.id}
+                                value={String(s.id)}
+                                className={({ active }) =>
+                                  `relative cursor-pointer select-none py-4 px-6 transition-colors ${
+                                    active ? 'bg-zinc-50 dark:bg-zinc-900/50' : ''
+                                  }`
+                                }
+                              >
+                                {({ selected }) => (
+                                  <div className="flex items-center justify-between">
+                                    <span
+                                      className={`block truncate text-[14px] font-serif tracking-tight ${selected ? 'text-[#251101] dark:text-white font-medium' : 'text-[#595f72]'}`}
+                                    >
+                                      {s.title}
+                                    </span>
+                                    {selected && (
+                                      <div className="w-1.5 h-1.5 rounded-full bg-[#48a9a6]" />
+                                    )}
+                                  </div>
+                                )}
+                              </ListboxOption>
+                            ))}
+                          </ListboxOptions>
+                        </Transition>
+                      </div>
+                    </Listbox>
+
                     {currentServiceId && !showExtraService && (
                       <button
                         type="button"
@@ -404,32 +449,61 @@ function BookingFormContent({
                           [ Remove ]
                         </button>
                       </div>
-                      <div className="relative">
-                        <select
-                          value={extraServiceId}
-                          onChange={(e) => setExtraServiceId(e.target.value)}
-                          className="w-full bg-transparent text-[15px] md:text-[16px] font-serif outline-none py-1.5 appearance-none border-b border-zinc-100 dark:border-zinc-900 focus:border-zinc-300 transition-colors"
-                        >
-                          <option value="" className="bg-white dark:bg-[#050505]">
-                            Select Service...
-                          </option>
-                          {services.map((s) => (
-                            <option
-                              key={s.id}
-                              value={s.id}
-                              disabled={String(s.id) === currentServiceId}
-                              className="bg-white dark:bg-[#050505]"
-                            >
-                              {s.title}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDownIcon className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#595f72] pointer-events-none" />
-                      </div>
+
+                      <Listbox value={extraServiceId} onChange={setExtraServiceId}>
+                        <div className="relative">
+                          <ListboxButton className="w-full bg-transparent text-[16px] font-serif text-left outline-none py-1.5 border-b border-zinc-100 dark:border-zinc-900 flex items-center justify-between transition-colors focus:border-zinc-300">
+                            <span className={`truncate ${!extraServiceId ? 'opacity-40' : ''}`}>
+                              {extraServiceId
+                                ? getServiceTitle(extraServiceId)
+                                : 'Select Service...'}
+                            </span>
+                            <ChevronDownIcon className="w-3.5 h-3.5 text-[#595f72]" />
+                          </ListboxButton>
+
+                          <Transition
+                            as={Fragment}
+                            enter="transition-all duration-[600ms] ease-[cubic-bezier(0.16,1,0.3,1)]"
+                            enterFrom="opacity-0 translate-y-4 blur-md scale-95"
+                            enterTo="opacity-100 translate-y-0 blur-0 scale-100"
+                            leave="transition-all duration-300 ease-in"
+                            leaveFrom="opacity-100 blur-0"
+                            leaveTo="opacity-0 blur-sm"
+                          >
+                            <ListboxOptions className="absolute z-50 mt-2 max-h-60 w-full overflow-auto rounded-2xl bg-white/90 dark:bg-[#050505]/90 backdrop-blur-2xl border border-zinc-100 dark:border-zinc-900 py-2 shadow-2xl focus:outline-none ring-1 ring-black/5">
+                              {services.map((s) => (
+                                <ListboxOption
+                                  key={s.id}
+                                  value={String(s.id)}
+                                  disabled={String(s.id) === currentServiceId}
+                                  className={({ active, selected, disabled }) =>
+                                    `relative select-none py-4 px-6 transition-colors ${
+                                      disabled ? 'opacity-20 cursor-not-allowed' : 'cursor-pointer'
+                                    } ${active && !disabled ? 'bg-zinc-50 dark:bg-zinc-900/50' : ''}`
+                                  }
+                                >
+                                  {({ selected }) => (
+                                    <div className="flex items-center justify-between">
+                                      <span
+                                        className={`block truncate text-[14px] font-serif tracking-tight ${selected ? 'text-[#251101] dark:text-white font-medium' : 'text-[#595f72]'}`}
+                                      >
+                                        {s.title}
+                                      </span>
+                                      {selected && (
+                                        <div className="w-1 h-1 rounded-full bg-[#48a9a6]" />
+                                      )}
+                                    </div>
+                                  )}
+                                </ListboxOption>
+                              ))}
+                            </ListboxOptions>
+                          </Transition>
+                        </div>
+                      </Listbox>
                     </div>
                   )}
 
-                  {/* IDENTITY FIELDS */}
+                  {/* IDENTITY FIELDS (Guest Logic Applied) */}
                   {showIdentitySection && showFirstName && (
                     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-700">
                       <Field
@@ -446,104 +520,118 @@ function BookingFormContent({
                           placeholder="Dela Cruz"
                         />
                       )}
-                      {showPhone && (
-                        <Field
-                          label="Phone"
-                          value={personalInfo.phone}
-                          onChange={(v) => setPersonalInfo({ ...personalInfo, phone: v })}
-                          placeholder="0917 123 4567"
-                        />
-                      )}
-                      {showEmail && (
-                        <Field
-                          label="Email"
-                          value={personalInfo.email}
-                          onChange={(v) => setPersonalInfo({ ...personalInfo, email: v })}
-                          placeholder="hello@example.com"
-                        />
+
+                      {/* Hide contact fields for guests */}
+                      {!isAddingGuest && (
+                        <>
+                          {showPhone && (
+                            <Field
+                              label="Phone"
+                              value={personalInfo.phone}
+                              onChange={(v) => setPersonalInfo({ ...personalInfo, phone: v })}
+                              placeholder="0917 123 4567"
+                            />
+                          )}
+                          {showEmail && (
+                            <Field
+                              label="Email"
+                              value={personalInfo.email}
+                              onChange={(v) => setPersonalInfo({ ...personalInfo, email: v })}
+                              placeholder="hello@example.com"
+                            />
+                          )}
+                        </>
                       )}
                     </div>
                   )}
 
-                  {/* CALENDAR SECTION */}
-                  {showDate && (
+                  {/* CALENDAR & TIME SECTION */}
+                  {showDateSection && (
                     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
-                      <div className="relative">
-                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-                          <div className="space-y-1">
-                            <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] block font-serif">
-                              Clinic Calendar
-                            </label>
-                            <h3 className="text-[20px] md:text-[24px] font-serif font-light tracking-tighter leading-none">
-                              {viewDate.format('MMMM YYYY')}
-                            </h3>
-                          </div>
-                          <div className="inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative overflow-hidden">
-                            <div
-                              className="absolute top-1 bottom-1 w-[42px] md:w-[35px] bg-white dark:bg-zinc-800 rounded-full shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
-                              style={{
-                                transform: `translateX(${availableMonths.findIndex((m) => m.isSame(viewDate, 'month')) * 100}%)`,
-                              }}
-                            />
-                            {availableMonths.map((m) => (
-                              <button
-                                key={m.format('MMM')}
-                                type="button"
-                                onClick={() => setViewDate(m)}
-                                className={`relative z-10 w-[42px] md:w-[52px] py-1.5 text-[6px] md:text-[7px] uppercase tracking-[0.1em] font-medium transition-colors duration-300 font-serif ${viewDate.isSame(m, 'month') ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'}`}
-                              >
-                                {m.format('MMM')}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-7 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 rounded-2xl overflow-hidden">
-                          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-                            <div
-                              key={d}
-                              className="bg-zinc-50/50 dark:bg-zinc-900/30 py-3 text-center"
-                            >
-                              <span className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] font-serif text-[#595f72] opacity-60">
-                                {d}
-                              </span>
+                      {/* Hide Calendar Grid for Guests */}
+                      {!isAddingGuest && (
+                        <div className="relative">
+                          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+                            <div className="space-y-1">
+                              <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] block font-serif">
+                                Clinic Calendar
+                              </label>
+                              <h3 className="text-[20px] md:text-[24px] font-serif font-light tracking-tighter leading-none">
+                                {viewDate.format('MMMM YYYY')}
+                              </h3>
                             </div>
-                          ))}
-                          {calendarGrid.map((date, i) => {
-                            const dateStr = date.format('YYYY-MM-DD')
-                            const isSelected = currentDate === dateStr
-                            const isToday = dateStr === todayStr
-                            const isDisabled = date.isBefore(dayjs(minSelectableDate), 'day')
-                            return (
-                              <button
-                                key={i}
-                                type="button"
-                                disabled={isDisabled}
-                                onClick={() => {
-                                  setCurrentDate(dateStr)
-                                  setCurrentTime('')
+                            <div className="inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative overflow-hidden">
+                              <div
+                                className="absolute top-1 bottom-1 w-[42px] md:w-[35px] bg-white dark:bg-zinc-800 rounded-full shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                                style={{
+                                  transform: `translateX(${availableMonths.findIndex((m) => m.isSame(viewDate, 'month')) * 100}%)`,
                                 }}
-                                className={`relative h-14 md:h-20 flex flex-col items-center justify-center transition-all duration-500 ${isSelected ? 'bg-[#251101] dark:bg-white z-10' : 'bg-white dark:bg-[#050505] hover:bg-zinc-50 dark:hover:bg-zinc-900/40'} ${!date.isSame(viewDate, 'month') ? 'opacity-[0.15]' : ''} ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-                              >
-                                <span
-                                  className={`text-[13px] md:text-[16px] font-serif tabular-nums tracking-tight ${isSelected ? 'text-white dark:text-[#251101]' : 'text-[#251101] dark:text-zinc-100'}`}
+                              />
+                              {availableMonths.map((m) => (
+                                <button
+                                  key={m.format('MMM')}
+                                  type="button"
+                                  onClick={() => setViewDate(m)}
+                                  className={`relative z-10 w-[42px] md:w-[52px] py-1.5 text-[6px] md:text-[7px] uppercase tracking-[0.1em] font-medium transition-colors duration-300 font-serif ${viewDate.isSame(m, 'month') ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'}`}
                                 >
-                                  {date.date()}
+                                  {m.format('MMM')}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-7 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 rounded-2xl overflow-hidden">
+                            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
+                              <div
+                                key={d}
+                                className="bg-zinc-50/50 dark:bg-zinc-900/30 py-3 text-center"
+                              >
+                                <span className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] font-serif text-[#595f72] opacity-60">
+                                  {d}
                                 </span>
-                                {isToday && (
-                                  <div
-                                    className={`absolute bottom-2 md:bottom-3 w-1 h-1 rounded-full ${isSelected ? 'bg-white dark:bg-[#251101]' : 'bg-[#48a9a6]'}`}
-                                  />
-                                )}
-                              </button>
-                            )
-                          })}
+                              </div>
+                            ))}
+                            {calendarGrid.map((date, i) => {
+                              const dateStr = date.format('YYYY-MM-DD')
+                              const isSelected = currentDate === dateStr
+                              const isToday = dateStr === todayStr
+                              const isDisabled = date.isBefore(dayjs(minSelectableDate), 'day')
+                              return (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  disabled={isDisabled}
+                                  onClick={() => {
+                                    setCurrentDate(dateStr)
+                                    setCurrentTime('')
+                                  }}
+                                  className={`relative h-14 md:h-20 flex flex-col items-center justify-center transition-all duration-500 ${isSelected ? 'bg-[#251101] dark:bg-white z-10' : 'bg-white dark:bg-[#050505] hover:bg-zinc-50 dark:hover:bg-zinc-900/40'} ${!date.isSame(viewDate, 'month') ? 'opacity-[0.15]' : ''} ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                                >
+                                  <span
+                                    className={`text-[13px] md:text-[16px] font-serif tabular-nums tracking-tight ${isSelected ? 'text-white dark:text-[#251101]' : 'text-[#251101] dark:text-zinc-100'}`}
+                                  >
+                                    {date.date()}
+                                  </span>
+                                  {isToday && (
+                                    <div
+                                      className={`absolute bottom-2 md:bottom-3 w-1 h-1 rounded-full ${isSelected ? 'bg-white dark:bg-[#251101]' : 'bg-[#48a9a6]'}`}
+                                    />
+                                  )}
+                                </button>
+                              )
+                            })}
+                          </div>
                         </div>
-                      </div>
+                      )}
 
+                      {/* Always show Time Slots once Date is set (persisted for guests) */}
                       {currentDate && (
                         <div className="relative animate-in fade-in slide-in-from-top-6 duration-700">
                           <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] block font-serif mb-6">
-                            {loadingSlots ? 'Consulting Archive...' : 'Available Time Slots'}
+                            {isAddingGuest
+                              ? `Guest Time Slot (${dayjs(currentDate).format('MMM D')})`
+                              : loadingSlots
+                                ? 'Consulting Archive...'
+                                : 'Available Time Slots'}
                           </label>
                           <div className="grid grid-cols-3 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 rounded-2xl overflow-hidden">
                             {timeSlots.map((slot) => {
@@ -592,7 +680,6 @@ function BookingFormContent({
               </div>
             </div>
 
-            {/* SUMMARY PANEL */}
             <div className="lg:col-span-6 flex flex-col gap-10">
               <div className="flex items-baseline justify-between border-b border-zinc-100 dark:border-zinc-900/50 pb-3 px-1">
                 <h2 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
