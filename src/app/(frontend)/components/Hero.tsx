@@ -58,7 +58,7 @@ export default function CinematicVideoHero() {
                 }`}
               >
                 <p className="text-[7px] md:text-[8px] font-mono tracking-[0.6em] text-white/30 uppercase">
-                  [ collection.dermal_logic_2026 ]
+                  [ core.skin_edit_2026]
                 </p>
                 <div
                   className={`h-px bg-white/10 transition-all duration-[2000ms] delay-[1000ms] ${
