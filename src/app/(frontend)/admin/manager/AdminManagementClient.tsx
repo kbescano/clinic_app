@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import FadeIn from '../../components/FadeIn'
 import { TableCellsIcon, ClockIcon } from '@heroicons/react/24/outline'
 import MassUpload from '../../components/MassUpload'
@@ -26,45 +26,80 @@ export default function AdminManagementClient({
 }: AdminProps) {
   const [drawLine, setDrawLine] = useState(false)
 
+  // SCROLL REVEAL STATES
+  const [isHeaderVisible, setIsHeaderVisible] = useState(false)
+  const [isSystemVisible, setIsSystemVisible] = useState(false)
+  const headerRef = useRef<HTMLDivElement>(null)
+  const systemRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
-    const timer = setTimeout(() => setDrawLine(true), 500)
-    return () => clearTimeout(timer)
+    const timer = setTimeout(() => setDrawLine(true), 100)
+
+    const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+    const headerObserver = new IntersectionObserver(
+      ([entry]) => setIsHeaderVisible(entry.isIntersecting),
+      observerOptions,
+    )
+    const systemObserver = new IntersectionObserver(
+      ([entry]) => setIsSystemVisible(entry.isIntersecting),
+      observerOptions,
+    )
+
+    if (headerRef.current) headerObserver.observe(headerRef.current)
+    if (systemRef.current) systemObserver.observe(systemRef.current)
+
+    return () => {
+      clearTimeout(timer)
+      headerObserver.disconnect()
+      systemObserver.disconnect()
+    }
   }, [])
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 px-4 md:px-8 selection:bg-zinc-100 overflow-x-hidden font-sans">
       <FadeIn>
-        {/* UNIFORM SPACING WRAPPER: Locked to max-w-4xl */}
         <div className="max-w-4xl mx-auto flex flex-col gap-10 md:gap-20">
-          {/* COUTURE HEADER */}
-          {/* COUTURE HEADER */}
-          <header className="flex flex-col md:flex-row md:items-center justify-between gap-8 md:gap-12">
+          {/* COUTURE HEADER: Animated Line & Typography */}
+          <header
+            ref={headerRef}
+            className="flex flex-col md:flex-row md:items-center justify-between gap-8 md:gap-12"
+          >
             <div className="space-y-4 relative">
               <div
-                className={`absolute -left-4 md:-left-8 top-0 w-[1px] bg-zinc-900 dark:bg-white transition-all duration-1000 ease-out origin-top ${
-                  drawLine ? 'h-full opacity-100' : 'h-0 opacity-0'
+                className={`absolute -left-4 md:-left-8 top-0 w-[1px] bg-zinc-900 dark:bg-white transition-all duration-[1500ms] ease-[cubic-bezier(0.16,1,0.3,1)] origin-top ${
+                  isHeaderVisible && drawLine ? 'h-full opacity-100' : 'h-0 opacity-0'
                 }`}
               />
-              <div className="flex items-center gap-4">
+              <div
+                className={`transition-all duration-1000 delay-100 ${isHeaderVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+              >
                 <p className="text-[8px] md:text-[10px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
                   Clinical Operations
                 </p>
               </div>
-              <h1 className="text-[28px] md:text-[48px] font-light tracking-tighter font-serif leading-none">
+              <h1
+                className={`text-[28px] md:text-[48px] font-light tracking-tighter font-serif leading-none transition-all duration-[1200ms] delay-300 ease-out ${
+                  isHeaderVisible
+                    ? 'opacity-100 translate-y-0 blur-0'
+                    : 'opacity-0 translate-y-8 blur-md'
+                }`}
+              >
                 Management
               </h1>
             </div>
 
-            {/* Filter Container */}
-            {/* Admin Filter Container: Anchored right for clean editorial alignment */}
-            <div className="self-end md:self-auto flex items-center relative z-20">
+            <div
+              className={`self-end md:self-auto flex items-center relative z-20 transition-all duration-1000 delay-500 ${
+                isHeaderVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+              }`}
+            >
               <AdminFilter initialRange={range} initialStatus={status} />
             </div>
           </header>
 
           <div className="flex flex-col gap-14 md:gap-20">
             {/* TODAY SECTION */}
-            <section className="animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-150 ease-out fill-mode-both flex flex-col gap-6 md:gap-8">
+            <section className="flex flex-col gap-6 md:gap-8">
               <div className="flex items-baseline justify-between border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
                 <h2 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif flex items-center gap-2">
                   Today&apos;s Sessions
@@ -85,7 +120,7 @@ export default function AdminManagementClient({
 
             {/* SECONDARY SECTION */}
             {range !== 'today' && (
-              <section className="animate-in fade-in duration-700 flex flex-col gap-6 md:gap-8">
+              <section className="flex flex-col gap-6 md:gap-8">
                 <div className="flex items-baseline justify-between border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
                   <h2 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
                     {secondaryLabel}
@@ -105,9 +140,14 @@ export default function AdminManagementClient({
               </section>
             )}
 
-            {/* SYSTEM INTEGRATION SECTION (Atelier Hairline Design) */}
-            <section className="animate-in fade-in duration-1000 delay-300 fill-mode-both">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 shadow-sm">
+            {/* SYSTEM INTEGRATION SECTION (Staggered Block Reveal) */}
+            <section
+              ref={systemRef}
+              className={`transition-all duration-[1200ms] ease-out ${
+                isSystemVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              }`}
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 shadow-sm overflow-hidden rounded-2xl">
                 <div className="lg:col-span-4 bg-white dark:bg-[#050505] p-6 md:p-10 flex flex-col justify-between group transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/20">
                   <div>
                     <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif mb-6 md:mb-8 flex items-center gap-2">
@@ -141,14 +181,31 @@ export default function AdminManagementClient({
   )
 }
 
+// --- SUB-COMPONENT: INDIVIDUAL TICKET SCROLL TRACKING ---
 function AppointmentTicket({ apt }: { apt: any }) {
+  const [isVisible, setIsVisible] = useState(false)
+  const ticketRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry.isIntersecting), {
+      threshold: 0.1,
+      rootMargin: '0px 0px -20px 0px',
+    })
+    if (ticketRef.current) observer.observe(ticketRef.current)
+    return () => observer.disconnect()
+  }, [])
+
   const displayTime = dayjs(apt.appointmentDate).tz('Asia/Manila').format('hh:mm A')
   const displayDate = dayjs(apt.appointmentDate).tz('Asia/Manila').format('MMM D')
 
   return (
-    <div className="group py-6 px-5 md:px-2 transition-all duration-500 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/10 border-t border-zinc-100 dark:border-zinc-900/50 first:border-t-0">
+    <div
+      ref={ticketRef}
+      className={`group py-6 px-5 md:px-2 transition-all duration-[1000ms] ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-zinc-50/50 dark:hover:bg-zinc-900/10 border-t border-zinc-100 dark:border-zinc-900/50 first:border-t-0 ${
+        isVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-8 blur-sm'
+      }`}
+    >
       <div className="flex flex-col lg:grid lg:grid-cols-[20%_45%_35%] lg:items-start gap-y-6 md:gap-y-0">
-        {/* COL 1: Time, Date & Dots */}
         <div className="flex flex-row items-start justify-between lg:flex-col lg:h-full lg:pr-8">
           <div className="space-y-1">
             <p className="text-[20px] md:text-[24px] font-light font-serif text-[#251101] dark:text-zinc-100 tabular-nums tracking-tighter leading-none">
@@ -165,7 +222,6 @@ function AppointmentTicket({ apt }: { apt: any }) {
           </div>
         </div>
 
-        {/* COL 2: Patient Info & Services */}
         <div className="flex flex-col justify-around h-full lg:pr-8">
           <div className="space-y-1.5 md:space-y-1">
             <h3 className="text-[15px] md:text-[16px] font-serif text-[#251101] dark:text-zinc-100 tracking-tight capitalize leading-none">
@@ -187,7 +243,6 @@ function AppointmentTicket({ apt }: { apt: any }) {
           </div>
         </div>
 
-        {/* COL 3: Actions */}
         <div className="lg:border-l border-zinc-100 dark:border-zinc-900/50 lg:pl-8 w-full pt-4 lg:pt-0 border-t lg:border-t-0 mt-2 lg:mt-0">
           <BookingActions appointmentId={apt.id} currentStatus={apt.status} />
         </div>

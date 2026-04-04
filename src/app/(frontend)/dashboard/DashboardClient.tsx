@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import FadeIn from '../components/FadeIn'
 import BackToHome from '../components/BackToHome'
 import dayjs from '@/lib/dayjs'
@@ -47,41 +47,76 @@ export default function SpecialistDashboardClient({
   const [view, setView] = useState<'today' | 'week'>('today')
   const [drawLine, setDrawLine] = useState(false)
 
+  // SCROLL REVEAL STATES
+  const [isHeaderVisible, setIsHeaderVisible] = useState(false)
+  const [isMetricsVisible, setIsMetricsVisible] = useState(false)
+  const headerRef = useRef<HTMLDivElement>(null)
+  const metricsRef = useRef<HTMLDivElement>(null)
+
   const activeData = view === 'today' ? todayData : weekData
   const activeMetrics = view === 'today' ? todayMetrics : weekMetrics
-
   const now = dayjs().tz('Asia/Manila')
 
   useEffect(() => {
     const timer = setTimeout(() => setDrawLine(true), 500)
-    return () => clearTimeout(timer)
+    const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
+
+    const headerObserver = new IntersectionObserver(
+      ([entry]) => setIsHeaderVisible(entry.isIntersecting),
+      observerOptions,
+    )
+    const metricsObserver = new IntersectionObserver(
+      ([entry]) => setIsMetricsVisible(entry.isIntersecting),
+      observerOptions,
+    )
+
+    if (headerRef.current) headerObserver.observe(headerRef.current)
+    if (metricsRef.current) metricsObserver.observe(metricsRef.current)
+
+    return () => {
+      clearTimeout(timer)
+      headerObserver.disconnect()
+      metricsObserver.disconnect()
+    }
   }, [])
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 px-4 md:px-8 selection:bg-zinc-100 overflow-x-hidden font-sans">
       <FadeIn>
-        {/* UNIFORM SPACING WRAPPER: Locked to max-w-4xl for focused, editorial reading width */}
         <div className="max-w-4xl mx-auto flex flex-col gap-10 md:gap-20">
-          {/* HEADER SECTION */}
-          <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 md:gap-12">
+          <header
+            ref={headerRef}
+            className="flex flex-col md:flex-row md:items-end justify-between gap-8 md:gap-12"
+          >
             <div className="space-y-4 relative">
               <div
-                className={`absolute -left-4 md:-left-8 top-0 w-[1px] bg-zinc-900 dark:bg-white transition-all duration-1000 ease-out origin-top ${
-                  drawLine ? 'h-full opacity-100' : 'h-0 opacity-0'
+                className={`absolute -left-4 md:-left-8 top-0 w-[1px] bg-zinc-900 dark:bg-white transition-all duration-[1500ms] ease-[cubic-bezier(0.16,1,0.3,1)] origin-top ${
+                  isHeaderVisible && drawLine ? 'h-full opacity-100' : 'h-0 opacity-0'
                 }`}
               />
-              <div className="flex items-center gap-4">
+              <div
+                className={`transition-all duration-1000 delay-100 ${isHeaderVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
+              >
                 <p className="text-[8px] md:text-[10px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
                   Clinical Schedule
                 </p>
               </div>
-              <h1 className="text-[28px] md:text-[48px] font-light tracking-tighter font-serif leading-none">
+              <h1
+                className={`text-[28px] md:text-[48px] font-light tracking-tighter font-serif leading-none transition-all duration-[1200ms] delay-300 ease-out ${
+                  isHeaderVisible
+                    ? 'opacity-100 translate-y-0 blur-0'
+                    : 'opacity-0 translate-y-8 blur-md'
+                }`}
+              >
                 {now.format('dddd')}, <span className="text-[#595f72]">{now.format('MMMM D')}</span>
               </h1>
             </div>
 
-            {/* LUXURY SEGMENTED CONTROL (self-end anchors it to the right on mobile) */}
-            <div className="self-end md:self-auto inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative">
+            <div
+              className={`self-end md:self-auto inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative transition-all duration-1000 delay-500 ${
+                isHeaderVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+              }`}
+            >
               <div
                 className={`absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-white dark:bg-zinc-800 rounded-full shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
                   view === 'week' ? 'translate-x-full' : 'translate-x-0'
@@ -89,39 +124,42 @@ export default function SpecialistDashboardClient({
               />
               <button
                 onClick={() => setView('today')}
-                className={`relative z-10 w-28 md:w-36 py-2.5 text-[7px] md:text-[9px] uppercase tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${
-                  view === 'today' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'
-                }`}
+                className={`relative z-10 w-28 md:w-36 py-2.5 text-[7px] md:text-[9px] uppercase tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${view === 'today' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'}`}
               >
                 Today
               </button>
               <button
                 onClick={() => setView('week')}
-                className={`relative z-10 w-28 md:w-36 py-2.5 text-[7px] md:text-[9px] uppercase tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${
-                  view === 'week' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'
-                }`}
+                className={`relative z-10 w-28 md:w-36 py-2.5 text-[7px] md:text-[9px] uppercase tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${view === 'week' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'}`}
               >
                 Next 7 Days
               </button>
             </div>
           </header>
 
-          {/* METRICS SECTION */}
-          <section className="animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-150 ease-out fill-mode-both flex flex-col gap-8 md:gap-10">
-            {/* 1px Grid Borders with Rounded Edges and Softened Lines */}
+          <section
+            ref={metricsRef}
+            className={`flex flex-col gap-8 md:gap-10 transition-all duration-[1200ms] ease-out ${isMetricsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}
+          >
             <div className="grid grid-cols-2 md:grid-cols-4 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 rounded-2xl overflow-hidden shadow-sm">
               <MetricBlock
                 label="Projected Revenue"
                 value={`₱${activeMetrics.projectedRevenue.toLocaleString()}`}
+                delay="delay-[0ms]"
+                visible={isMetricsVisible}
               />
               <MetricBlock
                 label="Settled Revenue"
                 value={`₱${activeMetrics.settledRevenue.toLocaleString()}`}
                 highlight
+                delay="delay-[100ms]"
+                visible={isMetricsVisible}
               />
               <MetricBlock
                 label="Pending Revenue"
                 value={`₱${activeMetrics.pendingRevenue.toLocaleString()}`}
+                delay="delay-[200ms]"
+                visible={isMetricsVisible}
               />
               <div className="bg-white dark:bg-[#050505] p-5 md:p-8 flex flex-col justify-between min-h-[140px] md:min-h-[160px] group transition-all hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20">
                 <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
@@ -134,45 +172,20 @@ export default function SpecialistDashboardClient({
                   <div className="w-full h-[1.5px] bg-zinc-100 dark:bg-zinc-900 mt-2 mb-1 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-[#251101] dark:bg-white transition-all duration-1000 ease-out"
-                      style={{ width: `${activeMetrics.completionRate}%` }}
+                      style={{
+                        width: isMetricsVisible ? `${activeMetrics.completionRate}%` : '0%',
+                      }}
                     />
                   </div>
-                  <p className="text-[6px] md:text-[8px] uppercase tracking-widest text-[#595f72] font-serif mt-2 opacity-70">
-                    {activeMetrics.totalCompletedServices} / {activeMetrics.totalManifestWorkload}{' '}
-                    Workloads
-                  </p>
                 </div>
               </div>
             </div>
-
-            {/* Service Breakdown */}
-            <div className="flex flex-wrap gap-4 md:gap-8 pt-2 px-1">
-              <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif w-full mb-1">
-                Service Manifest Breakdown
-              </p>
-              {Object.entries(activeMetrics.serviceCounts).length === 0 && (
-                <span className="text-[10px] md:text-[12px] font-serif text-zinc-400 italic">
-                  No workloads found.
-                </span>
-              )}
-              {Object.entries(activeMetrics.serviceCounts).map(([name, count]) => (
-                <div key={name} className="flex items-center gap-2 md:gap-3 group">
-                  <span className="text-[12px] md:text-[16px] font-serif text-[#251101] dark:text-zinc-100 tabular-nums leading-none transition-transform group-hover:scale-110">
-                    {count}
-                  </span>
-                  <span className="text-[7px] md:text-[9px] uppercase tracking-widest text-[#595f72] font-serif leading-none opacity-80 group-hover:opacity-100 transition-opacity">
-                    × {name}
-                  </span>
-                </div>
-              ))}
-            </div>
           </section>
-          {/* TABLE SECTION */}
-          <section className="animate-in fade-in duration-1000 delay-300 fill-mode-both">
+
+          <section>
             <BentoTable data={activeData} showDate={view === 'week'} />
           </section>
 
-          {/* FOOTER */}
           <div className="pt-8 md:pt-12 flex justify-center border-t border-zinc-50 dark:border-zinc-900/50 opacity-40 hover:opacity-100 transition-opacity">
             <BackToHome />
           </div>
@@ -186,13 +199,21 @@ function MetricBlock({
   label,
   value,
   highlight = false,
+  delay = '',
+  visible = false,
 }: {
   label: string
   value: string
   highlight?: boolean
+  delay?: string
+  visible?: boolean
 }) {
   return (
-    <div className="bg-white dark:bg-[#050505] p-5 md:p-8 flex flex-col justify-between min-h-[140px] md:min-h-[160px] group transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/20">
+    <div
+      className={`bg-white dark:bg-[#050505] p-5 md:p-8 flex flex-col justify-between min-h-[140px] md:min-h-[160px] group transition-all duration-[1200ms] ease-out ${delay} ${
+        visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
+      } hover:bg-zinc-50 dark:hover:bg-zinc-900/20`}
+    >
       <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
         {label}
       </p>
@@ -233,150 +254,126 @@ function BentoTable({ data, showDate }: { data: MergedAppointment[]; showDate: b
 
   return (
     <div className="w-full relative overflow-visible">
-      <table className="w-full text-left border-collapse block md:table overflow-visible">
-        <tbody className="block md:table-row-group md:divide-y md:divide-zinc-50 dark:md:divide-zinc-900/50 overflow-visible">
-          {data.map((apt, index) => {
-            const isOngoing = index === ongoingIndex
-            const isUpcoming = index === upcomingIndex
-            const hasOngoing = ongoingIndex !== -1
+      <div className="flex flex-col">
+        {data.map((apt, index) => {
+          const isOngoing = index === ongoingIndex
+          const isUpcoming = index === upcomingIndex
+          const hasOngoing = ongoingIndex !== -1
 
-            const isTodayTable = !showDate
-            const isWeekTable = showDate
+          const isTodayTable = !showDate
+          const isWeekTable = showDate
 
-            const isTodaySticky = isTodayTable && (isOngoing || (!hasOngoing && isUpcoming))
-            const isWeekSticky = isWeekTable && isPast6PM && isUpcoming
+          const isTodaySticky = isTodayTable && (isOngoing || (!hasOngoing && isUpcoming))
+          const isWeekSticky = isWeekTable && isPast6PM && isUpcoming
 
-            const isSticky = isTodaySticky || isWeekSticky
-            const showUpcomingLabel = isUpcoming && (isTodayTable || (isWeekTable && isPast6PM))
+          const isSticky = isTodaySticky || isWeekSticky
+          const showUpcomingLabel = isUpcoming && (isTodayTable || (isWeekTable && isPast6PM))
 
-            return (
-              <tr
-                key={apt.id}
-                style={
-                  isSticky
-                    ? {
-                        position: 'sticky',
-                        top: '80px',
-                        zIndex: 50,
-                        transform: 'translateZ(0)',
-                      }
-                    : {}
-                }
-                className={`
-                  flex flex-row items-start justify-between gap-4 md:gap-0
-                  py-5 px-5 md:px-0 md:py-0 md:min-h-0 md:table-row group transition-all duration-700 
-                  ${
-                    isSticky
-                      ? 'bg-white/95 dark:bg-[#050505]/95 backdrop-blur-md shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] border-b border-zinc-200 dark:border-zinc-800'
-                      : 'bg-transparent border-b border-zinc-100 dark:border-zinc-900/50 md:border-b-0'
-                  } 
-                  hover:bg-zinc-50/30 dark:hover:bg-zinc-900/10
-                `}
-              >
-                {/* TIME COLUMN */}
-                <td className="block md:table-cell w-20 md:w-32 shrink-0 pt-0.5 md:pt-0 py-0 md:py-8 pr-2 md:pr-8 align-top md:align-baseline pl-0 md:pl-6 relative">
-                  {isSticky && (
-                    <div
-                      className={`absolute -left-5 md:left-0 top-0 bottom-0 w-[2px] ${isOngoing ? 'bg-[#248232]' : 'bg-[#48a9a6]'}`}
-                    />
-                  )}
+          return (
+            <AppointmentRow
+              key={apt.id}
+              apt={apt}
+              showDate={showDate}
+              isSticky={isSticky}
+              isOngoing={isOngoing}
+              showUpcomingLabel={showUpcomingLabel}
+            />
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
-                  <div className="flex flex-col md:relative items-start md:items-baseline gap-0.5 md:gap-0">
-                    <div className="md:absolute md:-top-5 left-0 flex items-center gap-1.5 whitespace-nowrap">
-                      {isOngoing && isTodayTable && (
-                        <span className="text-[6px] md:text-[7px] text-[#248232] uppercase tracking-[0.2em] font-bold font-serif animate-pulse">
-                          ● Ongoing
-                        </span>
-                      )}
-                      {showUpcomingLabel && (
-                        <span className="text-[6px] md:text-[7px] text-[#48a9a6] uppercase tracking-[0.2em] font-medium font-serif">
-                          Upcoming
-                        </span>
-                      )}
-                    </div>
-                    <span
-                      className={`text-[9px] md:text-[12px] whitespace-nowrap font-light tracking-widest tabular-nums leading-none font-serif ${isOngoing ? 'text-[#248232]' : 'text-[#251101] dark:text-zinc-100'}`}
-                    >
-                      {formatPHTime(apt.appointmentDate)}
-                    </span>
-                  </div>
-                </td>
+function AppointmentRow({
+  apt,
+  showDate,
+  isSticky,
+  isOngoing,
+  showUpcomingLabel,
+}: {
+  apt: MergedAppointment
+  showDate: boolean
+  isSticky: boolean
+  isOngoing: boolean
+  showUpcomingLabel: boolean
+}) {
+  const [isVisible, setIsVisible] = useState(false)
+  const rowRef = useRef<HTMLDivElement>(null)
 
-                {/* DATE COLUMN (Desktop Weekly View Only) */}
-                {showDate && (
-                  <td className="hidden md:table-cell py-0 md:py-8 px-0 md:px-8 align-top md:align-baseline w-40">
-                    <span className="text-[11px] text-[#595f72] tracking-wider font-serif block leading-none">
-                      {formatPHDate(apt.appointmentDate)}
-                    </span>
-                  </td>
-                )}
+  useEffect(() => {
+    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry.isIntersecting), {
+      threshold: 0.1,
+      rootMargin: '0px 0px -20px 0px',
+    })
+    if (rowRef.current) observer.observe(rowRef.current)
+    return () => observer.disconnect()
+  }, [])
 
-                {/* NAME & MOBILE-COMBINED COLUMN */}
-                <td className="flex-1 min-w-0 block md:table-cell py-0 md:py-8 px-0 md:px-8 align-top md:align-baseline">
-                  <div className="flex flex-col gap-1.5 md:gap-1">
-                    <div className="flex flex-col md:flex-row md:items-baseline gap-1 md:gap-2 truncate">
-                      <span className="text-[13px] md:text-[16px] text-[#251101] font-serif tracking-tight capitalize dark:text-zinc-100 leading-none truncate">
-                        {apt.firstName} {apt.surname}
-                      </span>
-                      {/* Show date inline on mobile for Weekly View */}
-                      {showDate && (
-                        <span className="md:hidden text-[8px] text-[#595f72] font-serif tracking-wider whitespace-nowrap opacity-80">
-                          {formatPHDate(apt.appointmentDate)}
-                        </span>
-                      )}
-                    </div>
+  return (
+    <div
+      ref={rowRef}
+      style={
+        isSticky ? { position: 'sticky', top: '80px', zIndex: 50, transform: 'translateZ(0)' } : {}
+      }
+      className={`
+        flex flex-row items-start justify-between gap-4 md:gap-0
+        py-5 px-5 md:px-6 transition-all duration-[1000ms] ease-[cubic-bezier(0.16,1,0.3,1)]
+        ${isSticky ? 'bg-white/95 dark:bg-[#050505]/95 backdrop-blur-md shadow-sm' : 'bg-transparent border-b border-zinc-100 dark:border-zinc-900/50'} 
+        hover:bg-zinc-50/30 dark:hover:bg-zinc-900/10
+        ${isVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-8 blur-sm'}
+      `}
+    >
+      <div className="w-20 md:w-32 shrink-0 pt-1 relative">
+        {isSticky && (
+          <div
+            className={`absolute -left-5 top-1 bottom-1 w-[2px] ${isOngoing ? 'bg-[#248232]' : 'bg-[#48a9a6]'}`}
+          />
+        )}
+        <div className="flex flex-col items-start gap-1">
+          <div className="h-3 flex items-center">
+            {isOngoing && !showDate && (
+              <span className="text-[6px] text-[#248232] uppercase tracking-[0.2em] font-bold font-serif animate-pulse">
+                ● Ongoing
+              </span>
+            )}
+            {showUpcomingLabel && (
+              <span className="text-[6px] text-[#48a9a6] uppercase tracking-[0.2em] font-medium font-serif">
+                Upcoming
+              </span>
+            )}
+          </div>
+          <span
+            className={`text-[9px] md:text-[12px] whitespace-nowrap font-light tracking-widest tabular-nums leading-none font-serif ${isOngoing ? 'text-[#248232]' : 'text-[#251101] dark:text-zinc-100'}`}
+          >
+            {formatPHTime(apt.appointmentDate)}
+          </span>
+        </div>
+      </div>
 
-                    {/* Services (Visible on Mobile inside Name column) */}
-                    <div className="flex md:hidden flex-wrap items-center gap-y-1">
-                      {[...apt.services]
-                        .sort((a, b) => a.localeCompare(b))
-                        .map((s, i, array) => (
-                          <React.Fragment key={i}>
-                            <span className="text-[10px] md:text-[11px] capitalize tracking-tight text-[#595f72] dark:text-zinc-400 font-serif leading-none">
-                              {s}
-                            </span>
-                          </React.Fragment>
-                        ))}
-                    </div>
+      <div className="flex-1 min-w-0 flex flex-col gap-1.5 px-2 md:px-8 pt-4">
+        <span className="text-[13px] md:text-[16px] text-[#251101] font-serif font-medium tracking-tight capitalize dark:text-zinc-100 leading-none truncate">
+          {apt.firstName} {apt.surname}
+        </span>
+        <div className="flex flex-wrap items-center gap-y-1">
+          {[...apt.services].sort().map((s, i, array) => (
+            <React.Fragment key={i}>
+              <span className="text-[10px] md:text-[11px] capitalize tracking-tight text-[#595f72] dark:text-zinc-400 font-serif leading-none">
+                {s}
+              </span>
+              {i < array.length - 1 && (
+                <span className="mx-2 text-[8px] text-zinc-300 dark:text-zinc-800 font-light">
+                  |
+                </span>
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
 
-                    <span className="text-[8px] md:hidden text-[#595f72] font-serif lowercase tracking-tight leading-none truncate opacity-60">
-                      {apt.email}
-                    </span>
-                  </div>
-                </td>
-
-                {/* SERVICES COLUMN (Desktop Only) */}
-                <td className="hidden md:table-cell py-0 md:py-8 px-0 md:px-8 align-top md:align-baseline">
-                  <div className="flex flex-wrap gap-1.5 items-baseline">
-                    {[...apt.services]
-                      .sort((a, b) => a.localeCompare(b))
-                      .map((s, i, array) => (
-                        <React.Fragment key={i}>
-                          <span className="text-[10px] md:text-[11px] capitalize tracking-tight text-[#595f72] dark:text-zinc-400 font-serif leading-none">
-                            {s}
-                          </span>
-                          {/* Divider logic: only show if not the last item */}
-                          {i < array.length - 1 && (
-                            <span className="mx-2 text-[8px] text-zinc-300 dark:text-zinc-800 font-light">
-                              |
-                            </span>
-                          )}
-                        </React.Fragment>
-                      ))}
-                  </div>
-                </td>
-
-                {/* STATUS COLUMN */}
-                <td className="shrink-0 block md:table-cell pt-0.5 md:pt-0 py-0 md:py-8 pl-0 md:pl-8 align-top md:align-baseline text-right pr-0 md:pr-6 w-20 md:w-32">
-                  <div className="flex justify-end items-start md:items-baseline">
-                    <StatusBadge status={apt.status} />
-                  </div>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+      <div className="shrink-0 text-right w-20 md:w-32 pt-4">
+        <StatusBadge status={apt.status} />
+      </div>
     </div>
   )
 }

@@ -6,7 +6,7 @@ export function RegistrySkeleton() {
   const gradientId = useId()
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-white dark:bg-[#050505] z-[100]">
+    <div className="fixed inset-0 flex items-center justify-center bg-black z-[100]">
       <div className="relative animate-in fade-in zoom-in-95 duration-1000 ease-out">
         {/* CENTERED CLOCKWISE SPINNER */}
         <svg
@@ -26,10 +26,10 @@ export function RegistrySkeleton() {
               y2="22"
               gradientUnits="userSpaceOnUse"
             >
-              <stop offset="0%" stopColor="#000000" /> {/* Pure Black */}
-              <stop offset="40%" stopColor="#1A1A1A" /> {/* Deep Charcoal */}
-              <stop offset="70%" stopColor="#3F3F46" /> {/* Slate Highlight */}
-              <stop offset="100%" stopColor="#09090B" /> {/* Near Black */}
+              <stop offset="0%" stopColor="#FFFFFF" /> {/* Pure White */}
+              <stop offset="40%" stopColor="#FAFAFA" /> {/* Alabaster / Bone */}
+              <stop offset="70%" stopColor="#F4F4F5" /> {/* Zinc Highlight (This shows depth) */}
+              <stop offset="100%" stopColor="#FDFDFF" /> {/* Silken Finish */}
             </linearGradient>
           </defs>
           <path
