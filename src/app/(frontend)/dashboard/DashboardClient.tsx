@@ -359,7 +359,7 @@ function AppointmentRow({
 
       {/* COLUMN 2: PATIENT & SERVICES */}
       <div className="flex-1 min-w-0 flex flex-col items-start gap-1 px-2 md:px-8">
-        <span className="text-[12px] text-[#251101] font-medium tracking-tight capitalize dark:text-zinc-100 leading-none">
+        <span className="text-[12px] text-[#251101] font-medium font-serif tracking-tight capitalize dark:text-zinc-100 leading-none">
           {apt.firstName} {apt.surname}
         </span>
         <div className="flex flex-wrap items-center gap-y-1 leading-none">
@@ -390,7 +390,7 @@ function StatusBadge({ status }: { status: string }) {
   }
   return (
     <span
-      className={`text-[10px] uppercase tracking-[0.3em] font-medium font-serif leading-none ${styles[status]}`}
+      className={`text-[12px] uppercase font-medium tracking-[0.1em] font-serif dark:text-zinc-100 leading-none ${styles[status]}`}
     >
       {status}
     </span>
