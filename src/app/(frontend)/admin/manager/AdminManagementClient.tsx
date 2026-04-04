@@ -201,41 +201,57 @@ function AppointmentTicket({ apt }: { apt: any }) {
   return (
     <div
       ref={ticketRef}
-      className={`group py-6 px-5 md:px-2 transition-all duration-[1000ms] ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-zinc-50/50 dark:hover:bg-zinc-900/10 border-t border-zinc-100 dark:border-zinc-900/50 first:border-t-0 ${
+      className={`group py-6 px-5 md:px-2 transition-all duration-[1000ms] ease-[cubic-bezier(0.16,1,0.3,1)] hover:bg-zinc-50/50 dark:hover:bg-zinc-900/10 border-t border-zinc-100 dark:border-zinc-900/50 first:border-t-0 font-serif ${
         isVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-8 blur-sm'
       }`}
     >
-      <div className="flex flex-col lg:grid lg:grid-cols-[20%_45%_35%] lg:items-start gap-y-6 md:gap-y-0">
-        <div className="flex flex-row items-start justify-between lg:flex-col lg:h-full lg:pr-8">
-          <div className="space-y-1">
-            <p className="text-[20px] md:text-[24px] font-light font-serif text-[#251101] dark:text-zinc-100 tabular-nums tracking-tighter leading-none">
-              {displayTime}
-            </p>
-            <p className="text-[8px] md:text-[9px] uppercase text-[#595f72] tracking-[0.3em] font-serif mt-1">
-              {displayDate}
-            </p>
+      <div className="flex flex-col lg:grid lg:grid-cols-[20%_45%_35%] lg:items-start">
+        {/* COL 1: Mobile Row-Split Preserved */}
+        <div className="flex flex-row lg:h-[80px] h-[60px] lg:flex-col justify-between lg:pr-8">
+          <div className="flex flex-col gap-1">
+            {/* ROW 1 FIXED HEIGHT */}
+            <div className="flex items-center">
+              <p className="text-[16px] font-light text-[#251101] dark:text-zinc-100 tabular-nums tracking-tighter leading-none m-0">
+                {displayTime}
+              </p>
+            </div>
+            {/* ROW 2 FIXED HEIGHT */}
+            <div className="flex items-center">
+              <p className="text-[10px] uppercase text-[#595f72] tracking-[0.3em] leading-none m-0">
+                {displayDate}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-4 lg:mt-auto pt-2 lg:pt-8">
+          {/* ROW 3 FIXED MARGIN */}
+          <div className="flex items-start gap-4 pt-1 lg:pt-0">
             <StatusDot label="Conf" active={apt.emailStatus?.confirmationSent} />
             <StatusDot label="24H" active={apt.emailStatus?.reminder24hSent} />
             <StatusDot label="2H" active={apt.emailStatus?.reminder2hSent} />
           </div>
         </div>
 
-        <div className="flex flex-col justify-around h-full lg:pr-8">
-          <div className="space-y-1.5 md:space-y-1">
-            <h3 className="text-[15px] md:text-[16px] font-serif text-[#251101] dark:text-zinc-100 tracking-tight capitalize leading-none">
-              {apt.firstName} {apt.surname}
-            </h3>
-            <p className="text-[9px] md:text-[10px] text-[#595f72] font-serif tracking-tight lowercase">
-              {apt.email} <span className="mx-1.5 opacity-40">/</span> {apt.phone}
-            </p>
+        {/* COL 2: Patient Info */}
+        <div className="flex flex-col h-[80px] justify-between">
+          <div className="flex flex-col gap-1">
+            {/* ROW 1 FIXED HEIGHT */}
+            <div className="flex items-center">
+              <h3 className="text-[16px] text-[#251101] dark:text-zinc-100 tracking-tight capitalize leading-none m-0">
+                {apt.firstName} {apt.surname}
+              </h3>
+            </div>
+            {/* ROW 2 FIXED HEIGHT */}
+            <div className="flex items-center">
+              <p className="text-[10px] text-[#595f72] tracking-tight lowercase leading-none m-0">
+                {apt.email} <span className="mx-1.5 opacity-40">/</span> {apt.phone}
+              </p>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-1.5 mt-4 md:mt-6">
+          {/* ROW 3 FIXED MARGIN */}
+          <div className="flex flex-wrap items-center">
             {apt.services.map((s: string, i: number) => (
               <span
                 key={i}
-                className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] text-[#595f72] px-1.5 py-0.5 font-medium font-serif"
+                className="text-[10px] uppercase tracking-[0.2em] text-[#595f72] font-medium leading-none m-0 pb-0.5"
               >
                 {s}
               </span>
@@ -243,7 +259,8 @@ function AppointmentTicket({ apt }: { apt: any }) {
           </div>
         </div>
 
-        <div className="lg:border-l border-zinc-100 dark:border-zinc-900/50 lg:pl-8 w-full pt-4 lg:pt-0 border-t lg:border-t-0 mt-2 lg:mt-0">
+        {/* COL 3: Actions */}
+        <div className="lg:border-l border-zinc-100 dark:border-zinc-900/50 lg:pl-8 w-full pt-6 lg:pt-0 border-t lg:border-t-0 mt-6 lg:mt-0">
           <BookingActions appointmentId={apt.id} currentStatus={apt.status} />
         </div>
       </div>
@@ -253,12 +270,12 @@ function AppointmentTicket({ apt }: { apt: any }) {
 
 function StatusDot({ label, active }: { label: string; active?: boolean }) {
   return (
-    <div className="flex flex-col gap-1.5 shrink-0 items-start">
+    <div className="relative flex flex-col shrink-0 items-start justify-center h-[16px]">
       <div
-        className={`w-5 md:w-6 h-[1.5px] transition-all duration-700 ${active ? 'bg-[#248232] dark:bg-[#48a9a6]' : 'bg-zinc-200 dark:bg-zinc-800'}`}
+        className={`absolute -top-1 left-0 w-full h-[1.5px] transition-all duration-700 ${active ? 'bg-[#248232] dark:bg-[#48a9a6]' : 'bg-zinc-200 dark:bg-zinc-800'}`}
       />
       <span
-        className={`text-[6px] md:text-[7px] uppercase tracking-[0.2em] font-medium font-serif ${active ? 'text-[#248232] dark:text-[#48a9a6]' : 'text-[#595f72]'}`}
+        className={`text-[10px] uppercase tracking-[0.2em] font-medium leading-none m-0 ${active ? 'text-[#248232] dark:text-[#48a9a6]' : 'text-[#595f72]'}`}
       >
         {label}
       </span>

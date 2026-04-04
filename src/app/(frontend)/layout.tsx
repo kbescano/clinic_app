@@ -8,6 +8,7 @@ import { Ovo } from 'next/font/google'
 import './globals.css'
 import Navbar from './components/Navbar'
 import { ContactProvider } from './components/ContactContext'
+import ScrollToTop from './components/ScrollToTop'
 
 const ovo = Ovo({
   weight: '400', // Ovo only comes in regular weight
@@ -51,6 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
       </head>
       <body className={`${ovo.variable} antialiased`}>
+        <ScrollToTop />
         <ContactProvider contactData={contactData}>
           <Navbar contactData={contactData} headerData={headerData} />
           <main className="min-h-screen pb-20 lg:pb-0 dark:bg-black">{children}</main>

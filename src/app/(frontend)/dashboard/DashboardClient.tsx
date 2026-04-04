@@ -318,60 +318,63 @@ function AppointmentRow({
       }
       className={`
         flex flex-row items-start justify-between gap-4 md:gap-0
-        py-5 px-5 md:px-6 transition-all duration-[1000ms] ease-[cubic-bezier(0.16,1,0.3,1)]
+        py-8 px-5 md:px-6 transition-all duration-[1000ms] ease-[cubic-bezier(0.16,1,0.3,1)]
         ${isSticky ? 'bg-white/95 dark:bg-[#050505]/95 backdrop-blur-md shadow-sm' : 'bg-transparent border-b border-zinc-100 dark:border-zinc-900/50'} 
         hover:bg-zinc-50/30 dark:hover:bg-zinc-900/10
         ${isVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-8 blur-sm'}
+        font-serif
       `}
     >
-      <div className="w-20 md:w-32 shrink-0 pt-1 relative">
+      {/* COLUMN 1: TIME & LABEL */}
+      <div className="w-20 md:w-32 shrink-0 relative flex flex-col items-start gap-1">
         {isSticky && (
           <div
-            className={`absolute -left-5 top-1 bottom-1 w-[2px] ${isOngoing ? 'bg-[#248232]' : 'bg-[#48a9a6]'}`}
+            className={`absolute -left-5 top-0 bottom-0 w-[2px] ${isOngoing ? 'bg-[#248232]' : 'bg-[#48a9a6]'}`}
           />
         )}
-        <div className="flex flex-col items-start gap-1">
-          <div className="h-3 flex items-center">
+        {(isOngoing && !showDate) || showUpcomingLabel ? (
+          <div className="flex flex-col items-start gap-1 leading-none">
             {isOngoing && !showDate && (
-              <span className="text-[6px] text-[#248232] uppercase tracking-[0.2em] font-bold font-serif animate-pulse">
+              <span className="text-[10px] text-[#248232] uppercase tracking-[0.2em] font-bold animate-pulse">
                 ● Ongoing
               </span>
             )}
             {showUpcomingLabel && (
-              <span className="text-[6px] text-[#48a9a6] uppercase tracking-[0.2em] font-medium font-serif">
+              <span className="text-[10px] text-[#48a9a6] uppercase tracking-[0.2em] font-medium">
                 Upcoming
               </span>
             )}
+            <span
+              className={`text-[16px] whitespace-nowrap font-light tracking-widest tabular-nums ${isOngoing ? 'text-[#248232]' : 'text-[#251101] dark:text-zinc-100'}`}
+            >
+              {formatPHTime(apt.appointmentDate)}
+            </span>
           </div>
-          <span
-            className={`text-[9px] md:text-[12px] whitespace-nowrap font-light tracking-widest tabular-nums leading-none font-serif ${isOngoing ? 'text-[#248232]' : 'text-[#251101] dark:text-zinc-100'}`}
-          >
+        ) : (
+          <span className="text-[16px] whitespace-nowrap font-light tracking-widest tabular-nums text-[#251101] dark:text-zinc-100 leading-none">
             {formatPHTime(apt.appointmentDate)}
           </span>
-        </div>
+        )}
       </div>
 
-      <div className="flex-1 min-w-0 flex flex-col gap-1.5 px-2 md:px-8 pt-4">
-        <span className="text-[13px] md:text-[16px] text-[#251101] font-serif font-medium tracking-tight capitalize dark:text-zinc-100 leading-none truncate">
+      {/* COLUMN 2: PATIENT & SERVICES */}
+      <div className="flex-1 min-w-0 flex flex-col items-start gap-1 px-2 md:px-8">
+        <span className="text-[16px] text-[#251101] font-medium tracking-tight capitalize dark:text-zinc-100 leading-none truncate">
           {apt.firstName} {apt.surname}
         </span>
-        <div className="flex flex-wrap items-center gap-y-1">
+        <div className="flex flex-wrap items-center gap-y-1 leading-none">
           {[...apt.services].sort().map((s, i, array) => (
             <React.Fragment key={i}>
-              <span className="text-[10px] md:text-[11px] capitalize tracking-tight text-[#595f72] dark:text-zinc-400 font-serif leading-none">
+              <span className="text-[10px] capitalize tracking-tight text-[#595f72] dark:text-zinc-400">
                 {s}
               </span>
-              {i < array.length - 1 && (
-                <span className="mx-2 text-[8px] text-zinc-300 dark:text-zinc-800 font-light">
-                  |
-                </span>
-              )}
             </React.Fragment>
           ))}
         </div>
       </div>
 
-      <div className="shrink-0 text-right w-20 md:w-32 pt-4">
+      {/* COLUMN 3: STATUS BADGE */}
+      <div className="shrink-0 text-right w-20 md:w-32 leading-none">
         <StatusBadge status={apt.status} />
       </div>
     </div>
@@ -387,7 +390,7 @@ function StatusBadge({ status }: { status: string }) {
   }
   return (
     <span
-      className={`text-[7px] md:text-[9px] uppercase tracking-[0.3em] font-medium font-serif ${styles[status]}`}
+      className={`text-[10px] uppercase tracking-[0.3em] font-medium font-serif leading-none ${styles[status]}`}
     >
       {status}
     </span>
