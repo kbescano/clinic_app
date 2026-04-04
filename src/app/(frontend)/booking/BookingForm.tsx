@@ -21,7 +21,7 @@ import { createBookingAction, getBusySlots, getCustomerByEmail } from './actions
 import { Service } from '@/payload-types'
 import FadeIn from '../components/FadeIn'
 import Notification from '../components/Notification'
-import { ArrowPathIcon, ChevronDownIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline'
+import { ArrowPathIcon, ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import BackToHome from '../components/BackToHome'
 import dayjs from '@/lib/dayjs'
 import { RegistrySkeleton } from '../components/RegistrySkeleton'

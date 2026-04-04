@@ -345,13 +345,13 @@ function AppointmentRow({
               </span>
             )}
             <span
-              className={`text-[16px] whitespace-nowrap font-light tracking-widest tabular-nums ${isOngoing ? 'text-[#248232]' : 'text-[#251101] dark:text-zinc-100'}`}
+              className={`text-[12px] whitespace-nowrap font-light tracking-widest tabular-nums ${isOngoing ? 'text-[#248232]' : 'text-[#251101] dark:text-zinc-100'}`}
             >
               {formatPHTime(apt.appointmentDate)}
             </span>
           </div>
         ) : (
-          <span className="text-[16px] whitespace-nowrap font-light tracking-widest tabular-nums text-[#251101] dark:text-zinc-100 leading-none">
+          <span className="text-[12px] whitespace-nowrap font-light tracking-widest tabular-nums text-[#251101] dark:text-zinc-100 leading-none">
             {formatPHTime(apt.appointmentDate)}
           </span>
         )}
@@ -359,13 +359,13 @@ function AppointmentRow({
 
       {/* COLUMN 2: PATIENT & SERVICES */}
       <div className="flex-1 min-w-0 flex flex-col items-start gap-1 px-2 md:px-8">
-        <span className="text-[16px] text-[#251101] font-medium tracking-tight capitalize dark:text-zinc-100 leading-none truncate">
+        <span className="text-[12px] text-[#251101] font-medium tracking-tight capitalize dark:text-zinc-100 leading-none">
           {apt.firstName} {apt.surname}
         </span>
         <div className="flex flex-wrap items-center gap-y-1 leading-none">
           {[...apt.services].sort().map((s, i, array) => (
             <React.Fragment key={i}>
-              <span className="text-[10px] capitalize tracking-tight text-[#595f72] dark:text-zinc-400">
+              <span className="text-[8px] capitalize tracking-tight text-[#595f72] dark:text-zinc-400">
                 {s}
               </span>
             </React.Fragment>
@@ -374,7 +374,7 @@ function AppointmentRow({
       </div>
 
       {/* COLUMN 3: STATUS BADGE */}
-      <div className="shrink-0 text-right w-20 md:w-32 leading-none">
+      <div className="shrink-0 text-right flex flex-start w-20 md:w-32 leading-none">
         <StatusBadge status={apt.status} />
       </div>
     </div>
