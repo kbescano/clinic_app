@@ -34,6 +34,7 @@ interface BookingEntry {
   phone: string
   date: string
   time: string
+  isExisting?: boolean // Tracking for summary display vs. DB submission
 }
 
 const isValidEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
@@ -106,6 +107,30 @@ function BookingFormContent({
     }
   }, [])
 
+  // --- BACKGROUND SYNC: Handles direct URL access reflecting status ---
+  useEffect(() => {
+    async function syncRegistry() {
+      if (hasPrefillData && initialData.email && !searchParams.get('apts')) {
+        try {
+          const data = await getCustomerByEmail(initialData.email)
+          if (data && data.appointments && data.appointments.length > 0) {
+            const params = new URLSearchParams({
+              fn: data.firstName,
+              sn: data.surname,
+              email: data.email,
+              ph: data.phone,
+              apts: JSON.stringify(data.appointments),
+            })
+            router.replace(`/booking/status?${params.toString()}`)
+          }
+        } catch (err) {
+          console.error('Background sync failed', err)
+        }
+      }
+    }
+    syncRegistry()
+  }, [hasPrefillData, initialData.email, router, searchParams])
+
   const [viewDate, setViewDate] = useState(dayjs(minSelectableDate).startOf('month'))
 
   const availableMonths = useMemo(() => {
@@ -119,12 +144,11 @@ function BookingFormContent({
   }, [viewDate])
 
   // --- REFINED PROGRESSIVE DISCLOSURE LOGIC ---
-  const isAddingGuest = bookings.length > 0
+  const isAddingGuest = bookings.filter((b) => !b.isExisting).length > 0
   const showIdentitySection = !hasPrefillData || isAddingGuest
   const showFirstName = currentServiceId !== ''
   const showSurname = showFirstName && personalInfo.firstName.trim().length > 0
 
-  // Logic: Only show contact fields for the primary booker
   const showPhone = !isAddingGuest && showIdentitySection && showSurname && !initialData.ph
   const showEmail =
     !isAddingGuest &&
@@ -132,7 +156,6 @@ function BookingFormContent({
     (initialData.ph ? showSurname : showPhone && isValidPHPhone(personalInfo.phone)) &&
     !initialData.email
 
-  // Fix: Guest only needs name and service to satisfy identity
   const identitySatisfied =
     hasPrefillData && !isAddingGuest
       ? currentServiceId !== ''
@@ -179,6 +202,7 @@ function BookingFormContent({
     updateAvailability()
   }, [currentDate, bookings])
 
+  // --- MODAL LOOKUP: Using router.push and Appointment Detection ---
   const handleLookup = async () => {
     if (!isValidEmail(existingEmail)) {
       setModalError('Invalid email format.')
@@ -186,20 +210,38 @@ function BookingFormContent({
     }
     setIsVerifying(true)
     try {
-      const data = (await getCustomerByEmail(existingEmail.trim().toLowerCase())) as any
+      const data = await getCustomerByEmail(existingEmail.trim().toLowerCase())
       if (!data) {
         setModalError('No record found.')
         setIsVerifying(false)
         return
       }
+
       const params = new URLSearchParams({
         fn: data.firstName,
         sn: data.surname,
         email: data.email,
         ph: data.phone,
       })
-      if (currentServiceId) params.append('serviceId', currentServiceId)
-      window.location.href = `/booking?${params.toString()}`
+
+      if (data.appointments && data.appointments.length > 0) {
+        params.append('apts', JSON.stringify(data.appointments))
+        router.push(`/booking/status?${params.toString()}`)
+      } else {
+        if (currentServiceId) params.append('serviceId', currentServiceId)
+
+        // Sync local form state to prefill fields immediately
+        setPersonalInfo({
+          firstName: data.firstName,
+          surname: data.surname,
+          email: data.email,
+          phone: data.phone,
+        })
+
+        setIsVerifying(false)
+        setShowModal(false)
+        router.push(`/booking?${params.toString()}`)
+      }
     } catch {
       setModalError('Server error.')
       setIsVerifying(false)
@@ -225,12 +267,13 @@ function BookingFormContent({
     setExtraServiceId('')
     setShowExtraService(false)
     setCurrentTime('')
-    // currentDate is preserved so the guest stays on the same day
   }
 
   const handleFinalSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const finalEntries = [...bookings]
+    // Only submit NEW entries (filter out existing ones if any)
+    const finalEntries = bookings.filter((b) => !b.isExisting)
+
     if (personalInfo.firstName && currentTime) {
       const current = {
         ...personalInfo,
@@ -548,7 +591,6 @@ function BookingFormContent({
                   {/* CALENDAR & TIME SECTION */}
                   {showDateSection && (
                     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
-                      {/* Hide Calendar Grid for Guests */}
                       {!isAddingGuest && (
                         <div className="relative">
                           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
@@ -623,7 +665,6 @@ function BookingFormContent({
                         </div>
                       )}
 
-                      {/* Always show Time Slots once Date is set (persisted for guests) */}
                       {currentDate && (
                         <div className="relative animate-in fade-in slide-in-from-top-6 duration-700">
                           <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] block font-serif mb-6">
