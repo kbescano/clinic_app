@@ -236,7 +236,12 @@ function AppointmentTicket({ apt }: { apt: any }) {
             {/* ROW 1 FIXED HEIGHT */}
             <div className="flex items-center">
               <h3 className="text-[16px] text-[#251101] dark:text-zinc-100 tracking-tight capitalize leading-none m-0">
-                {apt.firstName} {apt.surname}
+                {apt.firstName} {apt.surname}{' '}
+                {apt.isGuest && (
+                  <span className="text-[6px] px-1.5 py-0.5 text-[#595f72] uppercase tracking-[0.2em] font-serif">
+                    Guest
+                  </span>
+                )}
               </h3>
             </div>
             {/* ROW 2 FIXED HEIGHT */}

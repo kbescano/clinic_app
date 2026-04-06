@@ -34,7 +34,7 @@ export default function BookNowButton() {
         transition-all duration-1000 cubic-bezier(0.16, 1, 0.3, 1)
         ${
           isVisible
-            ? 'bottom-20 opacity-80 translate-y-0 scale-100'
+            ? 'bottom-20 opacity-100 translate-y-0 scale-100'
             : 'bottom-0 opacity-0 translate-y-20 scale-90 pointer-events-none'
         }
         active:scale-95 active:duration-150

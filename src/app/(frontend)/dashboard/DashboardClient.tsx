@@ -36,7 +36,6 @@ interface DashboardProps {
 }
 
 const formatPHTime = (dateStr: string) => dayjs(dateStr).tz('Asia/Manila').format('hh:mm A')
-const formatPHDate = (dateStr: string) => dayjs(dateStr).tz('Asia/Manila').format('MMM D, YYYY')
 
 export default function SpecialistDashboardClient({
   todayData,

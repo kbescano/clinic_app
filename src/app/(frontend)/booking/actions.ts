@@ -53,7 +53,19 @@ export async function getBusySlots(dateString: string) {
 export async function createBookingAction(prevState: any, formData: FormData) {
   const payload = await getPayload({ config })
 
-  // ... (Keep your existing data extraction logic)
+  // --- PHASE 0: SANITIZATION & IDENTITY ---
+  const rawRescheduleId = formData.get('rescheduleId') as string
+  // Treat empty strings or literal "undefined"/"null" as null
+  const rescheduleId =
+    rawRescheduleId &&
+    rawRescheduleId !== 'undefined' &&
+    rawRescheduleId !== 'null' &&
+    rawRescheduleId.trim() !== ''
+      ? rawRescheduleId
+      : null
+
+  const isReschedule = !!rescheduleId
+
   const rawFirstNames = formData.getAll('firstName').map((v) => String(v))
   const rawSurnames = formData.getAll('surname').map((v) => String(v))
   const rawEmails = formData.getAll('email').map((v) => String(v))
@@ -62,18 +74,20 @@ export async function createBookingAction(prevState: any, formData: FormData) {
   const rawDates = formData.getAll('appointmentDate').map((v) => String(v))
 
   const bookingGroupId = `GRP-${dayjs().format('YYMMDD')}-${crypto.randomBytes(2).toString('hex')}`
+  let validatedEntries: any[] = []
 
   try {
     // --- PHASE 1: PREPARE ENTRIES ---
-    const validatedEntries = rawFirstNames.map((_, i) => {
+    validatedEntries = rawFirstNames.map((_, i) => {
+      // Ensure we are working with PHT for the registry
       const isoDate = dayjs.tz(rawDates[i], 'Asia/Manila').toISOString()
-      const currentEmail = rawEmails[i].trim().toLowerCase()
-      const currentFirstName = rawFirstNames[i].trim().toLowerCase()
-      const currentSurname = rawSurnames[i].trim().toLowerCase()
+      const currentEmail = rawEmails[i]?.trim().toLowerCase() || ''
+      const currentFirstName = rawFirstNames[i]?.trim().toLowerCase() || ''
+      const currentSurname = rawSurnames[i]?.trim().toLowerCase() || ''
 
-      const mainEmail = rawEmails[0].trim().toLowerCase()
-      const mainFirstName = rawFirstNames[0].trim().toLowerCase()
-      const mainSurname = rawSurnames[0].trim().toLowerCase()
+      const mainEmail = rawEmails[0]?.trim().toLowerCase() || ''
+      const mainFirstName = rawFirstNames[0]?.trim().toLowerCase() || ''
+      const mainSurname = rawSurnames[0]?.trim().toLowerCase() || ''
 
       const isSamePersonAsMain =
         currentEmail === mainEmail &&
@@ -100,17 +114,35 @@ export async function createBookingAction(prevState: any, formData: FormData) {
       const conflict = await payload.find({
         collection: 'appointments',
         where: {
-          and: [{ appointmentDate: { equals: slot } }, { status: { not_equals: 'cancelled' } }],
+          and: [
+            { appointmentDate: { equals: slot } },
+            { status: { not_equals: 'cancelled' } },
+            // If rescheduling, ignore the old record so it doesn't block its own slot
+            ...(rescheduleId ? [{ id: { not_equals: rescheduleId } }] : []),
+          ],
         },
+        overrideAccess: true,
       })
 
       if (conflict.docs.length > 0) {
         const timeLabel = dayjs(slot).tz('Asia/Manila').format('h:mm A')
-        return { error: `The ${timeLabel} slot was just taken.` }
+        return { error: `The ${timeLabel} slot was just reserved by another patient.` }
       }
     }
 
-    // --- PHASE 3: SEQUENTIAL CREATE ---
+    // --- PHASE 3: RELEASE OLD SLOT (Ideal Reschedule Logic) ---
+    if (rescheduleId) {
+      await payload.update({
+        collection: 'appointments',
+        id: rescheduleId,
+        data: {
+          status: 'cancelled',
+        },
+        overrideAccess: true,
+      })
+    }
+
+    // --- PHASE 4: SEQUENTIAL REGISTRY CREATION ---
     for (const item of validatedEntries) {
       await payload.create({
         collection: 'appointments',
@@ -124,7 +156,7 @@ export async function createBookingAction(prevState: any, formData: FormData) {
           bookingGroupId: item.bookingGroupId,
           isGuest: item.isGuest,
           status: 'confirmed',
-          // INITIALIZE LED STATUS: Set to true so dashboard is instantly green
+          // Set LED markers for the specialist dashboard
           emailStatus: {
             confirmationSent: true,
             reminder24hSent: false,
@@ -134,47 +166,37 @@ export async function createBookingAction(prevState: any, formData: FormData) {
       })
     }
 
-    // --- PHASE 4: DISPATCH 1 CONSOLIDATED EMAIL ---
-    // Fetch the group data we just saved
+    // --- PHASE 5: CONSOLIDATED NOTIFICATION ---
     const groupData = await payload.find({
       collection: 'appointments',
       where: { bookingGroupId: { equals: bookingGroupId } },
+      depth: 1, // To get service titles
     })
 
     if (groupData.docs.length > 0) {
-      // Find the primary booker to address the email to
       const mainDoc = groupData.docs.find((d) => !d.isGuest) || groupData.docs[0]
-
-      // Fetch dynamic location
       const contactConfig = await payload.findGlobal({ slug: 'contact-config' })
       const clinicLocation =
         typeof contactConfig?.address === 'string'
           ? contactConfig.address
-          : 'Clinical Suite, Manila'
+          : 'Atelier Clinical Suite'
 
-      // Format time
       const displayDate = dayjs(mainDoc.appointmentDate).tz('Asia/Manila').format('MMMM D, YYYY')
-      const displayTime = dayjs(mainDoc.appointmentDate).tz('Asia/Manila').format('hh:mm a')
+      const displayTime = dayjs(mainDoc.appointmentDate).tz('Asia/Manila').format('hh:mm A')
 
-      // Build the 1-Column UI Manifest
-      const attendees = groupData.docs.map((doc) => {
-        const serviceName =
-          typeof doc.service === 'object'
-            ? doc.service?.title || 'Scheduled Procedure'
-            : 'Scheduled Procedure'
-
-        return {
-          name: `${doc.firstName} ${doc.surname}`,
-          service: serviceName,
-          isPrimary: !doc.isGuest,
-        }
-      })
+      const attendees = groupData.docs.map((doc) => ({
+        name: `${doc.firstName} ${doc.surname}`,
+        service: typeof doc.service === 'object' ? doc.service?.title : 'Scheduled Treatment',
+        isPrimary: !doc.isGuest,
+      }))
 
       try {
         await payload.sendEmail({
-          to: mainDoc.email, // Sent only to the main booker
-          from: process.env.FROM_EMAIL || 'onboarding@resend.dev',
-          subject: `Booking Confirmed: ${mainDoc.firstName} ${mainDoc.surname}`,
+          to: mainDoc.email,
+          from: process.env.FROM_EMAIL || 'registry@atelier.clinic',
+          subject: isReschedule
+            ? `Reschedule Confirmed: ${mainDoc.firstName} ${mainDoc.surname}`
+            : `Booking Confirmed: ${mainDoc.firstName} ${mainDoc.surname}`,
           html: getEmailHtml(
             mainDoc.firstName,
             displayDate,
@@ -184,15 +206,20 @@ export async function createBookingAction(prevState: any, formData: FormData) {
             attendees,
           ),
         })
-      } catch (error: any) {
-        console.error('Email failed to send, but booking was saved:', error)
+      } catch (emailErr) {
+        console.error('Email failed but booking saved:', emailErr)
       }
     }
   } catch (err: any) {
     if (err.digest?.includes('NEXT_REDIRECT')) throw err
+
+    // This will help you see EXACTLY what was sent to Payload
+    console.error('CRITICAL REGISTRY ERROR:', err)
+    console.error('DATA SENT:', validatedEntries)
+
     return { error: 'Server error. Please check your data.' }
   }
-
+  // Redirect to success page
   redirect('/booking/confirmation')
 }
 

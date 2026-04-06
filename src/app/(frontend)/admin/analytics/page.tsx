@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import FadeIn from '../../components/FadeIn'
-import { ClockIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
+import { ClockIcon } from '@heroicons/react/24/outline'
 import BackToHome from '../../components/BackToHome'
 import { RegistrySkeleton } from '../../components/RegistrySkeleton'
 
