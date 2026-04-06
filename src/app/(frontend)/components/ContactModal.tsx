@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   XMarkIcon,
   EnvelopeIcon,
-  ChatBubbleLeftRightIcon,
   DevicePhoneMobileIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline'
