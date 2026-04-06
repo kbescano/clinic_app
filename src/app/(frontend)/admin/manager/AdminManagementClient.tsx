@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import FadeIn from '../../components/FadeIn'
-import { TableCellsIcon, ClockIcon } from '@heroicons/react/24/outline'
+import { TableCellsIcon, ClockIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import MassUpload from '../../components/MassUpload'
 import BackToHome from '../../components/BackToHome'
 import AdminFilter from '../../components/AdminFilter'
 import BookingActions from './actions'
 import dayjs from '@/lib/dayjs'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 interface AdminProps {
   todayData: any[]
@@ -24,7 +25,10 @@ export default function AdminManagementClient({
   status,
   secondaryLabel,
 }: AdminProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [drawLine, setDrawLine] = useState(false)
+  const [search, setSearch] = useState(searchParams.get('search') || '')
 
   // SCROLL REVEAL STATES
   const [isHeaderVisible, setIsHeaderVisible] = useState(false)
@@ -33,6 +37,9 @@ export default function AdminManagementClient({
   const systemRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    // FIX: Force scroll to top on mount to bypass Next.js "Skipping auto-scroll" warning
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+
     const timer = setTimeout(() => setDrawLine(true), 100)
 
     const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
@@ -55,11 +62,18 @@ export default function AdminManagementClient({
     }
   }, [])
 
+  // Sync search with URL
+  const updateSearch = (val: string) => {
+    const params = new URLSearchParams(searchParams.toString())
+    if (val) params.set('search', val)
+    else params.delete('search')
+    router.push(`?${params.toString()}`)
+  }
+
   return (
     <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 px-4 md:px-8 selection:bg-zinc-100 overflow-x-hidden font-sans">
       <FadeIn>
         <div className="max-w-4xl mx-auto flex flex-col gap-10 md:gap-20">
-          {/* COUTURE HEADER: Animated Line & Typography */}
           <header
             ref={headerRef}
             className="flex flex-col md:flex-row md:items-center justify-between gap-8 md:gap-12"
@@ -98,6 +112,34 @@ export default function AdminManagementClient({
           </header>
 
           <div className="flex flex-col gap-14 md:gap-20">
+            {/* SEARCH BAR (Added for semantic compliance & utility) */}
+            <div
+              className={`flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-4 transition-all duration-1000 delay-700 ${isHeaderVisible ? 'opacity-100' : 'opacity-0'}`}
+            >
+              <label
+                htmlFor="admin-search"
+                className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif"
+              >
+                Registry
+              </label>
+              <div className="self-end md:self-auto w-full md:w-64 relative group">
+                <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#595f72]" />
+                <input
+                  id="admin-search"
+                  name="adminSearch"
+                  type="text"
+                  placeholder="Search database..."
+                  value={search}
+                  onChange={(e) => {
+                    const val = e.target.value
+                    setSearch(val)
+                    updateSearch(val)
+                  }}
+                  className="w-full bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-100 dark:border-zinc-800/50 rounded-full py-3 md:py-2.5 pl-10 pr-4 text-[9px] md:text-[10px] font-serif placeholder:text-[#595f72] text-[#251101] dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-zinc-200 dark:focus:ring-zinc-700 transition-all shadow-sm"
+                />
+              </div>
+            </div>
+
             {/* TODAY SECTION */}
             <section className="flex flex-col gap-6 md:gap-8">
               <div className="flex items-baseline justify-between border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
@@ -140,7 +182,6 @@ export default function AdminManagementClient({
               </section>
             )}
 
-            {/* SYSTEM INTEGRATION SECTION (Staggered Block Reveal) */}
             <section
               ref={systemRef}
               className={`transition-all duration-[1200ms] ease-out ${
@@ -171,7 +212,6 @@ export default function AdminManagementClient({
             </section>
           </div>
 
-          {/* FOOTER */}
           <div className="pt-8 md:pt-12 flex justify-center border-t border-zinc-50 dark:border-zinc-900/50 opacity-40 hover:opacity-100 transition-opacity">
             <BackToHome />
           </div>
@@ -181,7 +221,6 @@ export default function AdminManagementClient({
   )
 }
 
-// --- SUB-COMPONENT: INDIVIDUAL TICKET SCROLL TRACKING ---
 function AppointmentTicket({ apt }: { apt: any }) {
   const [isVisible, setIsVisible] = useState(false)
   const ticketRef = useRef<HTMLDivElement>(null)
@@ -206,23 +245,19 @@ function AppointmentTicket({ apt }: { apt: any }) {
       }`}
     >
       <div className="flex flex-col lg:grid lg:grid-cols-[20%_45%_35%] lg:items-start">
-        {/* COL 1: Mobile Row-Split Preserved */}
         <div className="flex flex-row lg:h-[80px] h-[60px] lg:flex-col justify-between lg:pr-8">
           <div className="flex flex-col gap-1">
-            {/* ROW 1 FIXED HEIGHT */}
             <div className="flex items-center">
               <p className="text-[16px] font-light text-[#251101] dark:text-zinc-100 tabular-nums tracking-tighter leading-none m-0">
                 {displayTime}
               </p>
             </div>
-            {/* ROW 2 FIXED HEIGHT */}
             <div className="flex items-center">
               <p className="text-[10px] uppercase text-[#595f72] tracking-[0.3em] leading-none m-0">
                 {displayDate}
               </p>
             </div>
           </div>
-          {/* ROW 3 FIXED MARGIN */}
           <div className="flex items-start gap-4 pt-1 lg:pt-0">
             <StatusDot label="Conf" active={apt.emailStatus?.confirmationSent} />
             <StatusDot label="24H" active={apt.emailStatus?.reminder24hSent} />
@@ -230,10 +265,8 @@ function AppointmentTicket({ apt }: { apt: any }) {
           </div>
         </div>
 
-        {/* COL 2: Patient Info */}
         <div className="flex flex-col h-[80px] justify-between">
           <div className="flex flex-col gap-1">
-            {/* ROW 1 FIXED HEIGHT */}
             <div className="flex items-center">
               <h3 className="text-[16px] text-[#251101] dark:text-zinc-100 tracking-tight capitalize leading-none m-0">
                 {apt.firstName} {apt.surname}{' '}
@@ -244,14 +277,12 @@ function AppointmentTicket({ apt }: { apt: any }) {
                 )}
               </h3>
             </div>
-            {/* ROW 2 FIXED HEIGHT */}
             <div className="flex items-center">
               <p className="text-[10px] text-[#595f72] tracking-tight lowercase leading-none m-0">
                 {apt.email} <span className="mx-1.5 opacity-40">/</span> {apt.phone}
               </p>
             </div>
           </div>
-          {/* ROW 3 FIXED MARGIN */}
           <div className="flex flex-wrap items-center">
             {apt.services.map((s: string, i: number) => (
               <span
@@ -264,7 +295,6 @@ function AppointmentTicket({ apt }: { apt: any }) {
           </div>
         </div>
 
-        {/* COL 3: Actions */}
         <div className="lg:border-l border-zinc-100 dark:border-zinc-900/50 lg:pl-8 w-full pt-6 lg:pt-0 border-t lg:border-t-0 mt-6 lg:mt-0">
           <BookingActions appointmentId={apt.id} currentStatus={apt.status} />
         </div>

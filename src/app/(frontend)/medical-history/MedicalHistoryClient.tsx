@@ -39,7 +39,6 @@ export default function MedicalHistoryClient({
   useEffect(() => {
     setIsMounted(true)
     setAppointments(initialData)
-    // Trigger header and line animations
     const timer = setTimeout(() => setDrawLine(true), 100)
     return () => clearTimeout(timer)
   }, [initialData])
@@ -150,7 +149,6 @@ export default function MedicalHistoryClient({
 
       <FadeIn>
         <div className="max-w-4xl mx-auto flex flex-col gap-10 md:gap-20">
-          {/* HEADER SECTION: Linked to drawLine for guaranteed reveal */}
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 md:gap-12">
             <div className="space-y-4 relative">
               <div
@@ -170,7 +168,6 @@ export default function MedicalHistoryClient({
               </h1>
             </div>
 
-            {/* SORTING CONTROLS */}
             <div
               className={`self-end md:self-auto inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative transition-all duration-1000 delay-500 ${drawLine ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
             >
@@ -215,17 +212,21 @@ export default function MedicalHistoryClient({
             </div>
           </header>
 
-          {/* LIST SECTION */}
           <section className="flex flex-col gap-6 md:gap-8">
             <div
               className={`flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-4 transition-all duration-1000 delay-700 ${drawLine ? 'opacity-100' : 'opacity-0'}`}
             >
-              <h3 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
+              <label
+                htmlFor="record-search"
+                className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif"
+              >
                 Database
-              </h3>
+              </label>
               <div className="self-end md:self-auto w-full md:w-64 relative group">
                 <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#595f72]" />
                 <input
+                  id="record-search"
+                  name="recordSearch"
                   type="text"
                   placeholder="Search Database..."
                   value={search}
@@ -262,7 +263,6 @@ export default function MedicalHistoryClient({
             </div>
           </section>
 
-          {/* PAGINATION */}
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-8 border-t border-zinc-100 dark:border-zinc-900/50">
               <button
@@ -423,9 +423,12 @@ function PatientRow({
             </div>
             <div className="lg:col-span-7 bg-white dark:bg-[#050505] p-5 md:p-8 space-y-6 md:space-y-8 flex flex-col">
               <div className="flex items-center justify-between">
-                <h4 className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif flex items-center gap-2">
+                <label
+                  htmlFor={`observation-${patient.uniqueId}`}
+                  className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif flex items-center gap-2 cursor-pointer"
+                >
                   <PencilSquareIcon className="w-3.5 h-3.5" /> Clinical Observation
-                </h4>
+                </label>
                 {savingId === patient.id && (
                   <span className="text-[6px] md:text-[7px] uppercase tracking-[0.3em] animate-pulse text-[#48a9a6] font-medium font-serif">
                     Saving...
@@ -433,6 +436,8 @@ function PatientRow({
                 )}
               </div>
               <textarea
+                id={`observation-${patient.uniqueId}`}
+                name={`observation-${patient.uniqueId}`}
                 onClick={(e) => e.stopPropagation()}
                 className="flex-1 w-full bg-zinc-50/50 dark:bg-zinc-900/20 border border-zinc-100 dark:border-zinc-800/50 p-5 text-[13px] md:text-[14px] text-[#251101] dark:text-zinc-200 focus:outline-none focus:border-zinc-300 dark:focus:border-zinc-600 transition-all min-h-[180px] leading-relaxed font-serif resize-none"
                 value={patient.specialistNotes || ''}

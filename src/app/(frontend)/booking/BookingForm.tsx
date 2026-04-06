@@ -50,7 +50,6 @@ function BookingFormContent({
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // --- REGISTRY & RESCHEDULE LOGIC ---
   const isReschedule = searchParams.get('reschedule') === 'true'
   const rescheduleId = searchParams.get('id')
   const prefillServiceTitle = searchParams.get('service')
@@ -58,7 +57,10 @@ function BookingFormContent({
   const urlSn = searchParams.get('sn') || ''
   const hasPrefillData = !!(initialData.email && initialData.fn)
 
-  // Match service title from URL to ID for rescheduling prefill
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [])
+
   const matchedServiceId = useMemo(() => {
     if (!prefillServiceTitle) return ''
     const match = services.find((s) => s.title.toLowerCase() === prefillServiceTitle.toLowerCase())
@@ -76,13 +78,11 @@ function BookingFormContent({
     email: initialData.email || searchParams.get('email') || '',
   })
 
-  // --- SERVICE STATE (Supports 2 Services) ---
   const [currentServiceId, setCurrentServiceId] = useState(
     matchedServiceId || searchParams.get('serviceId') || '',
   )
   const [extraServiceId, setExtraServiceId] = useState('')
   const [showExtraService, setShowExtraService] = useState(false)
-
   const [currentDate, setCurrentDate] = useState(searchParams.get('date') || '')
   const [currentTime, setCurrentTime] = useState(searchParams.get('time') || '')
 
@@ -92,7 +92,6 @@ function BookingFormContent({
   const [modalError, setModalError] = useState<string | null>(null)
   const [isPendingTransition, startTransition] = useTransition()
   const [state, formAction] = useActionState(createBookingAction, null)
-  const [bookings, setBookings] = useState<any[]>([])
   const [drawLine, setDrawLine] = useState(false)
   const [busySlots, setBusySlots] = useState<string[]>([])
   const [loadingSlots, setLoadingSlots] = useState(false)
@@ -109,7 +108,6 @@ function BookingFormContent({
     }
   }, [])
 
-  // --- CALENDAR GRID LOGIC ---
   const [viewDate, setViewDate] = useState(dayjs(minSelectableDate).startOf('month'))
   const availableMonths = useMemo(
     () => [...Array(6)].map((_, i) => dayjs(minSelectableDate).startOf('month').add(i, 'month')),
@@ -122,7 +120,7 @@ function BookingFormContent({
   }, [viewDate])
 
   const isRecognized = isReschedule || hasPrefillData || wasVerifiedInSession
-  const showIdentitySection = !isRecognized || bookings.length > 0
+  const showIdentitySection = !isRecognized
   const identitySatisfied = isRecognized
     ? currentServiceId !== ''
     : personalInfo.firstName.trim().length > 0 && personalInfo.surname.trim().length > 0
@@ -179,37 +177,16 @@ function BookingFormContent({
 
   const handleFinalSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const fd = new FormData()
+    const fd = new FormData(e.currentTarget as HTMLFormElement)
     if (isReschedule && rescheduleId) fd.append('rescheduleId', rescheduleId)
-
     startTransition(() => {
-      const mainEntry = {
-        firstName: personalInfo.firstName,
-        surname: personalInfo.surname,
-        email: personalInfo.email,
-        phone: personalInfo.phone,
-        serviceId: currentServiceId,
-        appointmentDate: `${currentDate}T${currentTime}:00`,
+      if (isRecognized) {
+        fd.set('firstName', personalInfo.firstName)
+        fd.set('surname', personalInfo.surname)
+        fd.append('email', personalInfo.email)
+        fd.append('phone', personalInfo.phone)
       }
-
-      // First Service
-      fd.append('firstName', mainEntry.firstName)
-      fd.append('surname', mainEntry.surname)
-      fd.append('email', mainEntry.email)
-      fd.append('phone', mainEntry.phone)
-      fd.append('serviceId', mainEntry.serviceId)
-      fd.append('appointmentDate', mainEntry.appointmentDate)
-
-      // Second Service (if added)
-      if (showExtraService && extraServiceId) {
-        fd.append('firstName', mainEntry.firstName)
-        fd.append('surname', mainEntry.surname)
-        fd.append('email', mainEntry.email)
-        fd.append('phone', mainEntry.phone)
-        fd.append('serviceId', extraServiceId)
-        fd.append('appointmentDate', mainEntry.appointmentDate)
-      }
-
+      fd.set('appointmentDate', `${currentDate}T${currentTime}:00`)
       formAction(fd)
     })
   }
@@ -233,9 +210,7 @@ function BookingFormContent({
       {errorToast && (
         <Notification message={errorToast} type="error" onClose={() => setErrorToast(null)} />
       )}
-
-      {showModal && !isReschedule && !hasPrefillData && (
-        /* ... Modal logic remains identical to keep the lookup clean ... */
+      {showModal && !isRecognized && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/80 dark:bg-black/80 backdrop-blur-xl p-4">
           <div className="w-full max-w-lg bg-white dark:bg-[#050505] p-10 md:p-16 border border-zinc-100 dark:border-zinc-900 rounded-2xl shadow-2xl text-center">
             {isExisting === null ? (
@@ -251,13 +226,13 @@ function BookingFormContent({
                     onClick={() => setIsExisting(true)}
                     className="w-full py-5 bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[8px] uppercase tracking-[0.4em] font-serif rounded-full transition-all"
                   >
-                    Yes, I am registered
+                    Yes, I am current Customer.
                   </button>
                   <button
                     onClick={() => setShowModal(false)}
                     className="w-full py-5 border border-zinc-100 text-[#595f72] text-[8px] uppercase tracking-[0.4em] font-serif rounded-full transition-all"
                   >
-                    No, new patient
+                    No, I&apos;m a new Customer.
                   </button>
                 </div>
               </div>
@@ -273,6 +248,8 @@ function BookingFormContent({
                   <p className="text-[10px] text-red-500 mb-4 font-serif">{modalError}</p>
                 )}
                 <input
+                  id="lookup-email"
+                  name="lookupEmail"
                   type="email"
                   value={existingEmail}
                   onChange={(e) => setExistingEmail(e.target.value)}
@@ -297,7 +274,6 @@ function BookingFormContent({
           </div>
         </div>
       )}
-
       <FadeIn>
         <div className="max-w-4xl mx-auto flex flex-col gap-14 md:gap-20">
           <header className="flex flex-col md:flex-row md:items-end justify-between gap-8 md:gap-12">
@@ -313,21 +289,25 @@ function BookingFormContent({
               </h1>
             </div>
           </header>
-
           <form
             onSubmit={handleFinalSubmit}
             className="grid grid-cols-1 lg:grid-cols-12 gap-12 md:gap-20"
           >
             <div className="lg:col-span-6 flex flex-col gap-10">
               <div className="bg-white dark:bg-[#050505] p-6 md:p-8 space-y-10 border border-zinc-100 dark:border-zinc-900 rounded-2xl shadow-sm">
-                {/* PRIMARY SERVICE SELECT */}
                 <div className="relative animate-in fade-in duration-700">
-                  <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-3 block font-serif">
+                  <label
+                    htmlFor="service-select"
+                    className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-3 block font-serif"
+                  >
                     Treatment
                   </label>
                   <Listbox value={currentServiceId} onChange={setCurrentServiceId}>
                     <div className="relative z-40">
-                      <ListboxButton className="w-full bg-transparent text-[16px] font-serif text-left outline-none py-1.5 border-b border-zinc-100 dark:border-zinc-900 flex items-center justify-between transition-colors focus:border-zinc-300">
+                      <ListboxButton
+                        id="service-select"
+                        className="w-full bg-transparent text-[16px] font-serif text-left outline-none py-1.5 border-b border-zinc-100 dark:border-zinc-900 flex items-center justify-between transition-colors focus:border-zinc-300"
+                      >
                         <span className={`truncate ${!currentServiceId ? 'opacity-40' : ''}`}>
                           {currentServiceId
                             ? getServiceTitle(currentServiceId)
@@ -335,6 +315,7 @@ function BookingFormContent({
                         </span>
                         <ChevronDownIcon className="w-3.5 h-3.5 text-[#595f72]" />
                       </ListboxButton>
+                      <input type="hidden" name="serviceId" value={currentServiceId} />
                       <Transition
                         as={Fragment}
                         enter="transition duration-100 ease-out"
@@ -369,12 +350,13 @@ function BookingFormContent({
                     </button>
                   )}
                 </div>
-
-                {/* EXTRA SERVICE SELECT */}
                 {showExtraService && (
                   <div className="relative animate-in fade-in slide-in-from-top-2 duration-500">
                     <div className="flex justify-between mb-3">
-                      <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
+                      <label
+                        htmlFor="extra-service-select"
+                        className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif"
+                      >
                         Additional Treatment
                       </label>
                       <button
@@ -390,7 +372,10 @@ function BookingFormContent({
                     </div>
                     <Listbox value={extraServiceId} onChange={setExtraServiceId}>
                       <div className="relative z-30">
-                        <ListboxButton className="w-full bg-transparent text-[16px] font-serif text-left outline-none py-1.5 border-b border-zinc-100 dark:border-zinc-900 flex items-center justify-between transition-colors focus:border-zinc-300">
+                        <ListboxButton
+                          id="extra-service-select"
+                          className="w-full bg-transparent text-[16px] font-serif text-left outline-none py-1.5 border-b border-zinc-100 dark:border-zinc-900 flex items-center justify-between transition-colors focus:border-zinc-300"
+                        >
                           <span className={`truncate ${!extraServiceId ? 'opacity-40' : ''}`}>
                             {extraServiceId
                               ? getServiceTitle(extraServiceId)
@@ -398,6 +383,7 @@ function BookingFormContent({
                           </span>
                           <ChevronDownIcon className="w-3.5 h-3.5 text-[#595f72]" />
                         </ListboxButton>
+                        <input type="hidden" name="extraServiceId" value={extraServiceId} />
                         <Transition
                           as={Fragment}
                           enter="transition duration-100 ease-out"
@@ -426,16 +412,19 @@ function BookingFormContent({
                     </Listbox>
                   </div>
                 )}
-
                 {showIdentitySection && currentServiceId !== '' && (
                   <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-700">
                     <Field
+                      id="first-name"
+                      name="firstName"
                       label="First Name"
                       value={personalInfo.firstName}
                       onChange={(v) => setPersonalInfo({ ...personalInfo, firstName: v })}
                       placeholder="Juan"
                     />
                     <Field
+                      id="surname"
+                      name="surname"
                       label="Surname"
                       value={personalInfo.surname}
                       onChange={(v) => setPersonalInfo({ ...personalInfo, surname: v })}
@@ -443,20 +432,22 @@ function BookingFormContent({
                     />
                   </div>
                 )}
-
-                {/* RESTORED CUSTOM CALENDAR GRID */}
                 {showDateSection && (
                   <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
                     <div className="relative">
                       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
                         <div className="space-y-1">
-                          <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] block font-serif">
+                          <label
+                            htmlFor="calendar-date"
+                            className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] block font-serif"
+                          >
                             Clinic Calendar
                           </label>
                           <h3 className="text-[20px] md:text-[24px] font-serif font-light tracking-tighter leading-none">
                             {viewDate.format('MMMM YYYY')}
                           </h3>
                         </div>
+                        <input type="hidden" id="calendar-date" name="date" value={currentDate} />
                         <div className="inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative overflow-hidden">
                           <div
                             className="absolute top-1 bottom-1 w-[42px] md:w-[35px] bg-white dark:bg-zinc-800 rounded-full shadow-sm transition-transform duration-500"
@@ -518,7 +509,6 @@ function BookingFormContent({
                         })}
                       </div>
                     </div>
-
                     {currentDate && (
                       <div className="relative animate-in fade-in slide-in-from-top-6 duration-700">
                         <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] block font-serif mb-6">
@@ -536,30 +526,20 @@ function BookingFormContent({
                                 type="button"
                                 disabled={isFull || loadingSlots}
                                 onClick={() => setCurrentTime(slot)}
-                                className={`relative py-6 md:py-8 flex flex-col items-center justify-center gap-2 transition-all ${isSelected ? 'bg-[#251101] dark:bg-white text-white dark:text-[#251101]' : 'bg-white dark:bg-[#050505] hover:bg-zinc-50 dark:hover:bg-zinc-900/40'} ${isFull ? 'opacity-20 cursor-not-allowed' : 'cursor-pointer'}`}
+                                className={`relative py-6 md:py-8 flex flex-col items-center justify-center gap-2 transition-all ${isSelected ? 'bg-[#251101] dark:bg-white text-white dark:text-[#251101]' : 'bg-white dark:bg-[#050505] hover:bg-zinc-50 dark:hover:bg-zinc-900/40'} ${isFull ? 'opacity-20 cursor-not-allowed' : 'hover:bg-zinc-50'}`}
                               >
-                                <span
-                                  className={`text-[12px] md:text-[14px] font-serif tabular-nums tracking-widest ${isSelected ? 'text-white dark:text-[#251101]' : 'text-[#251101] dark:text-zinc-100'}`}
-                                >
-                                  {slot}
-                                </span>
-                                {isFull && (
-                                  <span className="text-[5px] uppercase tracking-[0.2em] font-serif opacity-40">
-                                    Reserved
-                                  </span>
-                                )}
+                                {slot}
                               </button>
                             )
                           })}
                         </div>
+                        <input type="hidden" name="time" value={currentTime} />
                       </div>
                     )}
                   </div>
                 )}
               </div>
             </div>
-
-            {/* RESTORED SUMMARY CARD (Shows Multiple Services) */}
             <div className="lg:col-span-6 flex flex-col gap-10">
               <div className="bg-[#251101] dark:bg-white text-white dark:text-[#251101] p-8 md:p-10 flex flex-col justify-between min-h-[260px] rounded-2xl relative overflow-hidden animate-in fade-in duration-700 shadow-xl">
                 <div className="absolute top-0 left-0 w-full h-[1.5px] bg-[#48a9a6]/50" />
@@ -610,11 +590,15 @@ function BookingFormContent({
 }
 
 function Field({
+  id,
+  name,
   label,
   value,
   onChange,
   placeholder,
 }: {
+  id: string
+  name: string
   label: string
   value: string
   onChange: (v: string) => void
@@ -622,10 +606,15 @@ function Field({
 }) {
   return (
     <div className="group relative px-1">
-      <label className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-3 block font-serif">
+      <label
+        htmlFor={id}
+        className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-3 block font-serif"
+      >
         {label}
       </label>
       <input
+        id={id}
+        name={name}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}

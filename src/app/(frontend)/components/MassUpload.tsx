@@ -65,13 +65,13 @@ export default function MassUpload() {
             </header>
 
             <div className="space-y-6">
-              <div className="flex items-start gap-4 p-6 bg-zinc-50/30 dark:bg-zinc-900/20 border border-zinc-50 dark:border-zinc-900/50">
+              <div className="flex items-start gap-4 p-6 bg-zinc-50/30 dark:bg-zinc-900/20 border border-zinc-100 dark:border-zinc-900/50">
                 <DocumentTextIcon className="w-4 h-4 text-zinc-300 mt-0.5" />
                 <div>
                   <p className="text-[8px] md:text-[9px] font-medium uppercase tracking-[0.3em] dark:text-zinc-300 font-serif">
                     Format Requirement
                   </p>
-                  <p className="text-[9px] md:text-[10px] text-zinc-400 mt-2 leading-relaxed font-serif  opacity-70">
+                  <p className="text-[9px] md:text-[10px] text-zinc-400 mt-2 leading-relaxed font-serif opacity-70">
                     Ensure your data is a valid JSON array of appointment objects.
                   </p>
                 </div>
@@ -101,15 +101,21 @@ export default function MassUpload() {
             <div className="relative group">
               <div className="absolute top-5 left-8 flex items-center gap-3 pointer-events-none">
                 <CodeBracketIcon className="w-3 h-3 text-zinc-300" />
-                <span className="text-[8px] uppercase tracking-[0.4em] text-zinc-300 font-medium font-serif">
+                {/* Changed span to label and added htmlFor */}
+                <label
+                  htmlFor="json-mass-upload"
+                  className="text-[8px] uppercase tracking-[0.4em] text-zinc-300 font-medium font-serif"
+                >
                   JSON Registry
-                </span>
+                </label>
               </div>
               <textarea
+                id="json-mass-upload"
+                name="jsonRegistry"
                 value={jsonInput}
                 onChange={(e) => setJsonInput(e.target.value)}
                 placeholder='[ { "firstName": "Bryan", ... } ]'
-                className="w-full h-[380px] bg-zinc-50/20 dark:bg-zinc-900/10 border border-zinc-50 dark:border-zinc-900 p-8 pt-16 text-[10px] font-mono outline-none focus:border-zinc-200 dark:focus:border-zinc-700 transition-all resize-none shadow-sm placeholder:text-zinc-200 dark:placeholder:text-zinc-800"
+                className="w-full h-[380px] bg-zinc-50/20 dark:bg-zinc-900/10 border border-zinc-100 dark:border-zinc-900 p-8 pt-16 text-[10px] font-mono outline-none focus:border-zinc-200 dark:focus:border-zinc-700 transition-all resize-none shadow-sm placeholder:text-zinc-200 dark:placeholder:text-zinc-800"
               />
             </div>
 

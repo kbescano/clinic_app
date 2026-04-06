@@ -42,7 +42,6 @@ export default function AppointmentClient({ initialData }: { initialData: any })
 
   const { timelineRegistry, totalServices } = useMemo(() => {
     if (!patientData?.history) return { timelineRegistry: [], totalServices: 0 }
-
     const now = dayjs()
     const groups: Record<string, any> = {}
     let sCount = 0
@@ -51,13 +50,9 @@ export default function AppointmentClient({ initialData }: { initialData: any })
       const isPast = dayjs(h.date).isBefore(now)
       if (filter === 'upcoming' && isPast) return
       if (filter === 'past' && !isPast) return
-
       sCount++
       const dayKey = dayjs(h.date).format('YYYY-MM-DD')
-      if (!groups[dayKey]) {
-        groups[dayKey] = { date: h.date, main: [], guests: {}, daySubtotal: 0 }
-      }
-
+      if (!groups[dayKey]) groups[dayKey] = { date: h.date, main: [], guests: {}, daySubtotal: 0 }
       groups[dayKey].daySubtotal += 1
       if (!h.isGuest) groups[dayKey].main.push(h)
       else {
@@ -72,7 +67,6 @@ export default function AppointmentClient({ initialData }: { initialData: any })
       const timeB = dayjs(b.date).valueOf()
       return filter === 'upcoming' ? timeA - timeB : timeB - timeA
     })
-
     return { timelineRegistry: sorted, totalServices: sCount }
   }, [patientData, filter])
 
@@ -88,10 +82,8 @@ export default function AppointmentClient({ initialData }: { initialData: any })
         ([e]) => setIsMetricsVisible(e.isIntersecting),
         observerOptions,
       )
-
       if (headerRef.current) headerObserver.observe(headerRef.current)
       if (metricsRef.current) metricsObserver.observe(metricsRef.current)
-
       return () => {
         headerObserver.disconnect()
         metricsObserver.disconnect()
@@ -139,25 +131,37 @@ export default function AppointmentClient({ initialData }: { initialData: any })
                   </div>
                 )}
                 <div className="border-b border-zinc-100 dark:border-zinc-800 py-1">
-                  <label className="text-[7px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
+                  <label
+                    htmlFor="verify-email"
+                    className="text-[7px] uppercase tracking-[0.4em] text-[#595f72] font-serif"
+                  >
                     Email
                   </label>
                   <input
+                    id="verify-email"
+                    name="email"
                     required
                     type="email"
+                    autoComplete="email"
                     value={authForm.email}
                     onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
                     className="w-full bg-transparent py-2 outline-none font-serif text-base text-[#251101] dark:text-zinc-100"
                   />
                 </div>
                 <div className="border-b border-zinc-100 dark:border-zinc-800 py-1">
-                  <label className="text-[7px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
+                  <label
+                    htmlFor="verify-suffix"
+                    className="text-[7px] uppercase tracking-[0.4em] text-[#595f72] font-serif"
+                  >
                     Phone Suffix
                   </label>
                   <input
+                    id="verify-suffix"
+                    name="phoneSuffix"
                     required
                     maxLength={4}
                     type="text"
+                    inputMode="numeric"
                     value={authForm.lastFour}
                     onChange={(e) => setAuthForm({ ...authForm, lastFour: e.target.value })}
                     className="w-full bg-transparent py-2 outline-none font-serif text-base tracking-[0.6em] text-[#251101] dark:text-zinc-100"
@@ -166,6 +170,7 @@ export default function AppointmentClient({ initialData }: { initialData: any })
               </div>
               <button
                 disabled={isPending}
+                type="submit"
                 className="w-full py-4 bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[9px] font-serif uppercase tracking-[0.4em] rounded-full active:scale-95 transition-transform"
               >
                 {isPending ? 'Accessing...' : 'View My Schedule'}
@@ -203,16 +208,13 @@ export default function AppointmentClient({ initialData }: { initialData: any })
                 <span className="text-[#595f72]">{patientData.surname}</span>
               </h1>
             </div>
-
             <div className="flex flex-col items-end gap-6">
               <Link
                 href={bookNewUrl}
                 className="hidden md:flex items-center gap-3 px-6 py-3 bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[9px] font-serif uppercase tracking-[0.4em] rounded-full hover:opacity-100 transition-all active:scale-95 shadow-sm"
               >
-                <PlusIcon className="w-3 h-3" />
-                Book New Session
+                <PlusIcon className="w-3 h-3" /> Book New Session
               </Link>
-
               <div
                 className={`self-end md:self-auto inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative transition-all duration-1000 delay-500 ${isHeaderVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
               >
@@ -272,7 +274,7 @@ export default function AppointmentClient({ initialData }: { initialData: any })
                   key={i}
                   group={group}
                   isUpcoming={filter === 'upcoming'}
-                  patientData={patientData} // Corrected typo
+                  patientData={patientData}
                 />
               ))
             ) : (
@@ -317,7 +319,7 @@ export default function AppointmentClient({ initialData }: { initialData: any })
 function AppointmentDayBlock({
   group,
   isUpcoming,
-  patientData, // Corrected prop name
+  patientData,
 }: {
   group: any
   isUpcoming: boolean
@@ -325,7 +327,6 @@ function AppointmentDayBlock({
 }) {
   const [isVisible, setIsVisible] = useState(false)
   const blockRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     const observer = new IntersectionObserver(([e]) => setIsVisible(e.isIntersecting), {
       threshold: 0.1,
@@ -353,13 +354,11 @@ function AppointmentDayBlock({
           {dayjs(group.date).format('YYYY')}
         </span>
       </div>
-
       <div className="flex flex-col gap-10 mb-12">
         {group.main.map((v: any, idx: number) => (
           <AppointmentRow key={idx} visit={v} isUpcoming={isUpcoming} patientData={patientData} />
         ))}
       </div>
-
       {Object.entries(group.guests).map(([name, visits]: any, gIdx) => (
         <div key={gIdx} className="flex flex-col gap-10 mt-6">
           <div className="flex items-center gap-4 py-4 border-y border-zinc-100 dark:border-zinc-900/20 mb-6 px-2">
@@ -404,17 +403,7 @@ function AppointmentRow({
     pending: 'text-amber-600',
     cancelled: 'text-[#d7263d]',
   }
-
-  const rescheduleUrl =
-    `/booking?reschedule=true` +
-    `&id=${visit.id || ''}` +
-    `&service=${encodeURIComponent(visit.service || '')}` +
-    `&date=${dayjs(visit.date).format('YYYY-MM-DD')}` +
-    `&time=${dayjs(visit.date).format('HH:mm')}` + // Added time prefill
-    `&fn=${encodeURIComponent(visit.firstName || '')}` +
-    `&sn=${encodeURIComponent(visit.surname || '')}` +
-    `&email=${encodeURIComponent(patientData?.email || '')}` +
-    `&ph=${encodeURIComponent(patientData?.phone || '')}`
+  const rescheduleUrl = `/booking?reschedule=true&id=${visit.id || ''}&service=${encodeURIComponent(visit.service || '')}&date=${dayjs(visit.date).format('YYYY-MM-DD')}&time=${dayjs(visit.date).format('HH:mm')}&fn=${encodeURIComponent(visit.firstName || '')}&sn=${encodeURIComponent(visit.surname || '')}&email=${encodeURIComponent(patientData?.email || '')}&ph=${encodeURIComponent(patientData?.phone || '')}`
 
   return (
     <div className="flex justify-between items-baseline gap-6 font-serif group">
