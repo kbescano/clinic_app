@@ -148,6 +148,7 @@ const ServiceCard = ({
 }
 
 // --- SUB-COMPONENT: SLIDER ---
+// --- SUB-COMPONENT: SLIDER ---
 const ServiceSlider = ({ images }: { images: any[] }) => {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'start' })
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -157,6 +158,9 @@ const ServiceSlider = ({ images }: { images: any[] }) => {
     setSelectedIndex(emblaApi.selectedScrollSnap())
   }, [emblaApi])
 
+  const scrollPrev = useCallback(() => emblaApi && emblaApi.scrollPrev(), [emblaApi])
+  const scrollNext = useCallback(() => emblaApi && emblaApi.scrollNext(), [emblaApi])
+
   useEffect(() => {
     if (!emblaApi) return
     onSelect()
@@ -164,30 +168,54 @@ const ServiceSlider = ({ images }: { images: any[] }) => {
   }, [emblaApi, onSelect])
 
   return (
-    <div
-      className="relative h-[450px] w-full overflow-hidden cursor-grab active:cursor-grabbing group/slider bg-white dark:bg-black"
-      ref={emblaRef}
-    >
-      <div className="flex h-full">
-        {images.map((item, index) => (
-          <div key={index} className="relative flex-[0_0_100%] min-w-0 h-full">
-            <Image
-              src={item.image?.url || item.url || ''}
-              alt="Service"
-              fill
-              className="object-cover transition-transform duration-[2000ms] cubic-bezier(0.16, 1, 0.3, 1) group-hover/slider:scale-105"
-              sizes="(max-width: 768px) 100vw, 33vw"
-            />
-          </div>
-        ))}
+    <div className="relative h-[450px] w-full overflow-hidden cursor-grab active:cursor-grabbing group/slider bg-white dark:bg-black">
+      {/* Carousel Viewport */}
+      <div className="h-full w-full" ref={emblaRef}>
+        <div className="flex h-full">
+          {images.map((item, index) => (
+            <div key={index} className="relative flex-[0_0_100%] min-w-0 h-full">
+              <Image
+                src={item.image?.url || item.url || ''}
+                alt="Service"
+                fill
+                className="object-cover transition-transform duration-[2000ms] cubic-bezier(0.16, 1, 0.3, 1) group-hover/slider:scale-105"
+                sizes="(max-width: 768px) 100vw, 33vw"
+              />
+            </div>
+          ))}
+        </div>
       </div>
+
+      {/* Navigation Arrows: Pure Minimalist Raw Chevron */}
+      {images.length > 1 && (
+        <>
+          <button
+            onClick={scrollPrev}
+            className="absolute left-6 top-1/2 -translate-y-1/2 z-30 p-2 text-white/50 transition-all duration-300 hover:text-white"
+            aria-label="Previous slide"
+          >
+            <ChevronLeftIcon className="w-3.5 h-3.5" strokeWidth={1.5} />
+          </button>
+          <button
+            onClick={scrollNext}
+            className="absolute right-6 top-1/2 -translate-y-1/2 z-30 p-2 text-white/50  transition-all duration-300 hover:text-white"
+            aria-label="Next slide"
+          >
+            <ChevronRightIcon className="w-3.5 h-3.5" strokeWidth={1.5} />
+          </button>
+        </>
+      )}
+
+      {/* Pagination Indicators */}
       {images.length > 1 && (
         <div className="absolute bottom-10 left-0 right-0 flex justify-center gap-3 z-20">
           {images.map((_, i) => (
             <button
               key={i}
               onClick={() => emblaApi?.scrollTo(i)}
-              className={`h-[1px] transition-all duration-700 ${i === selectedIndex ? 'w-12 bg-zinc-800 dark:bg-white' : 'w-4 bg-zinc-200 dark:bg-white/20'}`}
+              className={`h-[1px] transition-all duration-700 ${
+                i === selectedIndex ? 'w-12 bg-white' : 'w-4 bg-white/30 hover:bg-white/60'
+              }`}
             />
           ))}
         </div>
