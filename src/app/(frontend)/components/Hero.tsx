@@ -61,7 +61,7 @@ export default function CinematicVideoHero() {
   const slowEase = 'cubic-bezier(0.2, 0, 0.2, 1)'
 
   return (
-    <section className="relative h-screen md:h-[100dvh] overflow-hidden bg-[#050505] text-white font-sans">
+    <section className="relative h-[95dvh] md:h-[100dvh] overflow-hidden bg-[#050505] text-white font-sans">
       {/* --- CINEMATIC OVERLAYS --- */}
       <div className="absolute inset-0 z-20 bg-[radial-gradient(circle,transparent_20%,rgba(0,0,0,0.4)_100%)] pointer-events-none" />
       <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none" />
@@ -135,7 +135,7 @@ export default function CinematicVideoHero() {
       </div>
 
       {/* --- DYNAMIC PAGINATION: NO DOT IF ACTIVE --- */}
-      <div className="absolute bottom-12 -translate-y-10 left-0 w-full z-50 flex justify-center items-center gap-4 md:gap-6">
+      <div className="absolute bottom-12 left-0 w-full z-50 flex justify-center items-center gap-4 md:gap-6">
         {SLIDES.map((_, index) => {
           const isActive = currentSlide === index
           return (
