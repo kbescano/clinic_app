@@ -242,12 +242,16 @@ function BentoTable({ data, showDate }: { data: MergedAppointment[]; showDate: b
   const isPast6PM = now.hour() >= 18
 
   const ongoingIndex = data.findIndex((apt) => {
+    if (apt.status === 'cancelled') return false // Skip cancelled
+
     const startUnix = dayjs(apt.appointmentDate).tz('Asia/Manila').valueOf()
     const endUnix = startUnix + 60 * 60 * 1000
     return nowUnix >= startUnix && nowUnix < endUnix
   })
 
   const upcomingIndex = data.findIndex((apt) => {
+    if (apt.status === 'cancelled') return false // Skip cancelled
+
     return dayjs(apt.appointmentDate).tz('Asia/Manila').valueOf() > nowUnix
   })
 
