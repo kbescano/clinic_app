@@ -168,7 +168,7 @@ const ServiceSlider = ({ images }: { images: any[] }) => {
   }, [emblaApi, onSelect])
 
   return (
-    <div className="relative h-[450px] w-full overflow-hidden cursor-grab active:cursor-grabbing group/slider bg-white dark:bg-black">
+    <div className="relative h-[650px] w-full overflow-hidden cursor-grab active:cursor-grabbing group/slider bg-white dark:bg-black">
       {/* Carousel Viewport */}
       <div className="h-full w-full" ref={emblaRef}>
         <div className="flex h-full">

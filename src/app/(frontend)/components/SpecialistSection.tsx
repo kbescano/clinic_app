@@ -67,8 +67,8 @@ export default function SpecialistSection({
           </header>
         </div>
 
-        {/* GRID REGISTRY */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 lg:gap-1 bg-white dark:bg-black border-y border-zinc-100 dark:border-zinc-900">
+        {/* GRID REGISTRY: Updated to 2 columns for all desktop views */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-zinc-100 dark:bg-zinc-900 border-y border-zinc-100 dark:border-zinc-900">
           {specialists.map((specialist) => (
             <SpecialistCard key={specialist.id} specialist={specialist} serverUrl={serverUrl} />
           ))}
@@ -78,7 +78,7 @@ export default function SpecialistSection({
   )
 }
 
-// --- SUB-COMPONENT (Internal to file to fix the Module Error) ---
+// --- SUB-COMPONENT ---
 function SpecialistCard({ specialist, serverUrl }: { specialist: Specialist; serverUrl: string }) {
   const [isVisible, setIsVisible] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -108,7 +108,7 @@ function SpecialistCard({ specialist, serverUrl }: { specialist: Specialist; ser
       ref={cardRef}
       className="group flex flex-col h-full bg-white dark:bg-black transition-colors duration-700 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/10"
     >
-      <div className="relative overflow-hidden w-full h-[500px] md:h-[600px] bg-white dark:bg-black grayscale-[0.2] group-hover:grayscale-0 transition-all duration-[1500ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
+      <div className="relative overflow-hidden w-full h-[500px] md:h-[700px] bg-white dark:bg-black grayscale-[0.2] group-hover:grayscale-0 transition-all duration-[1500ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
         {finalImageUrl ? (
           <Image
             className={`object-cover transition-all duration-[2000ms] group-hover:scale-105 ${
@@ -117,6 +117,7 @@ function SpecialistCard({ specialist, serverUrl }: { specialist: Specialist; ser
             src={finalImageUrl}
             alt={specialist.name}
             fill
+            sizes="(max-width: 768px) 100vw, 50vw"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-[8px] uppercase tracking-[0.4em] font-serif text-zinc-400 dark:text-zinc-600 bg-zinc-50 dark:bg-zinc-900/10">
@@ -125,7 +126,7 @@ function SpecialistCard({ specialist, serverUrl }: { specialist: Specialist; ser
         )}
       </div>
 
-      <div className="p-8 md:p-10 flex flex-col flex-grow border-t border-zinc-100 dark:border-zinc-900">
+      <div className="p-8 md:p-12 flex flex-col flex-grow border-t border-zinc-100 dark:border-zinc-900">
         <div className="space-y-4">
           <p
             className={`text-[8px] md:text-[9px] uppercase tracking-[0.4em] font-serif text-[#595f72] dark:text-zinc-500 transition-all duration-[1200ms] delay-100 ease-[cubic-bezier(0.16,1,0.3,1)] ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
@@ -133,14 +134,14 @@ function SpecialistCard({ specialist, serverUrl }: { specialist: Specialist; ser
             {specialist.specialization}
           </p>
           <h3
-            className={`text-[14px] md:text-[15px] font-light font-serif text-[#251101] dark:text-white leading-tight tracking-tighter uppercase transition-all duration-[1200ms] delay-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${isVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-8 blur-md'}`}
+            className={`text-[16px] md:text-[18px] font-light font-serif text-[#251101] dark:text-white leading-tight tracking-tighter uppercase transition-all duration-[1200ms] delay-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${isVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-8 blur-md'}`}
           >
             {specialist.name}
           </h3>
         </div>
 
         <div
-          className={`mt-8 pt-6 border-t border-zinc-50 dark:border-zinc-900/50 flex justify-end transition-all duration-[1500ms] delay-500 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+          className={`mt-10 pt-6 border-t border-zinc-50 dark:border-zinc-900/50 flex justify-end transition-all duration-[1500ms] delay-500 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
         >
           <div className="w-12 h-[1px] bg-zinc-100 dark:bg-zinc-800 group-hover:w-full group-hover:bg-zinc-900 dark:group-hover:bg-white transition-all duration-[1000ms]" />
         </div>

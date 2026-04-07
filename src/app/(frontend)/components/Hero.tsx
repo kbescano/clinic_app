@@ -1,113 +1,146 @@
 'use client'
 
+import Link from 'next/link'
 import React, { useState, useEffect, useRef } from 'react'
 
+const SLIDES = [
+  {
+    id: 1,
+    label: 'Clinical Treatments',
+    title: 'The Art of Rejuvenation',
+    cta: 'Discover the process',
+    video: 'https://www.pexels.com/download/video/4267991/', // Placeholder for Sports Cars
+  },
+  {
+    id: 2,
+    label: 'The Collection',
+    title: 'Your Daily Ritual',
+    cta: 'Shop the edit',
+    video: 'https://www.pexels.com/download/video/4264901/', // Placeholder for Collections
+  },
+  {
+    id: 3,
+    label: 'Advanced Dermal',
+    title: 'Precision Skin Care',
+    cta: 'Book an analysis',
+    video: 'https://www.pexels.com/download/video/8204093/', // Placeholder for Racing
+  },
+]
+
 export default function CinematicVideoHero() {
+  const [currentSlide, setCurrentSlide] = useState(0)
   const [isReady, setIsReady] = useState(false)
-  const videoRef = useRef<HTMLVideoElement>(null)
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
 
+  // SLIDE TIMER: Cycles every 6 seconds
   useEffect(() => {
-    // FORCE MUTE: This bypasses the React 'muted' attribute bug
-    if (videoRef.current) {
-      videoRef.current.defaultMuted = true
-      videoRef.current.muted = true
-    }
+    const slideTimer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % SLIDES.length)
+    }, 6000)
 
-    const timer = setTimeout(() => setIsReady(true), 400)
-    return () => clearTimeout(timer)
+    const readyTimer = setTimeout(() => setIsReady(true), 400)
+
+    return () => {
+      clearInterval(slideTimer)
+      clearTimeout(readyTimer)
+    }
   }, [])
+
+  // FORCE MUTE: Handle all video refs
+  useEffect(() => {
+    videoRefs.current.forEach((video) => {
+      if (video) {
+        video.defaultMuted = true
+        video.muted = true
+      }
+    })
+  }, [isReady])
 
   const slowEase = 'cubic-bezier(0.2, 0, 0.2, 1)'
 
   return (
-    <section className="relative h-screen md:h-[100dvh] overflow-hidden bg-[#050505]">
-      <video
-        ref={videoRef}
-        autoPlay
-        loop
-        muted
-        playsInline
-        className={`h-full w-full object-cover transition-all duration-[4000ms] ${slowEase} ${
-          isReady ? 'scale-100 blur-0 opacity-100' : 'scale-110 blur-md opacity-0'
-        } object-center`}
-        poster="https://images.pexels.com/photos/12556701/pexels-photo-12556701.jpeg"
-      >
-        <source src="https://www.pexels.com/download/video/4267991/" type="video/mp4" />
-      </video>
+    <section className="relative h-screen md:h-[100dvh] overflow-hidden bg-[#050505] text-white font-sans">
+      {/* --- VIDEO STACK (CROSS-FADE) --- */}
+      {SLIDES.map((slide, index) => (
+        <div
+          key={slide.id}
+          className={`absolute inset-0 transition-opacity duration-[1500ms] ${slowEase} ${
+            currentSlide === index ? 'opacity-100 z-10' : 'opacity-0 z-0'
+          }`}
+        >
+          <video
+            // Wrap the assignment in curly braces to ensure it returns void
+            ref={(el) => {
+              videoRefs.current[index] = el
+            }}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className={`h-full w-full object-cover transition-transform duration-[6000ms] ${
+              currentSlide === index && isReady ? 'scale-105' : 'scale-100'
+            }`}
+          >
+            <source src={slide.video} type="video/mp4" />
+          </video>
+          {/* DARK OVERLAY */}
+          <div className="absolute inset-0 bg-black/40 mix-blend-multiply" />
+        </div>
+      ))}
 
-      {/* --- OPTICAL GRADIENTS --- */}
-      <div className="absolute inset-0 z-10 bg-black/30 mix-blend-multiply pointer-events-none" />
-      <div className="absolute inset-0 z-20 bg-gradient-to-t from-[#050505] via-transparent to-transparent opacity-90 pointer-events-none" />
+      {/* --- CONTENT OVERLAY --- */}
+      <div className="absolute inset-0 z-40 flex flex-col items-center justify-center text-center px-6">
+        {SLIDES.map((slide, index) => (
+          <div
+            key={`content-${slide.id}`}
+            className={`absolute flex flex-col items-center transition-all duration-[1200ms] ${slowEase} ${
+              currentSlide === index
+                ? 'opacity-100 translate-y-0'
+                : 'opacity-0 translate-y-10 pointer-events-none'
+            }`}
+          >
+            <p className="text-[10px] md:text-xs font-bold tracking-[0.4em] uppercase mb-4 opacity-80">
+              {slide.label}
+            </p>
+            <h1 className="text-5xl md:text-8xl font-bold tracking-[0.1em] uppercase leading-none mb-10">
+              {slide.title.split(' ').map((word, i) => (
+                <React.Fragment key={i}>
+                  {word} {i === 1 && <br className="md:hidden" />}
+                </React.Fragment>
+              ))}
+            </h1>
+            <button className="group flex items-center gap-4 text-[10px] md:text-xs tracking-[0.3em] uppercase hover:text-black transition-colors">
+              <p>Book now</p>
+              <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center group-hover:border-black transition-all">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
+              </div>
+            </button>
+          </div>
+        ))}
+      </div>
 
-      {/* --- BOTTOM ANCHORED CONTENT --- */}
-      <div className="absolute inset-0 z-40 flex flex-col justify-end px-6 pb-10 md:px-16 md:pb-16">
-        <div className="max-w-7xl w-full mx-auto">
-          <div className="flex items-start gap-4 md:gap-6">
-            {/* THE ATELIER PILLAR: Extended duration for a "growing" effect */}
+      {/* --- INTERACTIVE PAGINATION --- */}
+      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4">
+        {SLIDES.map((_, index) => (
+          <button key={index} onClick={() => setCurrentSlide(index)} className="group relative p-2">
             <div
-              className={`w-px bg-white/30 transition-all duration-[2500ms] ${slowEase} origin-bottom ${
-                isReady ? 'h-14 md:h-20 opacity-100' : 'h-0 opacity-0'
+              className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${
+                currentSlide === index ? 'bg-black scale-125' : 'bg-white/40 hover:bg-white'
               }`}
             />
-
-            <div className="space-y-6">
-              {/* 01. THE REGISTRY TAG: Microscopic & Technical */}
-              <div
-                className={`flex items-center gap-3 transition-all duration-[2000ms] delay-[800ms] ${slowEase} ${
-                  isReady ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
-                }`}
-              >
-                <p className="text-[7px] md:text-[8px] font-mono tracking-[0.6em] text-white/30 uppercase">
-                  [ core.skin_edit_2026]
-                </p>
-                <div
-                  className={`h-px bg-white/10 transition-all duration-[2000ms] delay-[1000ms] ${
-                    isReady ? 'w-12' : 'w-0'
-                  }`}
-                />
-              </div>
-
-              {/* 02. THE STANDOUT HEADER: Large, Thin, & Indented */}
-              <div className="space-y-4">
-                <h1
-                  className={`text-[42px] md:text-[64px] font-serif font-light tracking-tighter text-white leading-[0.85] lowercase transition-all duration-[3000ms] delay-[1200ms] ${slowEase} ${
-                    isReady ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-xl scale-[0.98]'
-                  }`}
-                >
-                  the skin <br />
-                  <span className="italic opacity-40 pl-12 md:pl-20 inline-block transition-all duration-[3000ms] delay-[1500ms]">
-                    edit
-                  </span>
-                </h1>
-
-                {/* 03. THE SUBTITLE: Justified Micro-Serif */}
-                <p
-                  className={`max-w-[240px] md:max-w-[300px] text-[10px] md:text-[11px] font-serif font-light text-white/40 leading-relaxed tracking-tight transition-all duration-[2500ms] delay-[2000ms] ${slowEase} ${
-                    isReady ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                  }`}
-                >
-                  Personalized skin care solutions designed for{' '}
-                  <span className="text-white/80 italic underline underline-offset-4 decoration-white/10">
-                    healthy, radiant skin
-                  </span>
-                  . A new attitude towards dermal health emerges.
-                </p>
-              </div>
-
-              {/* 04. KINETIC ANCHOR: The structural "end" point */}
-              <div
-                className={`transition-all duration-[2000ms] delay-[2800ms] ${slowEase} ${
-                  isReady ? 'opacity-100 scale-100' : 'opacity-0 scale-0'
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-1 h-1 bg-white rounded-full animate-pulse" />
-                  <div className="w-12 h-px bg-white/5" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+          </button>
+        ))}
       </div>
     </section>
   )
