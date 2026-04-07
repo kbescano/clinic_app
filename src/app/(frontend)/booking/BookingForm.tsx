@@ -267,7 +267,7 @@ function BookingFormContent({
 
       {showModal && !isRecognized && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-white/80 dark:bg-black/80 backdrop-blur-xl p-4">
-          <div className="w-full max-w-lg bg-white dark:bg-[#050505] p-10 border border-zinc-100 dark:border-zinc-900 rounded-2xl shadow-2xl text-center">
+          <div className="w-[400px] max-w-lg bg-white dark:bg-[#050505] p-10 border border-zinc-100 dark:border-zinc-900 rounded-2xl shadow-2xl text-center">
             {isExisting === null ? (
               <div className="animate-in fade-in zoom-in-95 duration-500 font-serif">
                 <h3 className="text-[24px] md:text-[32px] font-light mb-14 tracking-tighter text-[#251101] dark:text-white leading-none">

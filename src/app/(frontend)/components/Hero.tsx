@@ -102,30 +102,29 @@ export default function CinematicVideoHero() {
             <p className="text-[10px] md:text-xs font-bold tracking-[0.4em] uppercase mb-4 opacity-80">
               {slide.label}
             </p>
-            <h1 className="text-5xl md:text-8xl font-bold tracking-[0.1em] uppercase leading-none mb-10">
-              {slide.title.split(' ').map((word, i) => (
-                <React.Fragment key={i}>
-                  {word} {i === 1 && <br className="md:hidden" />}
-                </React.Fragment>
-              ))}
+            <h1 className="text-3xl sm:text-4xl md:text-8xl font-bold tracking-normal md:tracking-[0.1em] uppercase leading-[1.1] md:leading-[0.9] mb-10 max-w-[12ch] md:max-w-[15ch] mx-auto whitespace-normal text-balance break-words">
+              {slide.title}
             </h1>
-            <button className="group flex items-center gap-4 text-[10px] md:text-xs tracking-[0.3em] uppercase hover:text-black transition-colors">
-              <p>Book now</p>
-              <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center group-hover:border-black transition-all">
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="m9 18 6-6-6-6" />
-                </svg>
-              </div>
-            </button>
+            <Link href={'/booking'}>
+              <button className="group flex items-center gap-4 text-[8px] md:text-xs tracking-[0.3em] uppercase hover:text-black transition-colors">
+                <span>{slide.cta}</span>
+
+                <div className="w-10 h-10 rounded-full border border-white/20 flex items-center justify-center group-hover:border-black transition-all">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="m9 18 6-6-6-6" />
+                  </svg>
+                </div>
+              </button>
+            </Link>
           </div>
         ))}
       </div>
