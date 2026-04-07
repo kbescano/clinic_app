@@ -102,7 +102,8 @@ export default function CinematicVideoHero() {
             <p className="text-[10px] md:text-xs font-bold tracking-[0.4em] uppercase mb-4 opacity-80">
               {slide.label}
             </p>
-            <h1 className="text-3xl sm:text-4xl md:text-8xl font-bold tracking-normal md:tracking-[0.1em] uppercase leading-[1.1] md:leading-[0.9] mb-10 max-w-[12ch] md:max-w-[15ch] mx-auto whitespace-normal text-balance break-words">
+            {/* UPDATED: Dropped mobile font to text-4xl/5xl and tightened character limit */}
+            <h1 className="text-3xl md:text-8xl font-bold tracking-tight md:tracking-[0.1em] uppercase leading-[1.1] md:leading-[0.9] mb-10 max-w-[16ch] md:max-w-[15ch] mx-auto whitespace-normal text-balance break-normal">
               {slide.title}
             </h1>
             <Link href={'/booking'}>
