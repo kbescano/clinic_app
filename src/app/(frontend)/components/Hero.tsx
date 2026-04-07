@@ -135,16 +135,17 @@ export default function CinematicVideoHero() {
       </div>
 
       {/* --- DYNAMIC PAGINATION: NO DOT IF ACTIVE --- */}
-      <div className="absolute bottom-12 left-0 w-full z-50 flex justify-center items-center gap-4 md:gap-6">
+      <div className="absolute bottom-12 left-0 w-full z-50 flex justify-center items-center gap-1 md:gap-2">
         {SLIDES.map((_, index) => {
           const isActive = currentSlide === index
           return (
             <button
               key={index}
               onClick={() => setCurrentSlide(index)}
-              className="group relative w-10 h-10 flex items-center justify-center"
+              // Reduced from w-10 to w-6 to pull them closer
+              className="group relative w-6 h-6 flex items-center justify-center"
             >
-              {/* Center Dot: Opacity-0 if active (hidden) */}
+              {/* Center Dot */}
               <div
                 className={`absolute w-1 h-1 rounded-full transition-all duration-700 ease-in-out ${
                   isActive
@@ -153,16 +154,16 @@ export default function CinematicVideoHero() {
                 }`}
               />
 
-              {/* Progress Circle: Only appears and animates when active */}
+              {/* Progress Circle */}
               <svg
                 className={`absolute inset-0 w-full h-full -rotate-90 transform transition-all duration-1000 ${slowEase} ${
                   isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
                 }`}
               >
-                {/* Thin Track Circle (Faint) */}
+                {/* Track - cx/cy updated to 12 to center in the w-6 (24px) container */}
                 <circle
-                  cx="20"
-                  cy="20"
+                  cx="12"
+                  cy="12"
                   r={radius}
                   stroke="currentColor"
                   strokeWidth="1"
@@ -171,8 +172,8 @@ export default function CinematicVideoHero() {
                 />
                 {/* Active Progress Border */}
                 <circle
-                  cx="20"
-                  cy="20"
+                  cx="12"
+                  cy="12"
                   r={radius}
                   stroke="currentColor"
                   strokeWidth="1.5"
@@ -180,7 +181,6 @@ export default function CinematicVideoHero() {
                   strokeDasharray={circumference}
                   style={{
                     strokeDashoffset: isActive ? 0 : circumference,
-                    // linear timing for the 6s countdown
                     transition: isActive ? 'stroke-dashoffset 6000ms linear' : 'none',
                   }}
                   className="text-white"
