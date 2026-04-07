@@ -50,14 +50,32 @@ export default function AppointmentClient({ initialData }: { initialData: any })
       const isPast = dayjs(h.date).isBefore(now)
       if (filter === 'upcoming' && isPast) return
       if (filter === 'past' && !isPast) return
-      sCount++
+
+      // ONLY increment count if NOT cancelled
+      if (h.status !== 'cancelled') {
+        sCount++
+      }
+
       const dayKey = dayjs(h.date).format('YYYY-MM-DD')
-      if (!groups[dayKey]) groups[dayKey] = { date: h.date, main: [], guests: {}, daySubtotal: 0 }
+      if (!groups[dayKey]) {
+        groups[dayKey] = {
+          date: h.date,
+          main: [],
+          guests: {},
+          daySubtotal: 0,
+        }
+      }
+
+      // We still track the day subtotal and grouping even if cancelled
       groups[dayKey].daySubtotal += 1
-      if (!h.isGuest) groups[dayKey].main.push(h)
-      else {
+
+      if (!h.isGuest) {
+        groups[dayKey].main.push(h)
+      } else {
         const gName = `${h.firstName} ${h.surname}`
-        if (!groups[dayKey].guests[gName]) groups[dayKey].guests[gName] = []
+        if (!groups[dayKey].guests[gName]) {
+          groups[dayKey].guests[gName] = []
+        }
         groups[dayKey].guests[gName].push(h)
       }
     })
@@ -67,6 +85,7 @@ export default function AppointmentClient({ initialData }: { initialData: any })
       const timeB = dayjs(b.date).valueOf()
       return filter === 'upcoming' ? timeA - timeB : timeB - timeA
     })
+
     return { timelineRegistry: sorted, totalServices: sCount }
   }, [patientData, filter])
 
@@ -111,7 +130,7 @@ export default function AppointmentClient({ initialData }: { initialData: any })
           <div className="w-full max-w-[320px] space-y-8 text-center">
             <header className="space-y-1">
               <p className="text-[7px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
-                Secure Registry
+                Login
               </p>
               <h1 className="text-xl font-serif font-light tracking-tighter uppercase text-[#251101] dark:text-zinc-100">
                 Appointments
@@ -162,9 +181,10 @@ export default function AppointmentClient({ initialData }: { initialData: any })
                     maxLength={4}
                     type="text"
                     inputMode="numeric"
+                    placeholder="••••"
                     value={authForm.lastFour}
                     onChange={(e) => setAuthForm({ ...authForm, lastFour: e.target.value })}
-                    className="w-full bg-transparent py-2 outline-none font-serif text-base tracking-[0.6em] text-[#251101] dark:text-zinc-100"
+                    className="w-full bg-transparent py-2 outline-none font-serif text-base tracking-[0.6em] text-[#251101] dark:text-zinc-100 placeholder:opacity-30"
                   />
                 </div>
               </div>
@@ -198,11 +218,11 @@ export default function AppointmentClient({ initialData }: { initialData: any })
                 className={`transition-all duration-1000 delay-100 ${isHeaderVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
               >
                 <p className="text-[8px] md:text-[10px] uppercase tracking-[0.4em] text-[#595f72] font-serif flex items-center gap-2">
-                  <ShieldCheckIcon className="w-3.5 h-3.5 text-[#48a9a6]" /> Management Portal
+                  <ShieldCheckIcon className="w-3.5 h-3.5 text-[#48a9a6]" /> Appointment Portal
                 </p>
               </div>
               <h1
-                className={`text-[28px] md:text-[48px] font-light tracking-tighter font-serif leading-none transition-all duration-[1200ms] delay-300 ease-out ${isHeaderVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-8 blur-md'}`}
+                className={`text-[28px] md:text-[48px] capitalize font-light tracking-tighter font-serif leading-none transition-all duration-[1200ms] delay-300 ease-out ${isHeaderVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-8 blur-md'}`}
               >
                 {patientData.firstName}{' '}
                 <span className="text-[#595f72]">{patientData.surname}</span>
@@ -243,7 +263,7 @@ export default function AppointmentClient({ initialData }: { initialData: any })
           >
             <div className="bg-white dark:bg-[#050505] p-6 md:p-8 flex flex-col justify-between min-h-[120px] group transition-all hover:bg-zinc-50/50">
               <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
-                Grand Total Visits
+                {filter === 'upcoming' ? 'Upcoming total visits' : 'Total Visits'}
               </p>
               <p className="text-[24px] md:text-[32px] font-light font-serif tracking-tight tabular-nums text-[#251101] dark:text-zinc-100">
                 {timelineRegistry.length}
