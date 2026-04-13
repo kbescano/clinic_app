@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useMemo } from 'react'
 import FadeIn from '../../components/FadeIn'
 import { TableCellsIcon, ClockIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import MassUpload from '../../components/MassUpload'
@@ -37,7 +37,6 @@ export default function AdminManagementClient({
   const systemRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // FIX: Force scroll to top on mount to bypass Next.js "Skipping auto-scroll" warning
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
 
     const timer = setTimeout(() => setDrawLine(true), 100)
@@ -62,13 +61,49 @@ export default function AdminManagementClient({
     }
   }, [])
 
-  // Sync search with URL
+  // Sync search with URL & update smoothly
   const updateSearch = (val: string) => {
     const params = new URLSearchParams(searchParams.toString())
-    if (val) params.set('search', val)
-    else params.delete('search')
-    router.push(`?${params.toString()}`)
+    if (val) {
+      params.set('search', val)
+    } else {
+      params.delete('search')
+    }
+    // Use replace with scroll: false so it doesn't spam history or jump the page while typing
+    router.replace(`?${params.toString()}`, { scroll: false })
   }
+
+  // 1. First combine and deduplicate incoming data
+  const combinedData = useMemo(() => {
+    const map = new Map()
+    todayData.forEach((item) => map.set(item.id, item))
+    otherData.forEach((item) => map.set(item.id, item))
+    return Array.from(map.values())
+  }, [todayData, otherData])
+
+  // 2. Instantly filter data locally (Identical to Medical History logic)
+  const searchResults = useMemo(() => {
+    let dataToFilter = [...combinedData]
+
+    if (search) {
+      const term = search.toLowerCase().trim()
+      dataToFilter = dataToFilter.filter((item) => {
+        const searchableFields = [
+          item.firstName,
+          item.surname,
+          item.email,
+          item.phone,
+          ...(item.services || []),
+        ]
+
+        const searchableString = searchableFields.filter(Boolean).join(' ').toLowerCase()
+
+        return searchableString.includes(term)
+      })
+    }
+
+    return dataToFilter
+  }, [combinedData, search])
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 px-4 md:px-8 selection:bg-zinc-100 overflow-x-hidden font-sans">
@@ -107,12 +142,12 @@ export default function AdminManagementClient({
                 isHeaderVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
               }`}
             >
-              <AdminFilter initialRange={range} initialStatus={status} />
+              {!search && <AdminFilter initialRange={range} initialStatus={status} />}
             </div>
           </header>
 
           <div className="flex flex-col gap-14 md:gap-20">
-            {/* SEARCH BAR (Added for semantic compliance & utility) */}
+            {/* SEARCH BAR */}
             <div
               className={`flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-4 transition-all duration-1000 delay-700 ${isHeaderVisible ? 'opacity-100' : 'opacity-0'}`}
             >
@@ -140,40 +175,48 @@ export default function AdminManagementClient({
               </div>
             </div>
 
-            {/* TODAY SECTION */}
-            <section className="flex flex-col gap-6 md:gap-8">
-              <div className="flex items-baseline justify-between border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
-                <h2 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif flex items-center gap-2">
-                  Today&apos;s Sessions
-                </h2>
-                <span className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] text-[#595f72] font-serif">
-                  {todayData.length} Entries
-                </span>
-              </div>
-
-              <div className="flex flex-col border-b border-zinc-100 dark:border-zinc-900/50">
-                {todayData.length > 0 ? (
-                  todayData.map((apt: any) => <AppointmentTicket key={apt.id} apt={apt} />)
-                ) : (
-                  <EmptyState message="The registry is clear for today" />
-                )}
-              </div>
-            </section>
-
-            {/* SECONDARY SECTION */}
-            {range !== 'today' && (
+            {/* TODAY SECTION - Hidden when searching */}
+            {!search && (
               <section className="flex flex-col gap-6 md:gap-8">
                 <div className="flex items-baseline justify-between border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
-                  <h2 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
-                    {secondaryLabel}
+                  <h2 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif flex items-center gap-2">
+                    Today&apos;s Sessions
                   </h2>
                   <span className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] text-[#595f72] font-serif">
-                    {otherData.length} Found
+                    {todayData.length} Entries
                   </span>
                 </div>
 
                 <div className="flex flex-col border-b border-zinc-100 dark:border-zinc-900/50">
-                  {otherData.length > 0 ? (
+                  {todayData.length > 0 ? (
+                    todayData.map((apt: any) => <AppointmentTicket key={apt.id} apt={apt} />)
+                  ) : (
+                    <EmptyState message="The registry is clear for today" />
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* SECONDARY / SEARCH RESULTS SECTION */}
+            {(search || range !== 'today') && (
+              <section className="flex flex-col gap-6 md:gap-8">
+                <div className="flex items-baseline justify-between border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
+                  <h2 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
+                    {search ? 'Search Results' : secondaryLabel}
+                  </h2>
+                  <span className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] text-[#595f72] font-serif">
+                    {search ? searchResults.length : otherData.length} Found
+                  </span>
+                </div>
+
+                <div className="flex flex-col border-b border-zinc-100 dark:border-zinc-900/50">
+                  {search ? (
+                    searchResults.length > 0 ? (
+                      searchResults.map((apt: any) => <AppointmentTicket key={apt.id} apt={apt} />)
+                    ) : (
+                      <EmptyState message="No matching records found" />
+                    )
+                  ) : otherData.length > 0 ? (
                     otherData.map((apt: any) => <AppointmentTicket key={apt.id} apt={apt} />)
                   ) : (
                     <EmptyState message={`No records found in selected range`} />
