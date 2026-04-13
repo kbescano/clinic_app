@@ -175,8 +175,8 @@ export default function AdminManagementClient({
               </div>
             </div>
 
-            {/* TODAY SECTION - Hidden when searching */}
-            {!search && (
+            {/* TODAY SECTION - Hidden when searching OR when filters are not set to today */}
+            {!search && range === 'today' && (
               <section className="flex flex-col gap-6 md:gap-8">
                 <div className="flex items-baseline justify-between border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
                   <h2 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif flex items-center gap-2">
