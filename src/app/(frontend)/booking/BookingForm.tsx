@@ -84,7 +84,7 @@ function BookingFormContent({
     },
   ])
 
-  const activeBooking = bookings[activeTabIndex] || bookings[0] // Fallback safety
+  const activeBooking = bookings[activeTabIndex] || bookings[0]
 
   const updateActiveBooking = (field: keyof BookingEntry, value: any) => {
     setBookings((prev) => {
@@ -103,10 +103,9 @@ function BookingFormContent({
   }
 
   const handleDeleteGuest = (e: React.MouseEvent, indexToDelete: number) => {
-    e.stopPropagation() // Prevent tab switch when clicking delete
+    e.stopPropagation()
     setBookings((prev) => prev.filter((_, i) => i !== indexToDelete))
 
-    // Auto-adjust active tab so the view doesn't break
     if (activeTabIndex === indexToDelete) {
       setActiveTabIndex(indexToDelete - 1)
     } else if (activeTabIndex > indexToDelete) {
@@ -130,7 +129,6 @@ function BookingFormContent({
 
   // --- LOGIC CONSTANTS ---
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  // Strict PH Mobile Regex (accepts 09xxxxxxxxx or 639xxxxxxxxx after non-digits are stripped)
   const phoneRegex = /^(09|639)\d{9}$/
 
   const isEmailValid = emailRegex.test(activeBooking.email.trim())
@@ -152,7 +150,6 @@ function BookingFormContent({
   const showDateSection = isPrimaryDraft && activeBooking.serviceId !== '' && identitySatisfied
   const showTimeOnlySection = !isPrimaryDraft && activeBooking.serviceId !== '' && identitySatisfied
 
-  // Strict validation logic for Confirm Button
   const isAllValid = useMemo(() => {
     return bookings.every((b, i) => {
       const identityOk =
@@ -195,6 +192,10 @@ function BookingFormContent({
     [bookings, activeBooking.date, activeTabIndex],
   )
 
+  const getServiceTitle = useMemo(() => {
+    return (id: string) => services.find((s) => String(s.id) === id)?.title || 'Service'
+  }, [services])
+
   useEffect(() => {
     if (state?.error) setErrorToast(state.error)
   }, [state])
@@ -211,8 +212,6 @@ function BookingFormContent({
     updateAvailability()
   }, [activeBooking.date])
 
-  const getServiceTitle = (id: string) =>
-    services.find((s) => String(s.id) === id)?.title || 'Service'
   const timeSlots = [
     '09:00',
     '10:00',
@@ -250,12 +249,36 @@ function BookingFormContent({
   const handleFinalSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!isAllValid) return
+
     const fd = new FormData()
+
+    // Bundle details into a secure query string for the backend to use for redirecting
+    const params = new URLSearchParams()
+    params.append('date', dayjs(bookings[0].date).format('MMMM D, YYYY'))
+    params.append('time', bookings[0].time)
+    params.append('fn', bookings[0].firstName)
+    params.append('sn', bookings[0].surname)
+
+    const serviceTitles = []
+    if (bookings[0].serviceId) serviceTitles.push(getServiceTitle(bookings[0].serviceId))
+    if (bookings[0].extraServiceId) serviceTitles.push(getServiceTitle(bookings[0].extraServiceId))
+    params.append('service', serviceTitles.join(' + '))
+
+    const guestNames = bookings.slice(1).forEach((b) => {
+      const gName = `${b.firstName} ${b.surname}`
+      const gServices = []
+      if (b.serviceId) gServices.push(getServiceTitle(b.serviceId))
+      if (b.extraServiceId) gServices.push(getServiceTitle(b.extraServiceId))
+
+      const formattedGuestDetails = `${gName} — ${gServices.join(' + ')}`
+      params.append('guests', formattedGuestDetails)
+    })
+
+    fd.append('redirectQuery', params.toString())
     if (isReschedule && rescheduleId) fd.append('rescheduleId', rescheduleId)
 
     startTransition(() => {
       bookings.forEach((b) => {
-        // Fallback: Ensure backend receives primary contact info for guests
         const submitEmail = b.isGuest ? bookings[0].email : b.email
         const submitPhone = b.isGuest ? bookings[0].phone : b.phone
 

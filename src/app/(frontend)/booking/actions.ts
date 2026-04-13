@@ -219,8 +219,17 @@ export async function createBookingAction(prevState: any, formData: FormData) {
 
     return { error: 'Server error. Please check your data.' }
   }
-  // Redirect to success page
-  redirect('/booking/confirmation')
+
+  // --- PHASE 6: DYNAMIC SUCCESS REDIRECT ---
+  // Grab the query string we generated on the frontend
+  const redirectQuery = formData.get('redirectQuery')
+
+  // Redirect with the dynamic data if it exists, otherwise fallback to the default base path
+  if (redirectQuery && typeof redirectQuery === 'string') {
+    redirect(`/booking/confirmation?${redirectQuery}`)
+  } else {
+    redirect('/booking/confirmation')
+  }
 }
 
 /**

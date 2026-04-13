@@ -20,12 +20,11 @@ const ServiceCard = ({
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // This triggers every time the card enters or leaves the view
         setIsVisible(entry.isIntersecting)
       },
       {
-        threshold: 0.15, // Triggers when 15% of the card is visible
-        rootMargin: '0px 0px -50px 0px', // Slight offset for a smoother "pop"
+        threshold: 0.15,
+        rootMargin: '0px 0px -50px 0px',
       },
     )
 
@@ -36,23 +35,22 @@ const ServiceCard = ({
   return (
     <div
       ref={cardRef}
-      className="flex flex-col bg-white dark:bg-[#050505] group h-full overflow-hidden"
+      className="flex flex-col md:flex-row bg-white dark:bg-[#050505] group h-full overflow-hidden even:md:flex-row-reverse"
     >
-      {/* Media Section */}
-      <div className="relative overflow-hidden grayscale-[0.3] group-hover:grayscale-0 transition-all duration-1000">
+      {/* Media Section: Switched to flex-1 on desktop to accommodate the gap */}
+      <div className="relative w-full md:flex-1 shrink-0 overflow-hidden grayscale-[0.3] group-hover:grayscale-0 transition-all duration-1000 h-[650px] md:h-auto md:min-h-[600px]">
         {service.images && service.images.length > 0 ? (
           <ServiceSlider images={service.images} />
         ) : (
-          <div className="h-[450px] w-full bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-center text-[8px] uppercase tracking-[0.4em] text-zinc-400 font-serif">
+          <div className="absolute inset-0 bg-zinc-50 dark:bg-zinc-900/50 flex items-center justify-center text-[8px] uppercase tracking-[0.4em] text-zinc-400 font-serif">
             Media Offline
           </div>
         )}
       </div>
 
-      {/* Animated Content Section */}
-      <div className="flex flex-col flex-grow p-6 md:p-10">
+      {/* Animated Content Section: Switched to flex-1 and adjusted padding to balance the gap */}
+      <div className="flex flex-col flex-1 p-6 md:p-10 lg:p-16 justify-center">
         <div className="mb-6">
-          {/* Title: Quick Blur-to-Focus Reveal */}
           <h3
             className={`text-[14px] md:text-[16px] font-normal tracking-tight font-serif text-[#251101] dark:text-zinc-100 mb-6 leading-none transition-all duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
               isVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-8 blur-md'
@@ -61,7 +59,6 @@ const ServiceCard = ({
             {service.title}
           </h3>
 
-          {/* Description: Staggered Slide */}
           <div
             className={`relative transition-all duration-[1200ms] delay-150 ease-[cubic-bezier(0.16,1,0.3,1)] ${
               isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
@@ -83,7 +80,6 @@ const ServiceCard = ({
           </div>
         </div>
 
-        {/* Details: Subtle Staggered Fade */}
         {service.details && service.details.length > 0 && (
           <div
             className={`border-t border-zinc-100 dark:border-zinc-900/50 mb-6 transition-all duration-[1200ms] delay-300 ${
@@ -120,9 +116,9 @@ const ServiceCard = ({
           </div>
         )}
 
-        {/* Footer: Bottom Anchor Reveal */}
+        {/* Footer pushed to bottom */}
         <div
-          className={`mt-auto flex items-end justify-between pt-8 border-t border-zinc-100 dark:border-zinc-900 transition-all duration-[1200ms] delay-500 ${
+          className={`mt-auto flex items-end justify-between pt-8 md:pt-12 border-t border-zinc-100 dark:border-zinc-900 transition-all duration-[1200ms] delay-500 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
           }`}
         >
@@ -148,7 +144,6 @@ const ServiceCard = ({
 }
 
 // --- SUB-COMPONENT: SLIDER ---
-// --- SUB-COMPONENT: SLIDER ---
 const ServiceSlider = ({ images }: { images: any[] }) => {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'start' })
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -168,7 +163,7 @@ const ServiceSlider = ({ images }: { images: any[] }) => {
   }, [emblaApi, onSelect])
 
   return (
-    <div className="relative h-[650px] w-full overflow-hidden cursor-grab active:cursor-grabbing group/slider bg-white dark:bg-black">
+    <div className="absolute inset-0 w-full h-full overflow-hidden cursor-grab active:cursor-grabbing group/slider bg-white dark:bg-black">
       {/* Carousel Viewport */}
       <div className="h-full w-full" ref={emblaRef}>
         <div className="flex h-full">
@@ -179,14 +174,13 @@ const ServiceSlider = ({ images }: { images: any[] }) => {
                 alt="Service"
                 fill
                 className="object-cover transition-transform duration-[2000ms] cubic-bezier(0.16, 1, 0.3, 1) group-hover/slider:scale-105"
-                sizes="(max-width: 768px) 100vw, 33vw"
+                sizes="(max-width: 768px) 100vw, 50vw"
               />
             </div>
           ))}
         </div>
       </div>
 
-      {/* Navigation Arrows: Pure Minimalist Raw Chevron */}
       {images.length > 1 && (
         <>
           <button
@@ -198,7 +192,7 @@ const ServiceSlider = ({ images }: { images: any[] }) => {
           </button>
           <button
             onClick={scrollNext}
-            className="absolute right-6 top-1/2 -translate-y-1/2 z-30 p-2 text-white/50  transition-all duration-300 hover:text-white"
+            className="absolute right-6 top-1/2 -translate-y-1/2 z-30 p-2 text-white/50 transition-all duration-300 hover:text-white"
             aria-label="Next slide"
           >
             <ChevronRightIcon className="w-3.5 h-3.5" strokeWidth={1.5} />
@@ -206,7 +200,6 @@ const ServiceSlider = ({ images }: { images: any[] }) => {
         </>
       )}
 
-      {/* Pagination Indicators */}
       {images.length > 1 && (
         <div className="absolute bottom-10 left-0 right-0 flex justify-center gap-3 z-20">
           {images.map((_, i) => (
@@ -261,7 +254,8 @@ export default function Services() {
       className="bg-white dark:bg-[#050505] text-zinc-900 dark:text-zinc-100 overflow-hidden"
     >
       <div className="max-w-[1440px] mx-auto border-x border-zinc-100 dark:border-zinc-900">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-px bg-zinc-100 dark:bg-zinc-900 border-y border-zinc-100 dark:border-zinc-900">
+        {/* Replaced gap-px on desktop with a clean gap to separate rows */}
+        <div className="grid grid-cols-1 gap-px md:gap-y-24 lg:gap-y-32 bg-zinc-100 dark:bg-zinc-900 md:bg-white md:dark:bg-[#050505] border-y border-zinc-100 dark:border-zinc-900 md:border-none md:py-20 lg:p-10">
           {services.map((service) => (
             <ServiceCard
               key={service.id}

@@ -12,8 +12,13 @@ import {
   ExclamationCircleIcon,
 } from '@heroicons/react/24/outline'
 import dayjs from '@/lib/dayjs'
+import { useSearchParams } from 'next/navigation'
 
 export default function AppointmentClient({ initialData }: { initialData: any }) {
+  const searchParams = useSearchParams()
+  const autoEmail = searchParams?.get('email')
+  const autoPhone = searchParams?.get('ph')
+
   const [isPending, startTransition] = useTransition()
   const [patientData, setPatientData] = useState(initialData)
   const [isVerified, setIsVerified] = useState(!!initialData)
@@ -22,12 +27,35 @@ export default function AppointmentClient({ initialData }: { initialData: any })
   const [drawLine, setDrawLine] = useState(false)
   const [isHeaderVisible, setIsHeaderVisible] = useState(false)
   const [isMetricsVisible, setIsMetricsVisible] = useState(false)
+  const [isAutoLoggingIn, setIsAutoLoggingIn] = useState(false)
 
   const headerRef = useRef<HTMLDivElement>(null)
   const metricsRef = useRef<HTMLDivElement>(null)
 
   const [authForm, setAuthForm] = useState({ email: '', lastFour: '' })
   const [error, setError] = useState<string | null>(null)
+
+  // --- AUTO LOGIN LOGIC ---
+  useEffect(() => {
+    if (!isVerified && autoEmail && autoPhone && !isAutoLoggingIn) {
+      setIsAutoLoggingIn(true)
+      const lastFour = autoPhone.length >= 4 ? autoPhone.slice(-4) : autoPhone
+      setAuthForm({ email: autoEmail, lastFour })
+
+      startTransition(async () => {
+        const res = await verifyPatientProfile(autoEmail, lastFour)
+        if (res.error) {
+          setError(res.error)
+          setIsAutoLoggingIn(false) // Revert to form so they can try manually
+        } else {
+          setPatientData(res.data)
+          setIsVerified(true)
+          // Clean the URL silently so a refresh doesn't re-trigger it
+          window.history.replaceState(null, '', '/appointments')
+        }
+      })
+    }
+  }, [isVerified, autoEmail, autoPhone, isAutoLoggingIn])
 
   const bookNewUrl = useMemo(() => {
     if (!patientData) return '/booking'
@@ -136,66 +164,75 @@ export default function AppointmentClient({ initialData }: { initialData: any })
                 Appointments
               </h1>
             </header>
-            <form
-              onSubmit={handleVerify}
-              className="space-y-8 bg-white dark:bg-[#050505] p-8 border border-zinc-100 dark:border-zinc-900 rounded-2xl shadow-sm"
-            >
-              <div className="space-y-6 text-left">
-                {error && (
-                  <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-lg animate-in fade-in zoom-in-95">
-                    <ExclamationCircleIcon className="w-4 h-4 text-red-500" />
-                    <p className="text-[10px] font-serif text-red-600 dark:text-red-400 leading-none">
-                      {error}
-                    </p>
-                  </div>
-                )}
-                <div className="border-b border-zinc-100 dark:border-zinc-800 py-1">
-                  <label
-                    htmlFor="verify-email"
-                    className="text-[7px] uppercase tracking-[0.4em] text-[#595f72] font-serif"
-                  >
-                    Email
-                  </label>
-                  <input
-                    id="verify-email"
-                    name="email"
-                    required
-                    type="email"
-                    autoComplete="email"
-                    value={authForm.email}
-                    onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
-                    className="w-full bg-transparent py-2 outline-none font-serif text-base text-[#251101] dark:text-zinc-100"
-                  />
-                </div>
-                <div className="border-b border-zinc-100 dark:border-zinc-800 py-1">
-                  <label
-                    htmlFor="verify-suffix"
-                    className="text-[7px] uppercase tracking-[0.4em] text-[#595f72] font-serif"
-                  >
-                    Phone Suffix
-                  </label>
-                  <input
-                    id="verify-suffix"
-                    name="phoneSuffix"
-                    required
-                    maxLength={4}
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="••••"
-                    value={authForm.lastFour}
-                    onChange={(e) => setAuthForm({ ...authForm, lastFour: e.target.value })}
-                    className="w-full bg-transparent py-2 outline-none font-serif text-base tracking-[0.6em] text-[#251101] dark:text-zinc-100 placeholder:opacity-30"
-                  />
-                </div>
+
+            {isAutoLoggingIn && isPending ? (
+              <div className="py-20 animate-pulse">
+                <p className="text-[10px] uppercase tracking-[0.4em] text-[#48a9a6] font-serif font-medium">
+                  Verifying Session...
+                </p>
               </div>
-              <button
-                disabled={isPending}
-                type="submit"
-                className="w-full py-4 bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[9px] font-serif uppercase tracking-[0.4em] rounded-full active:scale-95 transition-transform"
+            ) : (
+              <form
+                onSubmit={handleVerify}
+                className="space-y-8 bg-white dark:bg-[#050505] p-8 border border-zinc-100 dark:border-zinc-900 rounded-2xl shadow-sm"
               >
-                {isPending ? 'Accessing...' : 'View My Schedule'}
-              </button>
-            </form>
+                <div className="space-y-6 text-left">
+                  {error && (
+                    <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-lg animate-in fade-in zoom-in-95">
+                      <ExclamationCircleIcon className="w-4 h-4 text-red-500" />
+                      <p className="text-[10px] font-serif text-red-600 dark:text-red-400 leading-none">
+                        {error}
+                      </p>
+                    </div>
+                  )}
+                  <div className="border-b border-zinc-100 dark:border-zinc-800 py-1">
+                    <label
+                      htmlFor="verify-email"
+                      className="text-[7px] uppercase tracking-[0.4em] text-[#595f72] font-serif"
+                    >
+                      Email
+                    </label>
+                    <input
+                      id="verify-email"
+                      name="email"
+                      required
+                      type="email"
+                      autoComplete="email"
+                      value={authForm.email}
+                      onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
+                      className="w-full bg-transparent py-2 outline-none font-serif text-base text-[#251101] dark:text-zinc-100"
+                    />
+                  </div>
+                  <div className="border-b border-zinc-100 dark:border-zinc-800 py-1">
+                    <label
+                      htmlFor="verify-suffix"
+                      className="text-[7px] uppercase tracking-[0.4em] text-[#595f72] font-serif"
+                    >
+                      Phone Suffix
+                    </label>
+                    <input
+                      id="verify-suffix"
+                      name="phoneSuffix"
+                      required
+                      maxLength={4}
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="••••"
+                      value={authForm.lastFour}
+                      onChange={(e) => setAuthForm({ ...authForm, lastFour: e.target.value })}
+                      className="w-full bg-transparent py-2 outline-none font-serif text-base tracking-[0.6em] text-[#251101] dark:text-zinc-100 placeholder:opacity-30"
+                    />
+                  </div>
+                </div>
+                <button
+                  disabled={isPending}
+                  type="submit"
+                  className="w-full py-4 bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[9px] font-serif uppercase tracking-[0.4em] rounded-full active:scale-95 transition-transform"
+                >
+                  {isPending ? 'Accessing...' : 'View My Schedule'}
+                </button>
+              </form>
+            )}
           </div>
         </FadeIn>
       </div>
@@ -386,7 +423,7 @@ function AppointmentDayBlock({
             <p className="text-[10px] md:text-[12px] font-serif font-medium capitalize text-[#251101] dark:text-zinc-100 leading-none">
               {name}
             </p>
-            <div className="px-2 py-0.5 border border-zinc-200 dark:border-zinc-800 rounded-full">
+            <div className="px-2 py-0.5">
               <span className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] text-[#595f72] font-serif font-bold leading-none">
                 Guest
               </span>

@@ -68,7 +68,7 @@ export default function SpecialistSection({
         </div>
 
         {/* GRID REGISTRY: Updated to 2 columns for all desktop views */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-px bg-zinc-100 dark:bg-zinc-900 border-y border-zinc-100 dark:border-zinc-900">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-px lg:gap-10 bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-900">
           {specialists.map((specialist) => (
             <SpecialistCard key={specialist.id} specialist={specialist} serverUrl={serverUrl} />
           ))}
