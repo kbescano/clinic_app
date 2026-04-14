@@ -1,186 +1,186 @@
 import { MigrateUpArgs, MigrateDownArgs, sql } from '@payloadcms/db-postgres'
 
-export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
+export async function up({ db, payload: _payload, req: _req }: MigrateUpArgs): Promise<void> {
   await db.execute(sql`
    CREATE TYPE "public"."enum_users_role" AS ENUM('admin');
   CREATE TYPE "public"."enum_appointments_status" AS ENUM('pending', 'confirmed', 'cancelled');
   CREATE TABLE "users_sessions" (
-  	"_order" integer NOT NULL,
-  	"_parent_id" integer NOT NULL,
-  	"id" varchar PRIMARY KEY NOT NULL,
-  	"created_at" timestamp(3) with time zone,
-  	"expires_at" timestamp(3) with time zone NOT NULL
+    "_order" integer NOT NULL,
+    "_parent_id" integer NOT NULL,
+    "id" varchar PRIMARY KEY NOT NULL,
+    "created_at" timestamp(3) with time zone,
+    "expires_at" timestamp(3) with time zone NOT NULL
   );
   
   CREATE TABLE "users" (
-  	"id" serial PRIMARY KEY NOT NULL,
-  	"name" varchar NOT NULL,
-  	"role" "enum_users_role" DEFAULT 'admin' NOT NULL,
-  	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
-  	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
-  	"email" varchar NOT NULL,
-  	"reset_password_token" varchar,
-  	"reset_password_expiration" timestamp(3) with time zone,
-  	"salt" varchar,
-  	"hash" varchar,
-  	"login_attempts" numeric DEFAULT 0,
-  	"lock_until" timestamp(3) with time zone
+    "id" serial PRIMARY KEY NOT NULL,
+    "name" varchar NOT NULL,
+    "role" "enum_users_role" DEFAULT 'admin' NOT NULL,
+    "updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
+    "created_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
+    "email" varchar NOT NULL,
+    "reset_password_token" varchar,
+    "reset_password_expiration" timestamp(3) with time zone,
+    "salt" varchar,
+    "hash" varchar,
+    "login_attempts" numeric DEFAULT 0,
+    "lock_until" timestamp(3) with time zone
   );
   
   CREATE TABLE "appointments" (
-  	"id" serial PRIMARY KEY NOT NULL,
-  	"first_name" varchar NOT NULL,
-  	"surname" varchar NOT NULL,
-  	"email" varchar NOT NULL,
-  	"phone" varchar NOT NULL,
-  	"service_id" integer NOT NULL,
-  	"appointment_date" timestamp(3) with time zone NOT NULL,
-  	"status" "enum_appointments_status" DEFAULT 'pending',
-  	"specialist_notes" varchar,
-  	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
-  	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
+    "id" serial PRIMARY KEY NOT NULL,
+    "first_name" varchar NOT NULL,
+    "surname" varchar NOT NULL,
+    "email" varchar NOT NULL,
+    "phone" varchar NOT NULL,
+    "service_id" integer NOT NULL,
+    "appointment_date" timestamp(3) with time zone NOT NULL,
+    "status" "enum_appointments_status" DEFAULT 'pending',
+    "specialist_notes" varchar,
+    "updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
+    "created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
   );
   
   CREATE TABLE "services_images" (
-  	"_order" integer NOT NULL,
-  	"_parent_id" integer NOT NULL,
-  	"id" varchar PRIMARY KEY NOT NULL,
-  	"image_id" integer NOT NULL
+    "_order" integer NOT NULL,
+    "_parent_id" integer NOT NULL,
+    "id" varchar PRIMARY KEY NOT NULL,
+    "image_id" integer NOT NULL
   );
   
   CREATE TABLE "services" (
-  	"id" serial PRIMARY KEY NOT NULL,
-  	"title" varchar NOT NULL,
-  	"description" varchar NOT NULL,
-  	"price" numeric NOT NULL,
-  	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
-  	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
+    "id" serial PRIMARY KEY NOT NULL,
+    "title" varchar NOT NULL,
+    "description" varchar NOT NULL,
+    "price" numeric NOT NULL,
+    "updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
+    "created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
   );
   
   CREATE TABLE "media" (
-  	"id" serial PRIMARY KEY NOT NULL,
-  	"alt" varchar NOT NULL,
-  	"cloudinary_public_id" varchar,
-  	"cloudinary_resource_type" varchar,
-  	"cloudinary_format" varchar,
-  	"cloudinary_secure_url" varchar,
-  	"cloudinary_bytes" numeric,
-  	"cloudinary_created_at" varchar,
-  	"cloudinary_version" varchar,
-  	"cloudinary_version_id" varchar,
-  	"cloudinary_width" numeric,
-  	"cloudinary_height" numeric,
-  	"cloudinary_duration" numeric,
-  	"cloudinary_pages" numeric,
-  	"cloudinary_selected_page" numeric DEFAULT 1,
-  	"cloudinary_thumbnail_url" varchar,
-  	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
-  	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
-  	"url" varchar,
-  	"thumbnail_u_r_l" varchar,
-  	"filename" varchar,
-  	"mime_type" varchar,
-  	"filesize" numeric,
-  	"width" numeric,
-  	"height" numeric,
-  	"focal_x" numeric,
-  	"focal_y" numeric,
-  	"sizes_thumbnail_url" varchar,
-  	"sizes_thumbnail_width" numeric,
-  	"sizes_thumbnail_height" numeric,
-  	"sizes_thumbnail_mime_type" varchar,
-  	"sizes_thumbnail_filesize" numeric,
-  	"sizes_thumbnail_filename" varchar,
-  	"sizes_card_url" varchar,
-  	"sizes_card_width" numeric,
-  	"sizes_card_height" numeric,
-  	"sizes_card_mime_type" varchar,
-  	"sizes_card_filesize" numeric,
-  	"sizes_card_filename" varchar
+    "id" serial PRIMARY KEY NOT NULL,
+    "alt" varchar NOT NULL,
+    "cloudinary_public_id" varchar,
+    "cloudinary_resource_type" varchar,
+    "cloudinary_format" varchar,
+    "cloudinary_secure_url" varchar,
+    "cloudinary_bytes" numeric,
+    "cloudinary_created_at" varchar,
+    "cloudinary_version" varchar,
+    "cloudinary_version_id" varchar,
+    "cloudinary_width" numeric,
+    "cloudinary_height" numeric,
+    "cloudinary_duration" numeric,
+    "cloudinary_pages" numeric,
+    "cloudinary_selected_page" numeric DEFAULT 1,
+    "cloudinary_thumbnail_url" varchar,
+    "updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
+    "created_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
+    "url" varchar,
+    "thumbnail_u_r_l" varchar,
+    "filename" varchar,
+    "mime_type" varchar,
+    "filesize" numeric,
+    "width" numeric,
+    "height" numeric,
+    "focal_x" numeric,
+    "focal_y" numeric,
+    "sizes_thumbnail_url" varchar,
+    "sizes_thumbnail_width" numeric,
+    "sizes_thumbnail_height" numeric,
+    "sizes_thumbnail_mime_type" varchar,
+    "sizes_thumbnail_filesize" numeric,
+    "sizes_thumbnail_filename" varchar,
+    "sizes_card_url" varchar,
+    "sizes_card_width" numeric,
+    "sizes_card_height" numeric,
+    "sizes_card_mime_type" varchar,
+    "sizes_card_filesize" numeric,
+    "sizes_card_filename" varchar
   );
   
   CREATE TABLE "specialists" (
-  	"id" serial PRIMARY KEY NOT NULL,
-  	"name" varchar NOT NULL,
-  	"specialization" varchar DEFAULT 'Specialist' NOT NULL,
-  	"image_id" integer NOT NULL,
-  	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
-  	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
+    "id" serial PRIMARY KEY NOT NULL,
+    "name" varchar NOT NULL,
+    "specialization" varchar DEFAULT 'Specialist' NOT NULL,
+    "image_id" integer NOT NULL,
+    "updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
+    "created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
   );
   
   CREATE TABLE "payload_kv" (
-  	"id" serial PRIMARY KEY NOT NULL,
-  	"key" varchar NOT NULL,
-  	"data" jsonb NOT NULL
+    "id" serial PRIMARY KEY NOT NULL,
+    "key" varchar NOT NULL,
+    "data" jsonb NOT NULL
   );
   
   CREATE TABLE "payload_locked_documents" (
-  	"id" serial PRIMARY KEY NOT NULL,
-  	"global_slug" varchar,
-  	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
-  	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
+    "id" serial PRIMARY KEY NOT NULL,
+    "global_slug" varchar,
+    "updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
+    "created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
   );
   
   CREATE TABLE "payload_locked_documents_rels" (
-  	"id" serial PRIMARY KEY NOT NULL,
-  	"order" integer,
-  	"parent_id" integer NOT NULL,
-  	"path" varchar NOT NULL,
-  	"users_id" integer,
-  	"appointments_id" integer,
-  	"services_id" integer,
-  	"media_id" integer,
-  	"specialists_id" integer
+    "id" serial PRIMARY KEY NOT NULL,
+    "order" integer,
+    "parent_id" integer NOT NULL,
+    "path" varchar NOT NULL,
+    "users_id" integer,
+    "appointments_id" integer,
+    "services_id" integer,
+    "media_id" integer,
+    "specialists_id" integer
   );
   
   CREATE TABLE "payload_preferences" (
-  	"id" serial PRIMARY KEY NOT NULL,
-  	"key" varchar,
-  	"value" jsonb,
-  	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
-  	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
+    "id" serial PRIMARY KEY NOT NULL,
+    "key" varchar,
+    "value" jsonb,
+    "updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
+    "created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
   );
   
   CREATE TABLE "payload_preferences_rels" (
-  	"id" serial PRIMARY KEY NOT NULL,
-  	"order" integer,
-  	"parent_id" integer NOT NULL,
-  	"path" varchar NOT NULL,
-  	"users_id" integer
+    "id" serial PRIMARY KEY NOT NULL,
+    "order" integer,
+    "parent_id" integer NOT NULL,
+    "path" varchar NOT NULL,
+    "users_id" integer
   );
   
   CREATE TABLE "payload_migrations" (
-  	"id" serial PRIMARY KEY NOT NULL,
-  	"name" varchar,
-  	"batch" numeric,
-  	"updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
-  	"created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
+    "id" serial PRIMARY KEY NOT NULL,
+    "name" varchar,
+    "batch" numeric,
+    "updated_at" timestamp(3) with time zone DEFAULT now() NOT NULL,
+    "created_at" timestamp(3) with time zone DEFAULT now() NOT NULL
   );
   
   CREATE TABLE "contact_config" (
-  	"id" serial PRIMARY KEY NOT NULL,
-  	"address" varchar DEFAULT 'San Pedro, Laguna, Philippines' NOT NULL,
-  	"phone_number" varchar NOT NULL,
-  	"email" varchar NOT NULL,
-  	"office_hours" varchar NOT NULL,
-  	"updated_at" timestamp(3) with time zone,
-  	"created_at" timestamp(3) with time zone
+    "id" serial PRIMARY KEY NOT NULL,
+    "address" varchar DEFAULT 'San Pedro, Laguna, Philippines' NOT NULL,
+    "phone_number" varchar NOT NULL,
+    "email" varchar NOT NULL,
+    "office_hours" varchar NOT NULL,
+    "updated_at" timestamp(3) with time zone,
+    "created_at" timestamp(3) with time zone
   );
   
   CREATE TABLE "color_config" (
-  	"id" serial PRIMARY KEY NOT NULL,
-  	"primary_color" varchar NOT NULL,
-  	"secondary_color" varchar NOT NULL,
-  	"updated_at" timestamp(3) with time zone,
-  	"created_at" timestamp(3) with time zone
+    "id" serial PRIMARY KEY NOT NULL,
+    "primary_color" varchar NOT NULL,
+    "secondary_color" varchar NOT NULL,
+    "updated_at" timestamp(3) with time zone,
+    "created_at" timestamp(3) with time zone
   );
   
   CREATE TABLE "header_config" (
-  	"id" serial PRIMARY KEY NOT NULL,
-  	"top_label" varchar DEFAULT 'Curated Care' NOT NULL,
-  	"clinic_name" varchar DEFAULT 'Skin Radiance Clinic' NOT NULL,
-  	"updated_at" timestamp(3) with time zone,
-  	"created_at" timestamp(3) with time zone
+    "id" serial PRIMARY KEY NOT NULL,
+    "top_label" varchar DEFAULT 'Curated Care' NOT NULL,
+    "clinic_name" varchar DEFAULT 'Skin Radiance Clinic' NOT NULL,
+    "updated_at" timestamp(3) with time zone,
+    "created_at" timestamp(3) with time zone
   );
   
   ALTER TABLE "users_sessions" ADD CONSTRAINT "users_sessions_parent_id_fk" FOREIGN KEY ("_parent_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;
@@ -240,7 +240,7 @@ export async function up({ db, payload, req }: MigrateUpArgs): Promise<void> {
   CREATE INDEX "payload_migrations_created_at_idx" ON "payload_migrations" USING btree ("created_at");`)
 }
 
-export async function down({ db, payload, req }: MigrateDownArgs): Promise<void> {
+export async function down({ db, payload: _payload, req: _req }: MigrateDownArgs): Promise<void> {
   await db.execute(sql`
    DROP TABLE "users_sessions" CASCADE;
   DROP TABLE "users" CASCADE;

@@ -15,13 +15,48 @@ import BackToHome from '../components/BackToHome'
 import Notification from '../components/Notification'
 import { useRouter, useSearchParams } from 'next/navigation'
 
+// --- TYPES & INTERFACES ---
+
+export interface RawAppointment {
+  id: string
+  firstName: string
+  surname: string
+  email: string
+  isGuest?: boolean
+  appointmentDate: string
+  status: 'confirmed' | 'cancelled' | 'pending' | 'completed'
+  specialistNotes?: string
+  service?: string | { title?: string; name?: string }
+}
+
+interface VisitEntry extends RawAppointment {
+  services: string[]
+}
+
+interface PatientRecord extends RawAppointment {
+  uniqueId: string
+  history: VisitEntry[]
+  visitCount: number
+  services: string[]
+  isGuestPatient: boolean
+}
+
+// Helper for initial grouping setup
+interface GroupedAccumulator extends RawAppointment {
+  uniqueId: string
+  history: VisitEntry[]
+  uniqueDates: Set<string>
+  allServices: Set<string>
+  isGuestPatient: boolean
+}
+
 export const dynamic = 'force-dynamic'
 
 export default function MedicalHistoryClient({
   initialData,
   currentPage,
 }: {
-  initialData: any[]
+  initialData: RawAppointment[]
   currentPage: number
 }) {
   const router = useRouter()
@@ -30,7 +65,7 @@ export default function MedicalHistoryClient({
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [sortBy, setSortBy] = useState<'latest' | 'oldest' | 'name'>('latest')
   const [expandedId, setExpandedId] = useState<string | null>(null)
-  const [appointments, setAppointments] = useState(initialData)
+  const [appointments, setAppointments] = useState<RawAppointment[]>(initialData)
   const [savingId, setSavingId] = useState<string | null>(null)
   const [showNotification, setShowNotification] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
@@ -65,15 +100,17 @@ export default function MedicalHistoryClient({
   const ITEMS_PER_PAGE = 10
 
   const consolidatedData = useMemo(() => {
-    const grouped: Record<string, any> = {}
+    const grouped: Record<string, GroupedAccumulator> = {}
+
     appointments.forEach((doc) => {
       const fName = (doc.firstName || '').toLowerCase().trim()
       const lName = (doc.surname || '').toLowerCase().trim()
       const email = (doc.email || '').toLowerCase().trim()
       const uniqueId = `${fName}-${lName}-${email}`
+
       const serviceName =
         typeof doc.service === 'object'
-          ? doc.service?.title || doc.service?.name
+          ? doc.service?.title || doc.service?.name || 'General Procedure'
           : doc.service || 'General Procedure'
 
       if (!grouped[uniqueId]) {
@@ -86,23 +123,28 @@ export default function MedicalHistoryClient({
           isGuestPatient: doc.isGuest === true,
         }
       }
+
       grouped[uniqueId].allServices.add(serviceName)
       grouped[uniqueId].uniqueDates.add(doc.appointmentDate)
 
       const existingVisit = grouped[uniqueId].history.find(
-        (v: any) => v.appointmentDate === doc.appointmentDate,
+        (v) => v.appointmentDate === doc.appointmentDate,
       )
+
       if (existingVisit) {
         if (!existingVisit.services.includes(serviceName)) existingVisit.services.push(serviceName)
       } else {
         grouped[uniqueId].history.push({ ...doc, services: [serviceName] })
       }
     })
-    return Object.values(grouped).map((patient: any) => ({
-      ...patient,
-      visitCount: patient.uniqueDates.size,
-      services: Array.from(patient.allServices),
-    }))
+
+    return Object.values(grouped).map(
+      (patient): PatientRecord => ({
+        ...patient,
+        visitCount: patient.uniqueDates.size,
+        services: Array.from(patient.allServices),
+      }),
+    )
   }, [appointments])
 
   const sortedData = useMemo(() => {
@@ -119,6 +161,7 @@ export default function MedicalHistoryClient({
   }, [consolidatedData, sortBy])
 
   const totalPages = Math.ceil(sortedData.length / ITEMS_PER_PAGE) || 1
+
   const paginatedData = useMemo(() => {
     const safePage = Math.min(currentPage, totalPages)
     const startIndex = (safePage - 1) * ITEMS_PER_PAGE
@@ -294,6 +337,15 @@ export default function MedicalHistoryClient({
   )
 }
 
+interface PatientRowProps {
+  patient: PatientRecord
+  expandedId: string | null
+  setExpandedId: (id: string | null) => void
+  handleSaveNote: (id: string, note: string) => Promise<void>
+  savingId: string | null
+  setAppointments: React.Dispatch<React.SetStateAction<RawAppointment[]>>
+}
+
 function PatientRow({
   patient,
   expandedId,
@@ -301,7 +353,7 @@ function PatientRow({
   handleSaveNote,
   savingId,
   setAppointments,
-}: any) {
+}: PatientRowProps) {
   const [isVisible, setIsVisible] = useState(false)
   const rowRef = useRef<HTMLDivElement>(null)
 
@@ -387,14 +439,14 @@ function PatientRow({
               </h4>
               <div className="flex flex-col gap-4 md:gap-5">
                 {patient.history
-                  .filter((v: any) => v.status === 'completed' || v.status === 'confirmed')
-                  .map((visit: any, index: number) => (
+                  .filter((v) => v.status === 'completed' || v.status === 'confirmed')
+                  .map((visit, index) => (
                     <div
                       key={visit.id || index}
                       className="flex justify-between items-start gap-4 border-b border-zinc-100 dark:border-zinc-900/50 pb-4"
                     >
                       <div className="flex flex-wrap gap-1.5">
-                        {visit.services?.map((s: string, i: number) => (
+                        {visit.services?.map((s, i) => (
                           <span
                             key={i}
                             className="text-[6px] md:text-[7px] uppercase tracking-[0.2em] px-1.5 py-0.5 font-medium text-[#595f72] font-serif"
@@ -412,10 +464,9 @@ function PatientRow({
                       </span>
                     </div>
                   ))}
-                {patient.history.filter(
-                  (v: any) => v.status === 'completed' || v.status === 'confirmed',
-                ).length === 0 && (
-                  <p className="text-[10px] md:text-[12px] text-zinc-400 font-serif ">
+                {patient.history.filter((v) => v.status === 'completed' || v.status === 'confirmed')
+                  .length === 0 && (
+                  <p className="text-[10px] md:text-[12px] text-zinc-400 font-serif">
                     No confirmed visits.
                   </p>
                 )}
@@ -444,7 +495,7 @@ function PatientRow({
                 placeholder="Add directives and observations here..."
                 onChange={(e) => {
                   const val = e.target.value
-                  setAppointments((prev: any[]) =>
+                  setAppointments((prev) =>
                     prev.map((a) => (a.id === patient.id ? { ...a, specialistNotes: val } : a)),
                   )
                 }}
@@ -453,7 +504,7 @@ function PatientRow({
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    handleSaveNote(patient.id, patient.specialistNotes)
+                    handleSaveNote(patient.id, patient.specialistNotes || '')
                   }}
                   disabled={savingId === patient.id}
                   className="px-8 py-3 bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[7px] md:text-[8px] uppercase tracking-[0.3em] font-serif transition-all hover:opacity-80 disabled:opacity-50"

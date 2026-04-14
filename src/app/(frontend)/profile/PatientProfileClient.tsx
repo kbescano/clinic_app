@@ -4,12 +4,43 @@ import React, { useState, useEffect, useRef, useTransition, useMemo } from 'reac
 import FadeIn from '../components/FadeIn'
 import BackToHome from '../components/BackToHome'
 import { verifyPatientProfile, logoutPatient } from './actions'
-import { ShieldCheckIcon, UserIcon } from '@heroicons/react/24/outline'
+import { ShieldCheckIcon, UserIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline'
 import dayjs from '@/lib/dayjs'
 
-export default function PatientProfileClient({ initialData }: { initialData: any }) {
+// --- TYPES & INTERFACES ---
+
+interface PatientVisit {
+  id: string
+  date: string | Date
+  status: 'confirmed' | 'completed' | 'pending' | 'cancelled'
+  service: string
+  isGuest: boolean
+  firstName: string
+  surname: string
+}
+
+interface PatientProfile {
+  firstName: string
+  surname: string
+  email: string
+  phone: string
+  history: PatientVisit[]
+}
+
+interface TimelineGroup {
+  date: string | Date
+  main: PatientVisit[]
+  guests: Record<string, PatientVisit[]>
+  daySubtotal: number
+}
+
+export default function PatientProfileClient({
+  initialData,
+}: {
+  initialData: PatientProfile | null
+}) {
   const [isPending, startTransition] = useTransition()
-  const [patientData, setPatientData] = useState(initialData)
+  const [patientData, setPatientData] = useState<PatientProfile | null>(initialData)
   const [isVerified, setIsVerified] = useState(!!initialData)
   const [sortBy, setSortBy] = useState<'latest' | 'oldest'>('latest')
 
@@ -26,10 +57,10 @@ export default function PatientProfileClient({ initialData }: { initialData: any
   const { timelineRegistry, totalServices } = useMemo(() => {
     if (!patientData?.history) return { timelineRegistry: [], totalServices: 0 }
 
-    const groups: Record<string, any> = {}
+    const groups: Record<string, TimelineGroup> = {}
     let serviceCount = 0
 
-    patientData.history.forEach((h: any) => {
+    patientData.history.forEach((h) => {
       serviceCount++
       const dayKey = dayjs(h.date).format('YYYY-MM-DD')
       if (!groups[dayKey]) {
@@ -47,7 +78,7 @@ export default function PatientProfileClient({ initialData }: { initialData: any
       }
     })
 
-    const sorted = Object.values(groups).sort((a: any, b: any) => {
+    const sorted = Object.values(groups).sort((a, b) => {
       const timeA = dayjs(a.date).valueOf()
       const timeB = dayjs(b.date).valueOf()
       return sortBy === 'latest' ? timeB - timeA : timeA - timeB
@@ -56,7 +87,6 @@ export default function PatientProfileClient({ initialData }: { initialData: any
     return { timelineRegistry: sorted, totalServices: serviceCount }
   }, [patientData, sortBy])
 
-  // SCROLL REVEAL OBSERVER (Matches Dashboard)
   useEffect(() => {
     if (isVerified) {
       const timer = setTimeout(() => setDrawLine(true), 500)
@@ -89,7 +119,7 @@ export default function PatientProfileClient({ initialData }: { initialData: any
       const res = await verifyPatientProfile(authForm.email, authForm.lastFour)
       if (res.error) setError(res.error)
       else {
-        setPatientData(res.data)
+        setPatientData(res.data as PatientProfile | null)
         setIsVerified(true)
       }
     })
@@ -113,6 +143,14 @@ export default function PatientProfileClient({ initialData }: { initialData: any
               className="space-y-8 bg-white dark:bg-[#050505] p-8 border border-zinc-100 dark:border-zinc-900 rounded-2xl shadow-sm"
             >
               <div className="space-y-6 text-left">
+                {error && (
+                  <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/20 rounded-lg animate-in fade-in zoom-in-95">
+                    <ExclamationCircleIcon className="w-4 h-4 text-red-500" />
+                    <p className="text-[10px] font-serif text-red-600 dark:text-red-400 leading-none">
+                      {error}
+                    </p>
+                  </div>
+                )}
                 <div className="border-b border-zinc-100 dark:border-zinc-800 py-1">
                   <label className="text-[7px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
                     Registry Email
@@ -187,7 +225,6 @@ export default function PatientProfileClient({ initialData }: { initialData: any
               </h1>
             </div>
 
-            {/* SORT SWITCHER (Dashboard Styled) */}
             <div
               className={`self-end md:self-auto inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative transition-all duration-1000 delay-500 ${isHeaderVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
             >
@@ -204,12 +241,11 @@ export default function PatientProfileClient({ initialData }: { initialData: any
                 onClick={() => setSortBy('oldest')}
                 className={`relative z-10 w-28 md:w-36 py-2.5 text-[7px] md:text-[9px] uppercase tracking-[0.3em] font-medium transition-colors font-serif ${sortBy === 'oldest' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'}`}
               >
-                Newest
+                Oldest
               </button>
             </div>
           </header>
 
-          {/* GRAND TOTAL METRICS */}
           <section
             ref={metricsRef}
             className={`flex flex-col transition-all duration-[1200ms] ease-out ${isMetricsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'}`}
@@ -242,7 +278,6 @@ export default function PatientProfileClient({ initialData }: { initialData: any
             </div>
           </section>
 
-          {/* REGISTRY TIMELINE */}
           <div className="flex flex-col gap-16 md:gap-24">
             {timelineRegistry.map((group, i) => (
               <RegistryDayBlock key={i} group={group} />
@@ -267,7 +302,7 @@ export default function PatientProfileClient({ initialData }: { initialData: any
   )
 }
 
-function RegistryDayBlock({ group }: { group: any }) {
+function RegistryDayBlock({ group }: { group: TimelineGroup }) {
   const [isVisible, setIsVisible] = useState(false)
   const blockRef = useRef<HTMLDivElement>(null)
 
@@ -285,7 +320,6 @@ function RegistryDayBlock({ group }: { group: any }) {
       ref={blockRef}
       className={`flex flex-col transition-all duration-[1000ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${isVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-8 blur-sm'}`}
     >
-      {/* DATE HEADER (Dashboard Editorial Style) */}
       <div className="flex justify-between items-baseline border-b border-zinc-900 dark:border-white pb-4 mb-10">
         <div className="flex items-baseline gap-4">
           <h2 className="text-[22px] md:text-[28px] font-serif font-light tracking-tighter tabular-nums text-[#251101] dark:text-zinc-100">
@@ -300,17 +334,14 @@ function RegistryDayBlock({ group }: { group: any }) {
         </span>
       </div>
 
-      {/* MAIN PATIENT SERVICES */}
       <div className="flex flex-col gap-8 mb-12">
-        {group.main.map((v: any, idx: number) => (
+        {group.main.map((v, idx) => (
           <ServiceRow key={idx} title={v.service} status={v.status} />
         ))}
       </div>
 
-      {/* GUEST SECTION */}
-      {Object.entries(group.guests).map(([name, visits, isGuest]: any, gIdx) => (
+      {(Object.entries(group.guests) as [string, PatientVisit[]][]).map(([name, visits], gIdx) => (
         <div key={gIdx} className="flex flex-col gap-8 mt-6">
-          {/* GUEST PILL INDICATOR */}
           <div className="flex items-center gap-4 py-4 border-y border-zinc-100 dark:border-zinc-900/30 mb-4 px-2">
             <UserIcon className="w-3 h-3 text-[#595f72] opacity-40" />
             <p className="text-[10px] md:text-[12px] font-serif font-medium capitalize text-[#251101] dark:text-zinc-100 leading-none">
@@ -322,7 +353,7 @@ function RegistryDayBlock({ group }: { group: any }) {
           </div>
 
           <div className="flex flex-col gap-8">
-            {visits.map((v: any, vIdx: number) => (
+            {visits.map((v, vIdx) => (
               <ServiceRow key={vIdx} title={v.service} status={v.status} />
             ))}
           </div>
@@ -333,7 +364,6 @@ function RegistryDayBlock({ group }: { group: any }) {
 }
 
 function ServiceRow({ title, status }: { title: string; status: string }) {
-  // --- STATUS COLORS (Strictly Dashboard Matched) ---
   const styles: Record<string, string> = {
     confirmed: 'text-[#248232]',
     pending: 'text-amber-700/60',

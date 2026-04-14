@@ -1,21 +1,54 @@
 'use server'
 
-import { getPayload } from 'payload'
+import { getPayload, Where } from 'payload'
 import config from '@/payload.config'
 import { redirect } from 'next/navigation'
 import dayjs from '@/lib/dayjs'
 import crypto from 'crypto'
 import { getEmailHtml } from '@/lib/emailTemplate'
 
-// actions.ts
+// --- TYPES & INTERFACES ---
+
+interface AppointmentDoc {
+  id: string
+  firstName: string
+  surname: string
+  email: string
+  phone: string
+  appointmentDate: string
+  status: 'confirmed' | 'cancelled' | 'pending' | 'completed'
+  isGuest?: boolean
+  bookingGroupId: string
+  service?: number | { id: string | number; title: string }
+  emailStatus?: {
+    confirmationSent?: boolean
+    reminder24hSent?: boolean
+    reminder2hSent?: boolean
+  }
+}
+
+interface BookingState {
+  error?: string
+  success?: boolean
+}
+
+interface ValidatedEntry {
+  firstName: string
+  surname: string
+  email: string
+  phone: string
+  serviceId: string
+  appointmentDate: string
+  bookingGroupId: string
+  isGuest: boolean
+}
+
 /**
  * Fetches busy slots for a specific date, locked to Asia/Manila.
  */
 export async function getBusySlots(dateString: string) {
   const payload = await getPayload({ config })
 
-  // FIX: Inject dateString into dayjs so it targets the clicked calendar date.
-  // We strictly apply the Asia/Manila timezone before calculating the day's boundaries.
   const targetDate = dayjs(dateString).tz('Asia/Manila')
   const startOfDay = targetDate.startOf('day').toISOString()
   const endOfDay = targetDate.endOf('day').toISOString()
@@ -30,18 +63,17 @@ export async function getBusySlots(dateString: string) {
       ],
     },
     limit: 100,
-    // Sort by date to make the returned array predictable
     sort: 'appointmentDate',
   })
 
-  // Modernized mapping: returns a clean array of "HH:mm" strings
-  return busy.docs.map((doc) => {
-    // We treat the stored ISO date as UTC, but format it for the user in PHT
+  const docs = busy.docs as unknown as AppointmentDoc[]
+
+  return docs.map((doc) => {
     return new Date(doc.appointmentDate).toLocaleTimeString('en-GB', {
       timeZone: 'Asia/Manila',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false, // Ensures "09:00" format matches your timeSlots array
+      hour12: false,
     })
   })
 }
@@ -49,13 +81,13 @@ export async function getBusySlots(dateString: string) {
 /**
  * Creates bookings with a strict check for existing slots
  */
-
-export async function createBookingAction(prevState: any, formData: FormData) {
+export async function createBookingAction(
+  prevState: BookingState | null,
+  formData: FormData,
+): Promise<BookingState> {
   const payload = await getPayload({ config })
 
-  // --- PHASE 0: SANITIZATION & IDENTITY ---
   const rawRescheduleId = formData.get('rescheduleId') as string
-  // Treat empty strings or literal "undefined"/"null" as null
   const rescheduleId =
     rawRescheduleId &&
     rawRescheduleId !== 'undefined' &&
@@ -74,12 +106,11 @@ export async function createBookingAction(prevState: any, formData: FormData) {
   const rawDates = formData.getAll('appointmentDate').map((v) => String(v))
 
   const bookingGroupId = `GRP-${dayjs().format('YYMMDD')}-${crypto.randomBytes(2).toString('hex')}`
-  let validatedEntries: any[] = []
+  let validatedEntries: ValidatedEntry[] = []
 
   try {
     // --- PHASE 1: PREPARE ENTRIES ---
     validatedEntries = rawFirstNames.map((_, i) => {
-      // Ensure we are working with PHT for the registry
       const isoDate = dayjs.tz(rawDates[i], 'Asia/Manila').toISOString()
       const currentEmail = rawEmails[i]?.trim().toLowerCase() || ''
       const currentFirstName = rawFirstNames[i]?.trim().toLowerCase() || ''
@@ -111,16 +142,18 @@ export async function createBookingAction(prevState: any, formData: FormData) {
     // --- PHASE 2: ATOMIC CONFLICT CHECK ---
     const uniqueSlots = Array.from(new Set(validatedEntries.map((e) => e.appointmentDate)))
     for (const slot of uniqueSlots) {
+      const conflictWhere: Where[] = [
+        { appointmentDate: { equals: slot } },
+        { status: { not_equals: 'cancelled' } },
+      ]
+
+      if (rescheduleId) {
+        conflictWhere.push({ id: { not_equals: rescheduleId } })
+      }
+
       const conflict = await payload.find({
         collection: 'appointments',
-        where: {
-          and: [
-            { appointmentDate: { equals: slot } },
-            { status: { not_equals: 'cancelled' } },
-            // If rescheduling, ignore the old record so it doesn't block its own slot
-            ...(rescheduleId ? [{ id: { not_equals: rescheduleId } }] : []),
-          ],
-        },
+        where: { and: conflictWhere },
         overrideAccess: true,
       })
 
@@ -130,14 +163,12 @@ export async function createBookingAction(prevState: any, formData: FormData) {
       }
     }
 
-    // --- PHASE 3: RELEASE OLD SLOT (Ideal Reschedule Logic) ---
+    // --- PHASE 3: RELEASE OLD SLOT ---
     if (rescheduleId) {
       await payload.update({
         collection: 'appointments',
         id: rescheduleId,
-        data: {
-          status: 'cancelled',
-        },
+        data: { status: 'cancelled' },
         overrideAccess: true,
       })
     }
@@ -151,12 +182,11 @@ export async function createBookingAction(prevState: any, formData: FormData) {
           surname: item.surname,
           email: item.email,
           phone: item.phone,
-          service: Number(item.serviceId) as any,
+          service: Number(item.serviceId),
           appointmentDate: item.appointmentDate,
           bookingGroupId: item.bookingGroupId,
           isGuest: item.isGuest,
           status: 'confirmed',
-          // Set LED markers for the specialist dashboard
           emailStatus: {
             confirmationSent: true,
             reminder24hSent: false,
@@ -170,11 +200,13 @@ export async function createBookingAction(prevState: any, formData: FormData) {
     const groupData = await payload.find({
       collection: 'appointments',
       where: { bookingGroupId: { equals: bookingGroupId } },
-      depth: 1, // To get service titles
+      depth: 1,
     })
 
-    if (groupData.docs.length > 0) {
-      const mainDoc = groupData.docs.find((d) => !d.isGuest) || groupData.docs[0]
+    const groupDocs = groupData.docs as unknown as AppointmentDoc[]
+
+    if (groupDocs.length > 0) {
+      const mainDoc = groupDocs.find((d) => !d.isGuest) || groupDocs[0]
       const contactConfig = await payload.findGlobal({ slug: 'contact-config' })
       const clinicLocation =
         typeof contactConfig?.address === 'string'
@@ -184,7 +216,7 @@ export async function createBookingAction(prevState: any, formData: FormData) {
       const displayDate = dayjs(mainDoc.appointmentDate).tz('Asia/Manila').format('MMMM D, YYYY')
       const displayTime = dayjs(mainDoc.appointmentDate).tz('Asia/Manila').format('hh:mm A')
 
-      const attendees = groupData.docs.map((doc) => ({
+      const attendees = groupDocs.map((doc) => ({
         name: `${doc.firstName} ${doc.surname}`,
         service: typeof doc.service === 'object' ? doc.service?.title : 'Scheduled Treatment',
         isPrimary: !doc.isGuest,
@@ -210,21 +242,14 @@ export async function createBookingAction(prevState: any, formData: FormData) {
         console.error('Email failed but booking saved:', emailErr)
       }
     }
-  } catch (err: any) {
-    if (err.digest?.includes('NEXT_REDIRECT')) throw err
-
-    // This will help you see EXACTLY what was sent to Payload
+  } catch (err: unknown) {
+    if (err instanceof Error && (err as { digest?: string }).digest?.includes('NEXT_REDIRECT'))
+      throw err
     console.error('CRITICAL REGISTRY ERROR:', err)
-    console.error('DATA SENT:', validatedEntries)
-
     return { error: 'Server error. Please check your data.' }
   }
 
-  // --- PHASE 6: DYNAMIC SUCCESS REDIRECT ---
-  // Grab the query string we generated on the frontend
   const redirectQuery = formData.get('redirectQuery')
-
-  // Redirect with the dynamic data if it exists, otherwise fallback to the default base path
   if (redirectQuery && typeof redirectQuery === 'string') {
     redirect(`/booking/confirmation?${redirectQuery}`)
   } else {
@@ -240,33 +265,30 @@ export async function getCustomerByEmail(email: string) {
   const cleanEmail = email.trim().toLowerCase()
   const nowInManila = dayjs().tz('Asia/Manila').toISOString()
 
-  // 1. Fetch ALL appointments for this email (no date filter yet)
-  // This ensures we find the user if they have ANY history.
   const result = await payload.find({
     collection: 'appointments',
     where: {
       and: [{ email: { equals: cleanEmail } }, { status: { not_equals: 'cancelled' } }],
     },
-    sort: '-appointmentDate', // Latest first
+    sort: '-appointmentDate',
     limit: 100,
   })
 
-  // If no records at all, return null so handleLookup shows "No record found"
-  if (result.docs.length === 0) return null
+  const docs = result.docs as unknown as AppointmentDoc[]
 
-  // 2. Identify the Main Booker for profile info
-  const mainRecord = result.docs.find((d: any) => !d.isGuest) || result.docs[0]
+  if (docs.length === 0) return null
 
-  // 3. Filter for UPCOMING only to send to the status page logic
-  const upcomingDocs = result.docs.filter(
-    (doc: any) =>
+  const mainRecord = docs.find((d) => !d.isGuest) || docs[0]
+
+  const upcomingDocs = docs.filter(
+    (doc) =>
       dayjs(doc.appointmentDate).isAfter(dayjs(nowInManila)) ||
       dayjs(doc.appointmentDate).isSame(dayjs(nowInManila)),
   )
 
-  const appointments = upcomingDocs.map((apt: any) => ({
+  const appointments = upcomingDocs.map((apt) => ({
     date: apt.appointmentDate,
-    service: typeof apt.service === 'object' ? apt.service.title : apt.service,
+    service: typeof apt.service === 'object' ? apt.service.title : 'Scheduled Treatment',
     firstName: apt.firstName,
     surname: apt.surname,
     isGuest: apt.isGuest,
@@ -277,7 +299,6 @@ export async function getCustomerByEmail(email: string) {
     surname: mainRecord.surname,
     phone: mainRecord.phone,
     email: mainRecord.email,
-    // If this array is empty, handleLookup will redirect to /booking
-    appointments: appointments,
+    appointments,
   }
 }

@@ -35,8 +35,9 @@ export default function MassUpload() {
         const errData = await res.json()
         throw new Error(errData.error || 'Upload failed')
       }
-    } catch (err: any) {
-      setStatus({ type: 'error', msg: err.message || 'Invalid JSON format.' })
+    } catch (err: unknown) {
+      const errorMessage = (err as Error).message || 'Invalid JSON format.'
+      setStatus({ type: 'error', msg: errorMessage })
     } finally {
       setIsUploading(false)
     }

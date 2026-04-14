@@ -2,12 +2,24 @@
 
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-import { cookies } from 'next/headers'
-import dayjs from '@/lib/dayjs'
 import { revalidatePath } from 'next/cache'
 
-const PATIENT_SESSION_KEY = 'patient_registry_token'
+// --- TYPES & INTERFACES ---
 
+interface BookingFormData {
+  date: string
+  time: string
+  firstName: string
+  surname: string
+  email: string
+  phone: string
+  service: string | number
+  isGuest?: boolean
+}
+
+/**
+ * Updates an existing appointment to a new date and time.
+ */
 export async function rescheduleAppointment(
   appointmentId: string,
   newDate: string,
@@ -42,12 +54,10 @@ export async function rescheduleAppointment(
     })
     revalidatePath('/appointments')
     return { success: true }
-  } catch (err) {
+  } catch {
     return { error: 'Update failed.' }
   }
 }
-
-;('use server')
 
 /**
  * Checks if a specific date and time slot is already occupied.
@@ -57,7 +67,6 @@ export async function checkAvailability(date: string, time: string) {
   const payload = await getPayload({ config })
 
   // Combine date and time into the clinical ISO format used in your Registry
-  // Example: 2026-04-06T14:30:00
   const requestedSlot = `${date}T${time}:00`
 
   const existing = await payload.find({
@@ -71,7 +80,7 @@ export async function checkAvailability(date: string, time: string) {
         },
         {
           status: {
-            not_equals: 'cancelled', // Critical: allows re-booking of cancelled slots
+            not_equals: 'cancelled',
           },
         },
       ],
@@ -82,8 +91,10 @@ export async function checkAvailability(date: string, time: string) {
   return existing.docs.length > 0
 }
 
-// Inside your createBooking action logic
-export async function createNewBooking(formData: any, rescheduleId?: string) {
+/**
+ * Creates bookings with a strict check for existing slots.
+ */
+export async function createNewBooking(formData: BookingFormData, rescheduleId?: string) {
   const payload = await getPayload({ config })
 
   // 1. Prevent Double Booking
@@ -99,7 +110,7 @@ export async function createNewBooking(formData: any, rescheduleId?: string) {
         collection: 'appointments',
         id: rescheduleId,
         data: {
-          status: 'cancelled', // Frees up the old slot immediately
+          status: 'cancelled',
         },
         overrideAccess: true,
       })
@@ -114,15 +125,15 @@ export async function createNewBooking(formData: any, rescheduleId?: string) {
         email: formData.email,
         phone: formData.phone,
         appointmentDate: `${formData.date}T${formData.time}:00`,
-        service: formData.service,
-        status: 'confirmed', // Green color in your UI
+        service: formData.service as number,
+        status: 'confirmed',
         isGuest: formData.isGuest || false,
       },
       overrideAccess: true,
     })
 
     return { success: true, id: newAppointment.id }
-  } catch (err) {
+  } catch {
     return { error: 'Registry update failed. Please try again.' }
   }
 }

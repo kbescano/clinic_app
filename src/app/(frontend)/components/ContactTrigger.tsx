@@ -23,6 +23,8 @@ export default function ContactTrigger({ contactData }: ContactTriggerProps) {
   return (
     <button
       onClick={onOpen}
+      // Use contactData here to give screen readers context
+      aria-label={`Contact us at ${contactData.email}`}
       className="flex items-center gap-3 group outline-none transition-all duration-500 hover:scale-110"
     >
       <svg

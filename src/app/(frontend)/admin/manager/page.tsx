@@ -1,14 +1,39 @@
 import { getPayload } from 'payload'
+import { Where } from 'payload'
 import config from '@/payload.config'
 import AdminManagementClient from './AdminManagementClient'
 import dayjs from '@/lib/dayjs'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AdminManagementPage(props: { searchParams?: Promise<any> | any }) {
+interface SearchParams {
+  range?: string
+  status?: string
+}
+
+interface AppointmentDoc {
+  id: string
+  appointmentDate: string
+  status: string
+  firstName: string
+  surname: string
+  email: string
+  phone: string
+  service?: {
+    title: string
+  }
+  isGuest?: boolean
+  emailStatus?: {
+    confirmationSent?: boolean
+    reminder24hSent?: boolean
+    reminder2hSent?: boolean
+  }
+}
+
+export default async function AdminManagementPage(props: { searchParams: Promise<SearchParams> }) {
   const searchParams = await props.searchParams
-  const range = searchParams?.range || 'today'
-  const status = searchParams?.status || 'all'
+  const range = searchParams.range || 'today'
+  const status = searchParams.status || 'all'
 
   const payload = await getPayload({ config })
   const nowPHT = dayjs().tz('Asia/Manila')
@@ -31,10 +56,12 @@ export default async function AdminManagementPage(props: { searchParams?: Promis
     secondaryLabel = 'Archive Registry'
   }
 
-  const whereConditions: any[] = [
+  // 2. Change the type from Record to Where[]
+  const whereConditions: Where[] = [
     { appointmentDate: { greater_than_equal: dbStart } },
     { appointmentDate: { less_than_equal: dbEnd } },
   ]
+
   if (status !== 'all') {
     whereConditions.push({ status: { equals: status } })
   }
@@ -46,24 +73,24 @@ export default async function AdminManagementPage(props: { searchParams?: Promis
     limit: 500,
   })
 
-  const appointments = data.docs
+  const appointments = data.docs as unknown as AppointmentDoc[]
+
   const todayRaw = appointments.filter(
-    (a: any) => a.appointmentDate >= startOfToday && a.appointmentDate <= endOfToday,
+    (a) => a.appointmentDate >= startOfToday && a.appointmentDate <= endOfToday,
   )
   const otherRaw = appointments.filter(
-    (a: any) => a.appointmentDate < startOfToday || a.appointmentDate > endOfToday,
+    (a) => a.appointmentDate < startOfToday || a.appointmentDate > endOfToday,
   )
+
+  const mapToClient = (a: AppointmentDoc) => ({
+    ...a,
+    services: [a.service?.title || 'General Consultation'],
+  })
 
   return (
     <AdminManagementClient
-      todayData={todayRaw.map((a: any) => ({
-        ...a,
-        services: [a.service?.title || 'General Consultation'],
-      }))}
-      otherData={otherRaw.map((a: any) => ({
-        ...a,
-        services: [a.service?.title || 'General Consultation'],
-      }))}
+      todayData={todayRaw.map(mapToClient)}
+      otherData={otherRaw.map(mapToClient)}
       range={range}
       status={status}
       secondaryLabel={secondaryLabel}

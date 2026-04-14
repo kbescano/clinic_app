@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import Image from 'next/image'
 import FadeIn from './FadeIn'
 
 interface SectionHeaderProps {
@@ -10,7 +9,7 @@ interface SectionHeaderProps {
   logoUrl?: string | null
 }
 
-export default function SectionHeader({ topLabel, clinicName, logoUrl }: SectionHeaderProps) {
+export default function SectionHeader({ topLabel, clinicName }: SectionHeaderProps) {
   const [opacity, setOpacity] = useState(1)
   const [isScrolled, setIsScrolled] = useState(false)
 

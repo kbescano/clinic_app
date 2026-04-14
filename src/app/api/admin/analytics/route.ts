@@ -5,6 +5,22 @@ import dayjs from '@/lib/dayjs'
 
 export const dynamic = 'force-dynamic'
 
+// --- 1. DEFINE ANALYTICS INTERFACES ---
+
+interface Service {
+  title: string
+  price: number
+}
+
+interface Appointment {
+  id: string
+  firstName: string
+  surname: string
+  appointmentDate: string
+  status: 'confirmed' | 'cancelled' | 'pending' | 'completed'
+  service?: Service // Populated via depth: 1
+}
+
 export async function GET(request: Request) {
   const payload = await getPayload({ config })
   const { searchParams } = new URL(request.url)
@@ -12,7 +28,7 @@ export async function GET(request: Request) {
 
   const nowPHT = dayjs().tz('Asia/Manila')
 
-  // 1. Determine Current and Previous Period Boundaries
+  // Determine Current and Previous Period Boundaries
   let start = nowPHT.startOf('month')
   const end = nowPHT.endOf('day')
   let prevStart = nowPHT.subtract(1, 'month').startOf('month')
@@ -27,54 +43,56 @@ export async function GET(request: Request) {
     prevStart = nowPHT.subtract(14, 'day').startOf('day')
     prevEnd = nowPHT.subtract(7, 'day').endOf('day')
   } else if (range === 'all') {
-    start = dayjs('2020-01-01').tz('Asia/Manila') // Arbitrary past date
+    start = dayjs('2020-01-01').tz('Asia/Manila')
     prevStart = start
     prevEnd = start
   }
 
   try {
-    // 2. Fetch Current Period Data
-    const currentResult = await payload.find({
-      collection: 'appointments',
-      where: {
-        and: [
-          { status: { equals: 'completed' } },
-          { appointmentDate: { greater_than_equal: start.toISOString() } },
-          { appointmentDate: { less_than_equal: end.toISOString() } },
-        ],
-      },
-      sort: '-appointmentDate',
-      limit: 1000,
-      depth: 1,
-    })
+    // 2. Fetch Data with depth for service prices/titles
+    const [currentResult, prevResult] = await Promise.all([
+      payload.find({
+        collection: 'appointments',
+        where: {
+          and: [
+            { status: { equals: 'completed' } },
+            { appointmentDate: { greater_than_equal: start.toISOString() } },
+            { appointmentDate: { less_than_equal: end.toISOString() } },
+          ],
+        },
+        sort: '-appointmentDate',
+        limit: 1000,
+        depth: 1,
+      }),
+      payload.find({
+        collection: 'appointments',
+        where: {
+          and: [
+            { status: { equals: 'completed' } },
+            { appointmentDate: { greater_than_equal: prevStart.toISOString() } },
+            { appointmentDate: { less_than_equal: prevEnd.toISOString() } },
+          ],
+        },
+        limit: 1000,
+        depth: 1, // Depth 1 is needed here too for prevPeriodRevenue
+      }),
+    ])
 
-    // 3. Fetch Previous Period Data (For Growth Calculation)
-    const prevResult = await payload.find({
-      collection: 'appointments',
-      where: {
-        and: [
-          { status: { equals: 'completed' } },
-          { appointmentDate: { greater_than_equal: prevStart.toISOString() } },
-          { appointmentDate: { less_than_equal: prevEnd.toISOString() } },
-        ],
-      },
-      limit: 1000,
-      depth: 0,
-    })
-
-    const currentDocs = currentResult.docs as any[]
-    const prevDocs = prevResult.docs as any[]
+    // 3. Cast results to our local interfaces
+    const currentDocs = currentResult.docs as unknown as Appointment[]
+    const prevDocs = prevResult.docs as unknown as Appointment[]
 
     // --- CALCULATIONS ---
     const periodRevenue = currentDocs.reduce((sum, a) => sum + (a.service?.price || 0), 0)
     const prevPeriodRevenue = prevDocs.reduce((sum, a) => sum + (a.service?.price || 0), 0)
 
     // Calculate Growth Percentage
+    // Formula: $$\text{growth} = \frac{\text{periodRevenue} - \text{prevPeriodRevenue}}{\text{prevPeriodRevenue}} \times 100$$
     let growth = 0
     if (prevPeriodRevenue > 0) {
       growth = ((periodRevenue - prevPeriodRevenue) / prevPeriodRevenue) * 100
     } else if (periodRevenue > 0) {
-      growth = 100 // 100% growth if previous period was 0
+      growth = 100
     }
 
     // Category Distribution
@@ -99,12 +117,13 @@ export async function GET(request: Request) {
     return NextResponse.json({
       periodRevenue,
       prevPeriodRevenue,
-      growth: parseFloat(growth.toFixed(1)), // Round to 1 decimal
+      growth: parseFloat(growth.toFixed(1)),
       categorySales,
       recent,
       totalAppointments: currentDocs.length,
     })
-  } catch {
+  } catch (err) {
+    console.error('Analytics Route Error:', err)
     return NextResponse.json({ error: 'Failed to load metrics' }, { status: 500 })
   }
 }

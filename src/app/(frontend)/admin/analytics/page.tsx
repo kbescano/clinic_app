@@ -8,21 +8,24 @@ import { RegistrySkeleton } from '../../components/RegistrySkeleton'
 
 export const dynamic = 'force-dynamic'
 
+// 1. Define a specific interface for the Booking Activity
+interface BookingActivity {
+  id: string
+  firstName: string
+  surname: string
+  service: string
+  price: number
+  time: string
+  date: string
+}
+
 interface AnalyticsData {
   periodRevenue: number
   prevPeriodRevenue: number
   growth: number
   categorySales: Record<string, number>
   totalAppointments: number
-  recent: {
-    id: string
-    firstName: string
-    surname: string
-    service: string
-    price: number
-    time: string
-    date: string
-  }[]
+  recent: BookingActivity[] // Use the interface here
 }
 
 export default function AdminAnalytics() {
@@ -51,7 +54,6 @@ export default function AdminAnalytics() {
         setError(true)
       } finally {
         setLoading(false)
-        // Trigger line animation after data load
         setTimeout(() => setDrawLine(true), 200)
       }
     }
@@ -85,7 +87,6 @@ export default function AdminAnalytics() {
     <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 px-4 md:px-8 selection:bg-zinc-100 overflow-x-hidden font-sans">
       <FadeIn>
         <div className="max-w-4xl mx-auto flex flex-col gap-10 md:gap-20">
-          {/* HEADER SECTION: Animated Line & Typography */}
           <header
             ref={headerRef}
             className="flex flex-col md:flex-row md:items-end justify-between gap-8 md:gap-12"
@@ -114,7 +115,6 @@ export default function AdminAnalytics() {
               </h1>
             </div>
 
-            {/* LUXURY SEGMENTED CONTROL */}
             <div
               className={`self-end md:self-auto relative flex items-center transition-all duration-1000 delay-500 ${
                 isHeaderVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
@@ -171,13 +171,11 @@ export default function AdminAnalytics() {
             ref={metricsRef}
             className={`flex flex-col gap-10 md:gap-14 transition-all duration-700 ${loading ? 'opacity-50 blur-[2px]' : 'opacity-100 blur-0'}`}
           >
-            {/* PRIMARY METRIC GRID: Staggered Block Reveal */}
             <div
               className={`grid grid-cols-1 md:grid-cols-12 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 rounded-2xl overflow-hidden shadow-sm transition-all duration-[1200ms] ease-out ${
                 isMetricsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
               }`}
             >
-              {/* Revenue Slot */}
               <div className="md:col-span-6 bg-white dark:bg-[#050505] p-6 md:p-10 flex flex-col justify-between group transition-all duration-500 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20 relative">
                 <div
                   className={`absolute left-0 top-10 bottom-10 w-[2px] transition-all duration-1000 ${isMetricsVisible ? 'opacity-100' : 'opacity-0'} ${(data?.growth ?? 0) >= 0 ? 'bg-[#248232]/30' : 'bg-[#d7263d]/30'}`}
@@ -215,7 +213,6 @@ export default function AdminAnalytics() {
                 </div>
               </div>
 
-              {/* Efficiency Slot */}
               <div className="md:col-span-3 bg-white dark:bg-[#050505] p-6 md:p-10 flex flex-col justify-between group transition-all duration-500 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20">
                 <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-6 md:mb-8 font-serif">
                   Growth Index
@@ -237,7 +234,6 @@ export default function AdminAnalytics() {
                 </div>
               </div>
 
-              {/* Category List Slot */}
               <div className="md:col-span-3 bg-white dark:bg-[#050505] p-6 md:p-10 flex flex-col justify-between group transition-all duration-500 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20">
                 <div className="mb-8">
                   <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-4 md:mb-6 font-serif">
@@ -271,7 +267,6 @@ export default function AdminAnalytics() {
               </div>
             </div>
 
-            {/* SECONDARY SECTION: RECENT FEED (Self-Revealing Rows) */}
             <div className="w-full flex flex-col gap-6 md:gap-8">
               <div
                 className={`flex items-baseline justify-between border-b border-zinc-100 dark:border-zinc-900/50 pb-3 transition-all duration-1000 delay-500 ${isMetricsVisible ? 'opacity-100' : 'opacity-0'}`}
@@ -295,7 +290,6 @@ export default function AdminAnalytics() {
             </div>
           </section>
 
-          {/* FOOTER */}
           <div className="pt-8 md:pt-12 flex justify-center border-t border-zinc-50 dark:border-zinc-900/50 opacity-40 hover:opacity-100 transition-opacity">
             <BackToHome />
           </div>
@@ -305,8 +299,8 @@ export default function AdminAnalytics() {
   )
 }
 
-// --- SUB-COMPONENT: RECENT ACTIVITY ROW SCROLL TRACKING ---
-function ActivityRow({ booking }: { booking: any }) {
+// 2. Updated ActivityRow to use the new BookingActivity interface
+function ActivityRow({ booking }: { booking: BookingActivity }) {
   const [isVisible, setIsVisible] = useState(false)
   const rowRef = useRef<HTMLDivElement>(null)
 

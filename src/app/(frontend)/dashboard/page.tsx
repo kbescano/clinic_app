@@ -5,16 +5,50 @@ import dayjs from '@/lib/dayjs'
 
 export const dynamic = 'force-dynamic'
 
-// --- 1. NEW HELPER: Reusable Metrics Logic ---
-function calculateMetrics(docs: any[]) {
+// --- TYPES & INTERFACES ---
+
+interface AppointmentDoc {
+  id: string
+  status: 'confirmed' | 'cancelled' | 'pending' | 'completed'
+  firstName: string
+  surname: string
+  phone: string
+  email: string // <--- ADD THIS LINE
+  appointmentDate: string
+  service?: {
+    title: string
+    price: number
+  }
+}
+
+// GroupedAppointment now automatically includes 'email' because it's in AppointmentDoc
+interface GroupedAppointment extends Omit<AppointmentDoc, 'service'> {
+  services: string[]
+}
+
+interface DashboardMetrics {
+  serviceCounts: Record<string, number>
+  projectedRevenue: number
+  settledRevenue: number
+  totalCompletedServices: number
+  pendingRevenue: number
+  completionRate: number
+  totalManifestWorkload: number
+}
+
+// --- 1. UPDATED HELPER: Typed Metrics Logic ---
+function calculateMetrics(docs: AppointmentDoc[]): DashboardMetrics {
   const metrics = docs.reduce(
     (acc, raw) => {
       const status = raw.status
       const price = Number(raw.service?.price) || 0
       const title = raw.service?.title || 'General Consultation'
+
       if (status === 'cancelled' || status === 'pending') return acc
+
       acc.serviceCounts[title] = (acc.serviceCounts[title] || 0) + 1
       acc.projectedRevenue += price
+
       if (status === 'completed') {
         acc.settledRevenue += price
         acc.totalCompletedServices += 1
@@ -30,7 +64,7 @@ function calculateMetrics(docs: any[]) {
   )
 
   const totalManifestWorkload = Object.values(metrics.serviceCounts).reduce(
-    (a: number, b) => a + (b as number),
+    (a: number, b) => a + b,
     0,
   )
 
@@ -69,29 +103,42 @@ export default async function SpecialistDashboardPage() {
     }),
   ])
 
+  // Cast Payload docs to our local interface
+  const todayDocs = todayRaw.docs as unknown as AppointmentDoc[]
+  const weekDocs = weekRaw.docs as unknown as AppointmentDoc[]
+
   // --- 2. CALCULATE BOTH SETS OF METRICS ---
-  const todayMetrics = calculateMetrics(todayRaw.docs)
-  const weekMetrics = calculateMetrics(weekRaw.docs)
+  const todayMetrics = calculateMetrics(todayDocs)
+  const weekMetrics = calculateMetrics(weekDocs)
 
   return (
     <SpecialistDashboardClient
-      todayData={groupAppointments(todayRaw.docs as any)}
-      weekData={groupAppointments(weekRaw.docs as any)}
+      todayData={groupAppointments(todayDocs)}
+      weekData={groupAppointments(weekDocs)}
       todayMetrics={todayMetrics}
       weekMetrics={weekMetrics}
     />
   )
 }
 
-// --- HELPER (Untouched) ---
-function groupAppointments(docs: any[]): any[] {
-  const grouped = docs.reduce((acc: any, curr) => {
-    const key = `${curr.firstName}-${curr.surname}-${curr.phone}-${dayjs(curr.appointmentDate).toISOString()}`
-    if (!acc[key]) acc[key] = { ...curr, services: [curr.service?.title || 'General Consultation'] }
-    else acc[key].services.push(curr.service?.title || 'General Consultation')
+// --- 3. UPDATED HELPER: Typed Grouping ---
+function groupAppointments(docs: AppointmentDoc[]): GroupedAppointment[] {
+  const grouped = docs.reduce((acc: Record<string, GroupedAppointment>, curr) => {
+    // people who happen to have the same name/phone but different emails.
+    const key = `${curr.firstName}-${curr.surname}-${curr.email}-${dayjs(curr.appointmentDate).toISOString()}`
+
+    if (!acc[key]) {
+      acc[key] = {
+        ...curr,
+        services: [curr.service?.title || 'General Consultation'],
+      }
+    } else {
+      acc[key].services.push(curr.service?.title || 'General Consultation')
+    }
     return acc
   }, {})
-  return Object.values(grouped).sort((a: any, b: any) =>
+
+  return Object.values(grouped).sort((a, b) =>
     dayjs(a.appointmentDate).isBefore(dayjs(b.appointmentDate)) ? -1 : 1,
   )
 }

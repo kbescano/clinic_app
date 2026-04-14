@@ -6,6 +6,37 @@ import Image from 'next/image'
 import useEmblaCarousel from 'embla-carousel-react'
 import { ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 
+// --- TYPES & INTERFACES ---
+
+interface ServiceImage {
+  image?: {
+    url: string
+  }
+  url?: string
+}
+
+interface ServiceDetail {
+  title: string
+  description: string
+}
+
+interface Service {
+  id: string
+  title: string
+  description: string
+  price: number
+  images: ServiceImage[]
+  details: ServiceDetail[]
+}
+
+interface ServiceCardProps {
+  service: Service
+  expandedId: string | null
+  setExpandedId: (id: string | null) => void
+  detailsOpenId: string | null
+  setDetailsOpenId: (id: string | null) => void
+}
+
 // --- SUB-COMPONENT: SCROLL-REACTIVE CARD ---
 const ServiceCard = ({
   service,
@@ -13,7 +44,7 @@ const ServiceCard = ({
   setExpandedId,
   detailsOpenId,
   setDetailsOpenId,
-}: any) => {
+}: ServiceCardProps) => {
   const [isVisible, setIsVisible] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
@@ -37,7 +68,6 @@ const ServiceCard = ({
       ref={cardRef}
       className="flex flex-col md:flex-row bg-white dark:bg-[#050505] group h-full overflow-hidden even:md:flex-row-reverse"
     >
-      {/* Media Section: Switched to flex-1 on desktop to accommodate the gap */}
       <div className="relative w-full md:flex-1 shrink-0 overflow-hidden grayscale-[0.3] group-hover:grayscale-0 transition-all duration-1000 h-[650px] md:h-auto md:min-h-[600px]">
         {service.images && service.images.length > 0 ? (
           <ServiceSlider images={service.images} />
@@ -48,7 +78,6 @@ const ServiceCard = ({
         )}
       </div>
 
-      {/* Animated Content Section: Switched to flex-1 and adjusted padding to balance the gap */}
       <div className="flex flex-col flex-1 p-6 md:p-10 lg:p-16 justify-center">
         <div className="mb-6">
           <h3
@@ -86,7 +115,7 @@ const ServiceCard = ({
               isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
             }`}
           >
-            {service.details.map((item: any, idx: number) => {
+            {service.details.map((item: ServiceDetail, idx: number) => {
               const uniqueId = `${service.id}-${idx}`
               const isOpen = detailsOpenId === uniqueId
               return (
@@ -116,7 +145,6 @@ const ServiceCard = ({
           </div>
         )}
 
-        {/* Footer pushed to bottom */}
         <div
           className={`mt-auto flex items-end justify-between pt-8 md:pt-12 border-t border-zinc-100 dark:border-zinc-900 transition-all duration-[1200ms] delay-500 ${
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
@@ -144,7 +172,7 @@ const ServiceCard = ({
 }
 
 // --- SUB-COMPONENT: SLIDER ---
-const ServiceSlider = ({ images }: { images: any[] }) => {
+const ServiceSlider = ({ images }: { images: ServiceImage[] }) => {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'start' })
   const [selectedIndex, setSelectedIndex] = useState(0)
 
@@ -164,7 +192,6 @@ const ServiceSlider = ({ images }: { images: any[] }) => {
 
   return (
     <div className="absolute inset-0 w-full h-full overflow-hidden cursor-grab active:cursor-grabbing group/slider bg-white dark:bg-black">
-      {/* Carousel Viewport */}
       <div className="h-full w-full" ref={emblaRef}>
         <div className="flex h-full">
           {images.map((item, index) => (
@@ -219,7 +246,7 @@ const ServiceSlider = ({ images }: { images: any[] }) => {
 
 // --- MAIN COMPONENT ---
 export default function Services() {
-  const [services, setServices] = useState<any[]>([])
+  const [services, setServices] = useState<Service[]>([])
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [detailsOpenId, setDetailsOpenId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -254,7 +281,6 @@ export default function Services() {
       className="bg-white dark:bg-[#050505] text-zinc-900 dark:text-zinc-100 overflow-hidden"
     >
       <div className="max-w-[1440px] mx-auto border-x border-zinc-100 dark:border-zinc-900">
-        {/* Replaced gap-px on desktop with a clean gap to separate rows */}
         <div className="grid grid-cols-1 gap-px md:gap-y-24 lg:gap-y-32 bg-zinc-100 dark:bg-zinc-900 md:bg-white md:dark:bg-[#050505] border-y border-zinc-100 dark:border-zinc-900 md:border-none md:py-20 lg:p-10">
           {services.map((service) => (
             <ServiceCard

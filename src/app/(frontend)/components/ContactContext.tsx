@@ -16,7 +16,12 @@ export function ContactProvider({
   contactData,
 }: {
   children: React.ReactNode
-  contactData: any
+  contactData: {
+    email: string
+    phoneNumber: string
+    officeHours: string
+    address: string
+  }
 }) {
   const [isOpen, setIsOpen] = useState(false)
 

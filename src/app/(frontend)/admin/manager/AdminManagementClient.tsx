@@ -10,9 +10,27 @@ import BookingActions from './actions'
 import dayjs from '@/lib/dayjs'
 import { useRouter, useSearchParams } from 'next/navigation'
 
+// 1. Define the Registry/Booking Entry Interface
+interface BookingEntry {
+  id: string
+  firstName: string
+  surname: string
+  email: string
+  phone: string
+  services: string[]
+  appointmentDate: string | Date
+  status: string
+  isGuest?: boolean
+  emailStatus?: {
+    confirmationSent?: boolean
+    reminder24hSent?: boolean
+    reminder2hSent?: boolean
+  }
+}
+
 interface AdminProps {
-  todayData: any[]
-  otherData: any[]
+  todayData: BookingEntry[]
+  otherData: BookingEntry[]
   range: string
   status: string
   secondaryLabel: string
@@ -30,7 +48,6 @@ export default function AdminManagementClient({
   const [drawLine, setDrawLine] = useState(false)
   const [search, setSearch] = useState(searchParams.get('search') || '')
 
-  // SCROLL REVEAL STATES
   const [isHeaderVisible, setIsHeaderVisible] = useState(false)
   const [isSystemVisible, setIsSystemVisible] = useState(false)
   const headerRef = useRef<HTMLDivElement>(null)
@@ -38,7 +55,6 @@ export default function AdminManagementClient({
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
-
     const timer = setTimeout(() => setDrawLine(true), 100)
 
     const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
@@ -61,7 +77,6 @@ export default function AdminManagementClient({
     }
   }, [])
 
-  // Sync search with URL & update smoothly
   const updateSearch = (val: string) => {
     const params = new URLSearchParams(searchParams.toString())
     if (val) {
@@ -69,19 +84,16 @@ export default function AdminManagementClient({
     } else {
       params.delete('search')
     }
-    // Use replace with scroll: false so it doesn't spam history or jump the page while typing
     router.replace(`?${params.toString()}`, { scroll: false })
   }
 
-  // 1. First combine and deduplicate incoming data
   const combinedData = useMemo(() => {
-    const map = new Map()
+    const map = new Map<string, BookingEntry>()
     todayData.forEach((item) => map.set(item.id, item))
     otherData.forEach((item) => map.set(item.id, item))
     return Array.from(map.values())
   }, [todayData, otherData])
 
-  // 2. Instantly filter data locally (Identical to Medical History logic)
   const searchResults = useMemo(() => {
     let dataToFilter = [...combinedData]
 
@@ -95,9 +107,7 @@ export default function AdminManagementClient({
           item.phone,
           ...(item.services || []),
         ]
-
         const searchableString = searchableFields.filter(Boolean).join(' ').toLowerCase()
-
         return searchableString.includes(term)
       })
     }
@@ -147,7 +157,6 @@ export default function AdminManagementClient({
           </header>
 
           <div className="flex flex-col gap-14 md:gap-20">
-            {/* SEARCH BAR */}
             <div
               className={`flex flex-col md:flex-row md:items-center justify-between gap-6 md:gap-4 transition-all duration-1000 delay-700 ${isHeaderVisible ? 'opacity-100' : 'opacity-0'}`}
             >
@@ -175,7 +184,6 @@ export default function AdminManagementClient({
               </div>
             </div>
 
-            {/* TODAY SECTION - Hidden when searching OR when filters are not set to today */}
             {!search && range === 'today' && (
               <section className="flex flex-col gap-6 md:gap-8">
                 <div className="flex items-baseline justify-between border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
@@ -189,7 +197,7 @@ export default function AdminManagementClient({
 
                 <div className="flex flex-col border-b border-zinc-100 dark:border-zinc-900/50">
                   {todayData.length > 0 ? (
-                    todayData.map((apt: any) => <AppointmentTicket key={apt.id} apt={apt} />)
+                    todayData.map((apt) => <AppointmentTicket key={apt.id} apt={apt} />)
                   ) : (
                     <EmptyState message="The registry is clear for today" />
                   )}
@@ -197,7 +205,6 @@ export default function AdminManagementClient({
               </section>
             )}
 
-            {/* SECONDARY / SEARCH RESULTS SECTION */}
             {(search || range !== 'today') && (
               <section className="flex flex-col gap-6 md:gap-8">
                 <div className="flex items-baseline justify-between border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
@@ -212,12 +219,12 @@ export default function AdminManagementClient({
                 <div className="flex flex-col border-b border-zinc-100 dark:border-zinc-900/50">
                   {search ? (
                     searchResults.length > 0 ? (
-                      searchResults.map((apt: any) => <AppointmentTicket key={apt.id} apt={apt} />)
+                      searchResults.map((apt) => <AppointmentTicket key={apt.id} apt={apt} />)
                     ) : (
                       <EmptyState message="No matching records found" />
                     )
                   ) : otherData.length > 0 ? (
-                    otherData.map((apt: any) => <AppointmentTicket key={apt.id} apt={apt} />)
+                    otherData.map((apt) => <AppointmentTicket key={apt.id} apt={apt} />)
                   ) : (
                     <EmptyState message={`No records found in selected range`} />
                   )}
@@ -234,7 +241,7 @@ export default function AdminManagementClient({
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-px bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-800/50 shadow-sm overflow-hidden rounded-2xl">
                 <div className="lg:col-span-4 bg-white dark:bg-[#050505] p-6 md:p-10 flex flex-col justify-between group transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/20">
                   <div>
-                    <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif mb-6 md:mb-8 flex items-center gap-2">
+                    <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-6 md:mb-8 flex items-center gap-2">
                       <TableCellsIcon className="w-3.5 h-3.5 opacity-50" /> System
                     </p>
                     <h2 className="text-[18px] md:text-[24px] font-light font-serif text-[#251101] dark:text-zinc-100 tracking-tight uppercase leading-none">
@@ -264,7 +271,8 @@ export default function AdminManagementClient({
   )
 }
 
-function AppointmentTicket({ apt }: { apt: any }) {
+// 2. Applied BookingEntry to the sub-component
+function AppointmentTicket({ apt }: { apt: BookingEntry }) {
   const [isVisible, setIsVisible] = useState(false)
   const ticketRef = useRef<HTMLDivElement>(null)
 
@@ -327,7 +335,7 @@ function AppointmentTicket({ apt }: { apt: any }) {
             </div>
           </div>
           <div className="flex flex-wrap items-center">
-            {apt.services.map((s: string, i: number) => (
+            {apt.services.map((s, i) => (
               <span
                 key={i}
                 className="text-[10px] uppercase tracking-[0.2em] text-[#595f72] font-medium leading-none m-0 pb-0.5"

@@ -14,13 +14,39 @@ import {
 import dayjs from '@/lib/dayjs'
 import { useSearchParams } from 'next/navigation'
 
-export default function AppointmentClient({ initialData }: { initialData: any }) {
+// 1. Define specific interfaces for the Patient Portal
+interface PatientVisit {
+  id: string
+  date: string | Date
+  status: 'confirmed' | 'completed' | 'pending' | 'cancelled'
+  service: string
+  isGuest: boolean
+  firstName: string
+  surname: string
+}
+
+interface PatientProfile {
+  firstName: string
+  surname: string
+  email: string
+  phone: string
+  history: PatientVisit[]
+}
+
+interface AppointmentGroup {
+  date: string | Date
+  main: PatientVisit[]
+  guests: Record<string, PatientVisit[]>
+  daySubtotal: number
+}
+
+export default function AppointmentClient({ initialData }: { initialData: PatientProfile | null }) {
   const searchParams = useSearchParams()
   const autoEmail = searchParams?.get('email')
   const autoPhone = searchParams?.get('ph')
 
   const [isPending, startTransition] = useTransition()
-  const [patientData, setPatientData] = useState(initialData)
+  const [patientData, setPatientData] = useState<PatientProfile | null>(initialData)
   const [isVerified, setIsVerified] = useState(!!initialData)
   const [filter, setFilter] = useState<'upcoming' | 'past'>('upcoming')
 
@@ -35,7 +61,6 @@ export default function AppointmentClient({ initialData }: { initialData: any })
   const [authForm, setAuthForm] = useState({ email: '', lastFour: '' })
   const [error, setError] = useState<string | null>(null)
 
-  // --- AUTO LOGIN LOGIC ---
   useEffect(() => {
     if (!isVerified && autoEmail && autoPhone && !isAutoLoggingIn) {
       setIsAutoLoggingIn(true)
@@ -46,11 +71,10 @@ export default function AppointmentClient({ initialData }: { initialData: any })
         const res = await verifyPatientProfile(autoEmail, lastFour)
         if (res.error) {
           setError(res.error)
-          setIsAutoLoggingIn(false) // Revert to form so they can try manually
+          setIsAutoLoggingIn(false)
         } else {
-          setPatientData(res.data)
+          setPatientData(res?.data as PatientProfile | null)
           setIsVerified(true)
-          // Clean the URL silently so a refresh doesn't re-trigger it
           window.history.replaceState(null, '', '/appointments')
         }
       })
@@ -71,15 +95,14 @@ export default function AppointmentClient({ initialData }: { initialData: any })
   const { timelineRegistry, totalServices } = useMemo(() => {
     if (!patientData?.history) return { timelineRegistry: [], totalServices: 0 }
     const now = dayjs()
-    const groups: Record<string, any> = {}
+    const groups: Record<string, AppointmentGroup> = {}
     let sCount = 0
 
-    patientData.history.forEach((h: any) => {
+    patientData.history.forEach((h) => {
       const isPast = dayjs(h.date).isBefore(now)
       if (filter === 'upcoming' && isPast) return
       if (filter === 'past' && !isPast) return
 
-      // ONLY increment count if NOT cancelled
       if (h.status !== 'cancelled') {
         sCount++
       }
@@ -94,7 +117,6 @@ export default function AppointmentClient({ initialData }: { initialData: any })
         }
       }
 
-      // We still track the day subtotal and grouping even if cancelled
       groups[dayKey].daySubtotal += 1
 
       if (!h.isGuest) {
@@ -108,7 +130,7 @@ export default function AppointmentClient({ initialData }: { initialData: any })
       }
     })
 
-    const sorted = Object.values(groups).sort((a: any, b: any) => {
+    const sorted = Object.values(groups).sort((a, b) => {
       const timeA = dayjs(a.date).valueOf()
       const timeB = dayjs(b.date).valueOf()
       return filter === 'upcoming' ? timeA - timeB : timeB - timeA
@@ -145,7 +167,7 @@ export default function AppointmentClient({ initialData }: { initialData: any })
       const res = await verifyPatientProfile(authForm.email, authForm.lastFour)
       if (res.error) setError(res.error)
       else {
-        setPatientData(res.data)
+        setPatientData(res.data as PatientProfile | null)
         setIsVerified(true)
       }
     })
@@ -300,7 +322,7 @@ export default function AppointmentClient({ initialData }: { initialData: any })
           >
             <div className="bg-white dark:bg-[#050505] p-6 md:p-8 flex flex-col justify-between min-h-[120px] group transition-all hover:bg-zinc-50/50">
               <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
-                {filter === 'upcoming' ? 'Upcoming total visits' : 'Total Visits'}
+                {filter === 'upcoming' ? 'Upcoming visits' : 'Total Visits'}
               </p>
               <p className="text-[24px] md:text-[32px] font-light font-serif tracking-tight tabular-nums text-[#251101] dark:text-zinc-100">
                 {timelineRegistry.length}
@@ -308,7 +330,7 @@ export default function AppointmentClient({ initialData }: { initialData: any })
             </div>
             <div className="bg-white dark:bg-[#050505] p-6 md:p-8 flex flex-col justify-between min-h-[120px] group transition-all hover:bg-zinc-50/50">
               <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif">
-                Total Procedures
+                Procedures
               </p>
               <p className="text-[24px] md:text-[32px] font-light font-serif tracking-tight tabular-nums text-[#251101] dark:text-zinc-100">
                 {totalServices}
@@ -319,7 +341,7 @@ export default function AppointmentClient({ initialData }: { initialData: any })
                 Session Status
               </p>
               <p className="text-[24px] md:text-[32px] font-light font-serif tracking-tight text-[#48a9a6]">
-                Verified Access
+                Verified
               </p>
             </div>
           </section>
@@ -378,9 +400,9 @@ function AppointmentDayBlock({
   isUpcoming,
   patientData,
 }: {
-  group: any
+  group: AppointmentGroup
   isUpcoming: boolean
-  patientData: any
+  patientData: PatientProfile | null
 }) {
   const [isVisible, setIsVisible] = useState(false)
   const blockRef = useRef<HTMLDivElement>(null)
@@ -412,11 +434,11 @@ function AppointmentDayBlock({
         </span>
       </div>
       <div className="flex flex-col gap-10 mb-12">
-        {group.main.map((v: any, idx: number) => (
+        {group.main.map((v, idx) => (
           <AppointmentRow key={idx} visit={v} isUpcoming={isUpcoming} patientData={patientData} />
         ))}
       </div>
-      {Object.entries(group.guests).map(([name, visits]: any, gIdx) => (
+      {(Object.entries(group.guests) as [string, PatientVisit[]][]).map(([name, visits], gIdx) => (
         <div key={gIdx} className="flex flex-col gap-10 mt-6">
           <div className="flex items-center gap-4 py-4 border-y border-zinc-100 dark:border-zinc-900/20 mb-6 px-2">
             <UserIcon className="w-3.5 h-3.5 text-[#595f72] opacity-40" />
@@ -430,7 +452,7 @@ function AppointmentDayBlock({
             </div>
           </div>
           <div className="flex flex-col gap-10">
-            {visits.map((v: any, vIdx: number) => (
+            {visits.map((v, vIdx) => (
               <AppointmentRow
                 key={vIdx}
                 visit={v}
@@ -450,9 +472,9 @@ function AppointmentRow({
   isUpcoming,
   patientData,
 }: {
-  visit: any
+  visit: PatientVisit
   isUpcoming: boolean
-  patientData: any
+  patientData: PatientProfile | null
 }) {
   const statusColors: Record<string, string> = {
     confirmed: 'text-[#248232]',

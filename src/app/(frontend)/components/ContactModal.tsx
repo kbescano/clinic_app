@@ -115,7 +115,7 @@ function ContactItem({
       <div className="text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-all duration-500 pt-1">
         {React.cloneElement(
           icon as React.ReactElement,
-          { className: 'w-5 h-5 stroke-[1px]' } as any,
+          { className: 'w-5 h-5 stroke-[1px]' } as React.SVGProps<SVGSVGElement>,
         )}
       </div>
       <div className="space-y-2">

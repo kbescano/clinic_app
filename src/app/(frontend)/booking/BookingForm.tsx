@@ -9,7 +9,7 @@ import React, {
   useMemo,
   Fragment,
 } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import {
   Listbox,
   ListboxButton,
@@ -39,6 +39,10 @@ interface BookingEntry {
   time: string
 }
 
+// 1. Move Regex outside to prevent useMemo dependency warnings and unnecessary re-creations
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_REGEX = /^(09|639)\d{9}$/
+
 export default function BookingForm({
   services,
   initialData,
@@ -60,14 +64,13 @@ function BookingFormContent({
   services: Service[]
   initialData: { email: string; fn: string; sn: string; ph: string }
 }) {
-  const router = useRouter()
+  // 2. Removed 'router' since redirects are handled by the Server Action
   const searchParams = useSearchParams()
 
   const isReschedule = searchParams.get('reschedule') === 'true'
   const rescheduleId = searchParams.get('id')
   const hasPrefillData = !!(initialData.email && initialData.fn)
 
-  // --- LIVE REGISTRY STATE (Tabs) ---
   const [activeTabIndex, setActiveTabIndex] = useState(0)
   const [bookings, setBookings] = useState<BookingEntry[]>([
     {
@@ -86,16 +89,16 @@ function BookingFormContent({
 
   const activeBooking = bookings[activeTabIndex] || bookings[0]
 
-  const updateActiveBooking = (field: keyof BookingEntry, value: any) => {
+  // 3. Replaced 'any' with strict value typing
+  const updateActiveBooking = (field: keyof BookingEntry, value: string | boolean) => {
     setBookings((prev) => {
       const next = [...prev]
       next[activeTabIndex] = { ...next[activeTabIndex], [field]: value }
 
-      // Cascade date changes from Main Patient to all guests
       if (activeTabIndex === 0 && field === 'date') {
         for (let i = 1; i < next.length; i++) {
-          next[i].date = value
-          next[i].time = '' // Reset guest time if date changes
+          next[i].date = value as string
+          next[i].time = ''
         }
       }
       return next
@@ -120,19 +123,17 @@ function BookingFormContent({
   const [existingEmail, setExistingEmail] = useState('')
   const [isVerifying, setIsVerifying] = useState(false)
   const [errorToast, setErrorToast] = useState<string | null>(null)
-  const [modalError, setModalError] = useState<string | null>(null)
+
+  // 4. Removed unused 'modalError' and 'loadingSlots' state destructures
+  const [, setModalError] = useState<string | null>(null)
   const [isPendingTransition, startTransition] = useTransition()
   const [state, formAction] = useActionState(createBookingAction, null)
   const [busySlots, setBusySlots] = useState<string[]>([])
-  const [loadingSlots, setLoadingSlots] = useState(false)
+  const [, setLoadingSlots] = useState(false)
   const [touched, setTouched] = useState({ email: false, phone: false })
 
-  // --- LOGIC CONSTANTS ---
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  const phoneRegex = /^(09|639)\d{9}$/
-
-  const isEmailValid = emailRegex.test(activeBooking.email.trim())
-  const isPhoneValid = phoneRegex.test(activeBooking.phone.replace(/\D/g, ''))
+  const isEmailValid = EMAIL_REGEX.test(activeBooking.email.trim())
+  const isPhoneValid = PHONE_REGEX.test(activeBooking.phone.replace(/\D/g, ''))
 
   const isRecognized = isReschedule || hasPrefillData || wasVerifiedInSession
   const isPrimaryDraft = activeTabIndex === 0
@@ -157,8 +158,8 @@ function BookingFormContent({
           ? isRecognized ||
             (b.firstName.trim() !== '' &&
               b.surname.trim() !== '' &&
-              emailRegex.test(b.email.trim()) &&
-              phoneRegex.test(b.phone.replace(/\D/g, '')))
+              EMAIL_REGEX.test(b.email.trim()) &&
+              PHONE_REGEX.test(b.phone.replace(/\D/g, '')))
           : b.firstName.trim() !== '' && b.surname.trim() !== ''
 
       return identityOk && b.serviceId && b.date && b.time
@@ -177,7 +178,8 @@ function BookingFormContent({
     }
   }, [])
 
-  const [viewDate, setViewDate] = useState(dayjs(minSelectableDate).startOf('month'))
+  // 5. Removed unused 'setViewDate' setter
+  const [viewDate] = useState(dayjs(minSelectableDate).startOf('month'))
   const calendarGrid = useMemo(() => {
     const startOfMonth = viewDate.startOf('month')
     const startDay = startOfMonth.day()
@@ -224,7 +226,6 @@ function BookingFormContent({
     '17:00',
   ]
 
-  // --- HANDLERS ---
   const handleAddPerson = () => {
     const sharedDate = bookings[0].date
     setBookings((prev) => [
@@ -251,8 +252,6 @@ function BookingFormContent({
     if (!isAllValid) return
 
     const fd = new FormData()
-
-    // Bundle details into a secure query string for the backend to use for redirecting
     const params = new URLSearchParams()
     params.append('date', dayjs(bookings[0].date).format('MMMM D, YYYY'))
     params.append('time', bookings[0].time)
@@ -264,7 +263,8 @@ function BookingFormContent({
     if (bookings[0].extraServiceId) serviceTitles.push(getServiceTitle(bookings[0].extraServiceId))
     params.append('service', serviceTitles.join(' + '))
 
-    const guestNames = bookings.slice(1).forEach((b) => {
+    // 6. Removed unused 'guestNames' variable assignment
+    bookings.slice(1).forEach((b) => {
       const gName = `${b.firstName} ${b.surname}`
       const gServices = []
       if (b.serviceId) gServices.push(getServiceTitle(b.serviceId))
@@ -374,7 +374,7 @@ function BookingFormContent({
                         setIsVerifying(false)
                       })
                   }}
-                  disabled={isVerifying || !emailRegex.test(existingEmail.trim())}
+                  disabled={isVerifying || !EMAIL_REGEX.test(existingEmail.trim())}
                   className="w-full py-5 bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[9px] uppercase tracking-[0.4em] rounded-full mb-10 disabled:opacity-20"
                 >
                   {isVerifying ? 'Searching...' : 'Access Records'}
@@ -568,7 +568,11 @@ function BookingFormContent({
                           }}
                           onBlur={() => setTouched({ ...touched, email: true })}
                           placeholder="juan@example.com"
-                          error={touched.email && !isEmailValid ? 'Invalid email format' : ''}
+                          error={
+                            touched.email && !EMAIL_REGEX.test(activeBooking.email.trim())
+                              ? 'Invalid email format'
+                              : ''
+                          }
                         />
                         {isEmailValid && (
                           <Field
@@ -582,7 +586,8 @@ function BookingFormContent({
                             onBlur={() => setTouched({ ...touched, phone: true })}
                             placeholder="0917 123 4567"
                             error={
-                              touched.phone && !isPhoneValid
+                              touched.phone &&
+                              !PHONE_REGEX.test(activeBooking.phone.replace(/\D/g, ''))
                                 ? 'Valid PH mobile number required'
                                 : ''
                             }

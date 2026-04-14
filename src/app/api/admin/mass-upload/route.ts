@@ -2,9 +2,30 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
+// --- 1. DEFINE UPLOAD INTERFACES ---
+
+interface IncomingAppointment {
+  firstName: string
+  surname: string
+  email: string
+  phone: string
+  appointmentDate: string
+  service: string // The title from the CSV/JSON
+  status?: 'confirmed' | 'cancelled' | 'pending' | 'completed'
+}
+
+interface ServiceDoc {
+  id: string | number
+  title: string
+}
+
 export async function POST(req: Request) {
   const payload = await getPayload({ config })
-  const data = await req.json() // Your JSON array from the frontend
+
+  // Cast the incoming JSON array
+  const data: IncomingAppointment[] = await req.json()
 
   try {
     // 1. Fetch all services currently in your database
@@ -13,15 +34,17 @@ export async function POST(req: Request) {
       limit: 100,
     })
 
+    const serviceDocs = servicesRes.docs as unknown as ServiceDoc[]
+
     // 2. Create a Map of "Name" -> "ID"
-    // This turns "Anti-Aging Treatment" into something like "65f123abc..."
-    const serviceMap = servicesRes.docs.reduce((acc: any, s: any) => {
+    // Typed as Record<string, string | number> to avoid 'any'
+    const serviceMap = serviceDocs.reduce((acc: Record<string, string | number>, s) => {
       acc[s.title.trim().toLowerCase()] = s.id
       return acc
     }, {})
 
     // 3. Process the upload
-    const uploadPromises = data.map((item: any) => {
+    const uploadPromises = data.map((item) => {
       const cleanName = item.service.trim().toLowerCase()
       const sId = serviceMap[cleanName]
 
@@ -40,17 +63,18 @@ export async function POST(req: Request) {
           phone: item.phone,
           appointmentDate: item.appointmentDate,
           status: item.status || 'confirmed',
-          service: sId, // <--- This passes the ID to the database
+          service: sId as number, // Payload expects specific relation types
         },
-        overrideAccess: true, // Bypasses permission checks for this admin tool
+        overrideAccess: true,
       })
     })
 
     await Promise.all(uploadPromises)
 
     return NextResponse.json({ success: true, count: data.length })
-  } catch (err: any) {
-    console.error('Mass Upload Error:', err.message)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown upload error'
+    console.error('Mass Upload Error:', message)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

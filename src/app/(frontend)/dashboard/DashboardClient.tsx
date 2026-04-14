@@ -366,7 +366,7 @@ function AppointmentRow({
           {apt.firstName} {apt.surname}
         </span>
         <div className="flex flex-wrap items-center gap-y-1 leading-none">
-          {[...apt.services].sort().map((s, i, array) => (
+          {[...apt.services].sort().map((s, i) => (
             <React.Fragment key={i}>
               <span className="text-[8px] capitalize tracking-tight text-[#595f72] dark:text-zinc-400">
                 {s}

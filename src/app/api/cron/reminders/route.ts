@@ -4,7 +4,7 @@
 // import dayjs from '@/lib/dayjs'
 // import { getEmailHtml } from '../../../../lib/emailTemplate'
 
-export async function GET(request: Request) {
+export async function GET() {
   // 2. THE SECURITY GATE: Check for the CRON_SECRET
   //   const authHeader = request.headers.get('authorization')
   //   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {

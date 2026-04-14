@@ -1,23 +1,37 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import ContactTrigger from './ContactTrigger'
 import FadeIn from './FadeIn'
 
+// --- TYPES & INTERFACES ---
+
+interface ContactData {
+  email: string
+  address: string
+  phoneNumber: string
+  officeHours: string
+}
+
+interface HeaderData {
+  topLabel: string
+  logoUrl?: string | null
+  clinicName: string
+}
+
 interface NavbarProps {
-  contactData: any
-  headerData: any
+  contactData: ContactData
+  headerData: HeaderData
 }
 
 export default function Navbar({ contactData, headerData }: NavbarProps) {
   const [isVisible, setIsVisible] = useState(true)
   const [isAtTop, setIsAtTop] = useState(true)
-  const [lastScrollY, setLastScrollY] = useState(0)
+  const lastScrollY = useRef(0) // Using a Ref to prevent useEffect re-binding
   const pathname = usePathname()
 
-  // --- LOGIC GATE: ONLY TRANSPARENT ON HOMEPAGE AT TOP ---
   const isTransparent = pathname === '/' && isAtTop
 
   useEffect(() => {
@@ -25,23 +39,24 @@ export default function Navbar({ contactData, headerData }: NavbarProps) {
       if (typeof window !== 'undefined') {
         const currentScrollY = window.scrollY
 
-        // 1. Handle Scroll State
+        // 1. Handle Top State
         setIsAtTop(currentScrollY < 50)
 
-        // 2. Handle Show/Hide Animation
-        if (currentScrollY > lastScrollY && currentScrollY > 100) {
+        // 2. Handle Show/Hide Logic
+        // We use lastScrollY.current to compare without triggering a re-bind
+        if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
           setIsVisible(false) // Scrolling Down
         } else {
           setIsVisible(true) // Scrolling Up
         }
 
-        setLastScrollY(currentScrollY)
+        lastScrollY.current = currentScrollY
       }
     }
 
-    window.addEventListener('scroll', controlNavbar)
+    window.addEventListener('scroll', controlNavbar, { passive: true })
     return () => window.removeEventListener('scroll', controlNavbar)
-  }, [lastScrollY])
+  }, []) // Empty dependency array = Listener is bound only once
 
   return (
     <nav
@@ -66,7 +81,6 @@ export default function Navbar({ contactData, headerData }: NavbarProps) {
                 >
                   Book Appointment
                 </span>
-                {/* KINETIC LINE */}
                 <span
                   className={`absolute bottom-0 left-0 h-[1px] transition-all duration-500 ease-out group-hover:w-full w-0 ${
                     isTransparent ? 'bg-white' : 'bg-[#251101] dark:bg-zinc-400'

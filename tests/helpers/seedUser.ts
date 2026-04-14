@@ -1,4 +1,4 @@
-import { getPayload } from 'payload'
+import { getPayload, Where } from 'payload'
 import config from '../../src/payload.config.js'
 
 export const testUser = {
@@ -12,23 +12,31 @@ export const testUser = {
 export async function seedTestUser(): Promise<void> {
   const payload = await getPayload({ config })
 
+  const query: Where = {
+    email: {
+      equals: testUser.email,
+    },
+  }
+
   // Delete existing test user if any
-  // Use 'as any' to bypass the complex Payload 3.0 Type Requirements
   await payload.delete({
     collection: 'users',
-    where: {
-      email: {
-        equals: testUser.email,
-      },
-    },
-  } as any)
+    where: query,
+  })
 
   // Create fresh test user
   await payload.create({
     collection: 'users',
-    data: testUser,
+    // Inlining the object or using 'as const' on the variable
+    // helps TS verify that all required fields are present.
+    data: {
+      email: testUser.email,
+      password: testUser.password,
+      name: 'Test User',
+      role: 'admin',
+    },
     overrideAccess: true,
-  } as any) // Casting 'as any' fixes the build error immediately
+  })
 }
 
 /**
@@ -37,12 +45,14 @@ export async function seedTestUser(): Promise<void> {
 export async function cleanupTestUser(): Promise<void> {
   const payload = await getPayload({ config })
 
+  const query: Where = {
+    email: {
+      equals: testUser.email,
+    },
+  }
+
   await payload.delete({
     collection: 'users',
-    where: {
-      email: {
-        equals: testUser.email,
-      },
-    },
-  } as any)
+    where: query,
+  })
 }
