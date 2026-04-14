@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useRef, useMemo } from 'react'
+import React, { useEffect, useState, useRef, useMemo, useTransition } from 'react'
 import FadeIn from '../../components/FadeIn'
 import { TableCellsIcon, ClockIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import MassUpload from '../../components/MassUpload'
@@ -9,8 +9,13 @@ import AdminFilter from '../../components/AdminFilter'
 import BookingActions from './actions'
 import dayjs from '@/lib/dayjs'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { assignSpecialistAction } from './adminAction'
 
-// 1. Define the Registry/Booking Entry Interface
+export interface Specialist {
+  id: string | number
+  name: string
+}
+
 interface BookingEntry {
   id: string
   firstName: string
@@ -19,8 +24,10 @@ interface BookingEntry {
   phone: string
   services: string[]
   appointmentDate: string | Date
+  endDateTime?: string | Date // NEW: Added to calculate overlaps accurately
   status: string
   isGuest?: boolean
+  specialist?: string | Specialist | null
   emailStatus?: {
     confirmationSent?: boolean
     reminder24hSent?: boolean
@@ -31,6 +38,7 @@ interface BookingEntry {
 interface AdminProps {
   todayData: BookingEntry[]
   otherData: BookingEntry[]
+  specialists: Specialist[]
   range: string
   status: string
   secondaryLabel: string
@@ -39,6 +47,7 @@ interface AdminProps {
 export default function AdminManagementClient({
   todayData,
   otherData,
+  specialists,
   range,
   status,
   secondaryLabel,
@@ -87,6 +96,7 @@ export default function AdminManagementClient({
     router.replace(`?${params.toString()}`, { scroll: false })
   }
 
+  // We combine all data so the tickets can check for overlaps globally
   const combinedData = useMemo(() => {
     const map = new Map<string, BookingEntry>()
     todayData.forEach((item) => map.set(item.id, item))
@@ -197,7 +207,14 @@ export default function AdminManagementClient({
 
                 <div className="flex flex-col border-b border-zinc-100 dark:border-zinc-900/50">
                   {todayData.length > 0 ? (
-                    todayData.map((apt) => <AppointmentTicket key={apt.id} apt={apt} />)
+                    todayData.map((apt) => (
+                      <AppointmentTicket
+                        key={apt.id}
+                        apt={apt}
+                        specialists={specialists}
+                        allAppointments={combinedData} // Passed the global list here
+                      />
+                    ))
                   ) : (
                     <EmptyState message="The registry is clear for today" />
                   )}
@@ -219,12 +236,26 @@ export default function AdminManagementClient({
                 <div className="flex flex-col border-b border-zinc-100 dark:border-zinc-900/50">
                   {search ? (
                     searchResults.length > 0 ? (
-                      searchResults.map((apt) => <AppointmentTicket key={apt.id} apt={apt} />)
+                      searchResults.map((apt) => (
+                        <AppointmentTicket
+                          key={apt.id}
+                          apt={apt}
+                          specialists={specialists}
+                          allAppointments={combinedData}
+                        />
+                      ))
                     ) : (
                       <EmptyState message="No matching records found" />
                     )
                   ) : otherData.length > 0 ? (
-                    otherData.map((apt) => <AppointmentTicket key={apt.id} apt={apt} />)
+                    otherData.map((apt) => (
+                      <AppointmentTicket
+                        key={apt.id}
+                        apt={apt}
+                        specialists={specialists}
+                        allAppointments={combinedData}
+                      />
+                    ))
                   ) : (
                     <EmptyState message={`No records found in selected range`} />
                   )}
@@ -271,10 +302,43 @@ export default function AdminManagementClient({
   )
 }
 
-// 2. Applied BookingEntry to the sub-component
-function AppointmentTicket({ apt }: { apt: BookingEntry }) {
+function AppointmentTicket({
+  apt,
+  specialists,
+  allAppointments, // Receiving the full list here
+}: {
+  apt: BookingEntry
+  specialists: Specialist[]
+  allAppointments: BookingEntry[]
+}) {
   const [isVisible, setIsVisible] = useState(false)
   const ticketRef = useRef<HTMLDivElement>(null)
+  const [isPending, startTransition] = useTransition()
+
+  const currentSpecialistId = String(
+    typeof apt.specialist === 'object' ? apt.specialist?.id : apt.specialist || '',
+  )
+
+  // SMART COLLISION CHECK: Find specialists already busy at this exact time
+  const busySpecialistIds = useMemo(() => {
+    return allAppointments
+      .filter((other) => {
+        // Skip comparing against itself or appointments with no specialist assigned yet
+        if (other.id === apt.id || !other.specialist || other.status === 'cancelled') return false
+
+        const startA = dayjs(apt.appointmentDate)
+        const endA = apt.endDateTime ? dayjs(apt.endDateTime) : startA.add(60, 'minute')
+
+        const startB = dayjs(other.appointmentDate)
+        const endB = other.endDateTime ? dayjs(other.endDateTime) : startB.add(60, 'minute')
+
+        // If they overlap, this specialist is busy
+        return startA.isBefore(endB) && endA.isAfter(startB)
+      })
+      .map((other) =>
+        String(typeof other.specialist === 'object' ? other.specialist?.id : other.specialist),
+      )
+  }, [allAppointments, apt])
 
   useEffect(() => {
     const observer = new IntersectionObserver(([entry]) => setIsVisible(entry.isIntersecting), {
@@ -284,6 +348,15 @@ function AppointmentTicket({ apt }: { apt: BookingEntry }) {
     if (ticketRef.current) observer.observe(ticketRef.current)
     return () => observer.disconnect()
   }, [])
+
+  const handleSpecialistChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newId = e.target.value
+    startTransition(async () => {
+      if (assignSpecialistAction) {
+        await assignSpecialistAction(apt.id, newId === '' ? null : newId)
+      }
+    })
+  }
 
   const displayTime = dayjs(apt.appointmentDate).tz('Asia/Manila').format('hh:mm A')
   const displayDate = dayjs(apt.appointmentDate).tz('Asia/Manila').format('MMM D')
@@ -334,15 +407,45 @@ function AppointmentTicket({ apt }: { apt: BookingEntry }) {
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center">
-            {apt.services.map((s, i) => (
-              <span
-                key={i}
-                className="text-[10px] uppercase tracking-[0.2em] text-[#595f72] font-medium leading-none m-0 pb-0.5"
-              >
-                {s}
+          <div className="flex flex-col">
+            <div className="flex flex-wrap items-center">
+              {apt.services.map((s, i) => (
+                <span
+                  key={i}
+                  className="text-[10px] uppercase tracking-[0.2em] text-[#595f72] font-medium leading-none m-0 pb-0.5 mr-2"
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
+
+            <div className="flex items-center mt-2 opacity-60 group-hover:opacity-100 transition-opacity">
+              <span className="text-[8px] uppercase tracking-[0.2em] text-[#595f72] mr-2">
+                Lane:
               </span>
-            ))}
+              <select
+                value={currentSpecialistId}
+                onChange={handleSpecialistChange}
+                disabled={isPending}
+                className="bg-transparent text-[9px] uppercase tracking-[0.2em] font-serif text-[#251101] dark:text-zinc-100 outline-none border-b border-transparent focus:border-zinc-300 dark:focus:border-zinc-700 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <option value="">-- Unassigned --</option>
+                {specialists?.map((s) => {
+                  const sId = String(s.id)
+                  // It is busy if their ID is in the overlap array, UNLESS it's the one already assigned to this exact ticket
+                  const isBusy = busySpecialistIds.includes(sId) && currentSpecialistId !== sId
+
+                  return (
+                    <option key={sId} value={sId} disabled={isBusy}>
+                      {s.name} {isBusy ? '(Busy)' : ''}
+                    </option>
+                  )
+                })}
+              </select>
+              {isPending && (
+                <span className="ml-2 text-[8px] animate-pulse text-[#48a9a6]">Saving...</span>
+              )}
+            </div>
           </div>
         </div>
 

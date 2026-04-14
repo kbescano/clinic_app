@@ -36,6 +36,13 @@ export default async function AdminManagementPage(props: { searchParams: Promise
   const status = searchParams.status || 'all'
 
   const payload = await getPayload({ config })
+
+  const specialistsData = await payload.find({
+    collection: 'specialists',
+    limit: 100, // Fetch up to 100 active specialists
+    overrideAccess: true,
+  })
+
   const nowPHT = dayjs().tz('Asia/Manila')
   const startOfToday = nowPHT.startOf('day').toISOString()
   const endOfToday = nowPHT.endOf('day').toISOString()
@@ -94,6 +101,7 @@ export default async function AdminManagementPage(props: { searchParams: Promise
       range={range}
       status={status}
       secondaryLabel={secondaryLabel}
+      specialists={specialistsData.docs}
     />
   )
 }
