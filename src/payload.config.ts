@@ -15,6 +15,7 @@ import { Specialists } from './collections/Specialist'
 import { ContactConfig } from './globals/ContactConfig'
 import { ColorConfig } from './globals/ColorConfig'
 import { HeaderConfig } from './globals/GlobalConfig'
+import { BookingConfig } from './globals/BookingConfig'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -25,7 +26,7 @@ export default buildConfig({
   },
   sharp,
   collections: [Users, Appointments, Services, Media, Specialists],
-  globals: [ContactConfig, ColorConfig, HeaderConfig],
+  globals: [ContactConfig, ColorConfig, HeaderConfig, BookingConfig],
   editor: lexicalEditor({}),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

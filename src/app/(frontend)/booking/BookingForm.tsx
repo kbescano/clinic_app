@@ -17,7 +17,12 @@ import {
   ListboxOptions,
   Transition,
 } from '@headlessui/react'
-import { createBookingAction, getBusySlots, getCustomerByEmail } from './actions'
+import {
+  createBookingAction,
+  getBusySlots,
+  getCustomerByEmail,
+  getClinicTimeSlots,
+} from './actions'
 import { Service } from '@/payload-types'
 import FadeIn from '../components/FadeIn'
 import Notification from '../components/Notification'
@@ -186,17 +191,56 @@ function BookingFormContent({
     return [...Array(35)].map((_, i) => startOfMonth.subtract(startDay, 'day').add(i, 'day'))
   }, [viewDate])
 
-  const localBusySlots = useMemo(
-    () =>
-      bookings
-        .filter((b, i) => i !== activeTabIndex && b.date === activeBooking.date)
-        .map((b) => b.time),
-    [bookings, activeBooking.date, activeTabIndex],
-  )
+  // DURATION-AWARE REAL-TIME CART CHECK
+  const localBusySlots = useMemo(() => {
+    const busy: string[] = []
+
+    bookings.forEach((b, i) => {
+      // Ignore the current tab we are editing, or incomplete bookings
+      if (i === activeTabIndex || !b.date || !b.time || b.date !== activeBooking.date) return
+
+      // 1. Calculate total duration for this specific person
+      const service1 = services.find((s) => String(s.id) === b.serviceId)
+      const duration1 = Number(service1?.duration) || 60
+
+      const service2 = b.extraServiceId
+        ? services.find((s) => String(s.id) === b.extraServiceId)
+        : null
+      const duration2 = b.extraServiceId ? Number(service2?.duration) || 60 : 0
+
+      const totalDuration = duration1 + duration2
+
+      // 2. Block out every 30-minute chunk this person occupies
+      let current = dayjs(`${b.date}T${b.time}:00`)
+      const end = current.add(totalDuration, 'minute')
+
+      while (current.isBefore(end)) {
+        busy.push(current.format('HH:mm'))
+        current = current.add(30, 'minute') // Steps forward by your standard grid interval
+      }
+    })
+
+    return busy
+  }, [bookings, activeBooking.date, activeTabIndex, services])
 
   const getServiceTitle = useMemo(() => {
     return (id: string) => services.find((s) => String(s.id) === id)?.title || 'Service'
   }, [services])
+
+  // DYNAMIC TIME SLOTS STATE
+  const [timeSlots, setTimeSlots] = useState<string[]>([])
+
+  useEffect(() => {
+    async function fetchDynamicSlots() {
+      try {
+        const generatedSlots = await getClinicTimeSlots()
+        setTimeSlots(generatedSlots)
+      } catch (error) {
+        console.error('Failed to load clinic configuration', error)
+      }
+    }
+    fetchDynamicSlots()
+  }, [])
 
   useEffect(() => {
     if (state?.error) setErrorToast(state.error)
@@ -213,18 +257,6 @@ function BookingFormContent({
     }
     updateAvailability()
   }, [activeBooking.date])
-
-  const timeSlots = [
-    '09:00',
-    '10:00',
-    '11:00',
-    '12:00',
-    '13:00',
-    '14:00',
-    '15:00',
-    '16:00',
-    '17:00',
-  ]
 
   const handleAddPerson = () => {
     const sharedDate = bookings[0].date

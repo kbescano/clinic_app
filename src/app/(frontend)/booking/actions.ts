@@ -1,6 +1,6 @@
 'use server'
 
-import { getPayload, Where } from 'payload'
+import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { redirect } from 'next/navigation'
 import dayjs from '@/lib/dayjs'
@@ -9,6 +9,23 @@ import { getEmailHtml } from '@/lib/emailTemplate'
 
 // --- TYPES & INTERFACES ---
 
+interface BookingConfigGlobal {
+  openingTime?: string
+  closingTime?: string
+  slotInterval?: string
+  specialistCapacity?: number
+  lunchBreak?: {
+    start?: string
+    end?: string
+  }
+}
+
+interface ServiceDoc {
+  id: string | number
+  title: string
+  duration?: string | number
+}
+
 interface AppointmentDoc {
   id: string
   firstName: string
@@ -16,6 +33,7 @@ interface AppointmentDoc {
   email: string
   phone: string
   appointmentDate: string
+  endDateTime?: string // Added for duration tracking
   status: 'confirmed' | 'cancelled' | 'pending' | 'completed'
   isGuest?: boolean
   bookingGroupId: string
@@ -39,16 +57,43 @@ interface ValidatedEntry {
   phone: string
   serviceId: string
   appointmentDate: string
+  endDateTime: string // Required for collision checking
   bookingGroupId: string
   isGuest: boolean
 }
 
 /**
- * Fetches busy slots for a specific date, locked to Asia/Manila.
+ * Checks if two time ranges overlap.
  */
-export async function getBusySlots(dateString: string) {
+const isOverlapping = (
+  startA: dayjs.Dayjs,
+  endA: dayjs.Dayjs,
+  startB: dayjs.Dayjs,
+  endB: dayjs.Dayjs,
+): boolean => {
+  return startA.isBefore(endB) && endA.isAfter(startB)
+}
+
+/**
+ * Fetches busy slots for a specific date, locked to Asia/Manila.
+ * Now factors in Specialist Capacity, Durations, and Lunch Breaks.
+ */
+export async function getBusySlots(dateString: string): Promise<string[]> {
   const payload = await getPayload({ config })
 
+  // 1. Fetch Config
+  const bookingConfig = (await payload.findGlobal({
+    slug: 'booking-config',
+  })) as unknown as BookingConfigGlobal
+  const capacity = bookingConfig?.specialistCapacity ?? 1
+  const interval = Number(bookingConfig?.slotInterval) || 30
+
+  const openingStr = bookingConfig?.openingTime || '09:00'
+  const closingStr = bookingConfig?.closingTime || '17:00'
+  const lunchStartStr = bookingConfig?.lunchBreak?.start || '12:00'
+  const lunchEndStr = bookingConfig?.lunchBreak?.end || '13:00'
+
+  // 2. Fetch Appointments
   const targetDate = dayjs(dateString).tz('Asia/Manila')
   const startOfDay = targetDate.startOf('day').toISOString()
   const endOfDay = targetDate.endOf('day').toISOString()
@@ -66,20 +111,60 @@ export async function getBusySlots(dateString: string) {
     sort: 'appointmentDate',
   })
 
-  const docs = busy.docs as unknown as AppointmentDoc[]
+  const existingApts = busy.docs as unknown as AppointmentDoc[]
 
-  return docs.map((doc) => {
-    return new Date(doc.appointmentDate).toLocaleTimeString('en-GB', {
-      timeZone: 'Asia/Manila',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    })
-  })
+  // 3. Generate Slots and Scan for Collisions
+  const busySlotsOut: string[] = []
+
+  let currentSlot = targetDate
+    .set('hour', parseInt(openingStr.split(':')[0]))
+    .set('minute', parseInt(openingStr.split(':')[1]))
+  const closingTime = targetDate
+    .set('hour', parseInt(closingStr.split(':')[0]))
+    .set('minute', parseInt(closingStr.split(':')[1]))
+  const lunchStart = targetDate
+    .set('hour', parseInt(lunchStartStr.split(':')[0]))
+    .set('minute', parseInt(lunchStartStr.split(':')[1]))
+  const lunchEnd = targetDate
+    .set('hour', parseInt(lunchEndStr.split(':')[0]))
+    .set('minute', parseInt(lunchEndStr.split(':')[1]))
+
+  while (currentSlot.isBefore(closingTime)) {
+    const slotStart = currentSlot
+    // Assuming the slot minimum footprint equals the interval for baseline checking
+    const slotEnd = currentSlot.add(interval, 'minute')
+    const slotString = slotStart.format('HH:mm')
+
+    // Filter A: Lunch Break Check
+    if (isOverlapping(slotStart, slotEnd, lunchStart, lunchEnd)) {
+      busySlotsOut.push(slotString)
+      currentSlot = currentSlot.add(interval, 'minute')
+      continue
+    }
+
+    // Filter B: Capacity Check
+    let overlapCount = 0
+    for (const apt of existingApts) {
+      const aptStart = dayjs(apt.appointmentDate)
+      const aptEnd = apt.endDateTime ? dayjs(apt.endDateTime) : aptStart.add(60, 'minute') // Fallback
+
+      if (isOverlapping(slotStart, slotEnd, aptStart, aptEnd)) {
+        overlapCount++
+      }
+    }
+
+    if (overlapCount >= capacity) {
+      busySlotsOut.push(slotString)
+    }
+
+    currentSlot = currentSlot.add(interval, 'minute')
+  }
+
+  return busySlotsOut
 }
 
 /**
- * Creates bookings with a strict check for existing slots
+ * Creates bookings with a strict capacity and duration check
  */
 export async function createBookingAction(
   prevState: BookingState | null,
@@ -109,9 +194,20 @@ export async function createBookingAction(
   let validatedEntries: ValidatedEntry[] = []
 
   try {
-    // --- PHASE 1: PREPARE ENTRIES ---
+    // --- PHASE 1: PREPARE ENTRIES & CHAIN DURATIONS ---
+    const servicesData = await payload.find({
+      collection: 'services',
+      where: { id: { in: Array.from(new Set(rawServiceIds)) } },
+      overrideAccess: true,
+    })
+    const servicesDocs = servicesData.docs as unknown as ServiceDoc[]
+
+    // NEW: We use this object to track when a person's last service ends
+    // so we can chain their next service back-to-back.
+    const personEndTimes: Record<string, string> = {}
+
     validatedEntries = rawFirstNames.map((_, i) => {
-      const isoDate = dayjs.tz(rawDates[i], 'Asia/Manila').toISOString()
+      const baseIsoDate = dayjs.tz(rawDates[i], 'Asia/Manila').toISOString()
       const currentEmail = rawEmails[i]?.trim().toLowerCase() || ''
       const currentFirstName = rawFirstNames[i]?.trim().toLowerCase() || ''
       const currentSurname = rawSurnames[i]?.trim().toLowerCase() || ''
@@ -127,39 +223,100 @@ export async function createBookingAction(
 
       const isGuest = i > 0 && !isSamePersonAsMain
 
+      // Create a unique key for this person on this specific date
+      const personKey = `${currentEmail}-${currentFirstName}-${currentSurname}-${baseIsoDate}`
+
+      // CHAINING LOGIC: If this person already has a service, start this one when the last one ends
+      const actualStartIso = personEndTimes[personKey] ? personEndTimes[personKey] : baseIsoDate
+
+      // Duration Calculation
+      const serviceId = rawServiceIds[i]
+      const serviceDoc = servicesDocs.find((s) => String(s.id) === String(serviceId))
+      const duration = Number(serviceDoc?.duration) || 60
+      const actualEndIso = dayjs(actualStartIso).add(duration, 'minute').toISOString()
+
+      // Update the tracker so the next service starts after this one
+      personEndTimes[personKey] = actualEndIso
+
       return {
         firstName: rawFirstNames[i],
         surname: rawSurnames[i],
         email: currentEmail,
         phone: rawPhones[i],
-        serviceId: rawServiceIds[i],
-        appointmentDate: isoDate,
+        serviceId: serviceId,
+        appointmentDate: actualStartIso, // Uses the chained start time
+        endDateTime: actualEndIso, // Uses the chained end time
         bookingGroupId,
         isGuest,
       }
     })
 
-    // --- PHASE 2: ATOMIC CONFLICT CHECK ---
-    const uniqueSlots = Array.from(new Set(validatedEntries.map((e) => e.appointmentDate)))
-    for (const slot of uniqueSlots) {
-      const conflictWhere: Where[] = [
-        { appointmentDate: { equals: slot } },
-        { status: { not_equals: 'cancelled' } },
-      ]
+    // --- PHASE 2: ATOMIC CAPACITY & OVERLAP CHECK ---
+    const bookingConfig = (await payload.findGlobal({
+      slug: 'booking-config',
+    })) as unknown as BookingConfigGlobal
+    const capacity = bookingConfig?.specialistCapacity ?? 1
 
-      if (rescheduleId) {
-        conflictWhere.push({ id: { not_equals: rescheduleId } })
+    const earliestStart = validatedEntries.reduce(
+      (min, e) => (e.appointmentDate < min ? e.appointmentDate : min),
+      validatedEntries[0].appointmentDate,
+    )
+    const latestEnd = validatedEntries.reduce(
+      (max, e) => (e.endDateTime > max ? e.endDateTime : max),
+      validatedEntries[0].endDateTime,
+    )
+
+    const existingAptsData = await payload.find({
+      collection: 'appointments',
+      where: {
+        and: [
+          { endDateTime: { greater_than: earliestStart } },
+          { appointmentDate: { less_than: latestEnd } },
+          { status: { not_equals: 'cancelled' } },
+        ],
+      },
+      overrideAccess: true,
+      limit: 100,
+    })
+
+    let existingApts = existingAptsData.docs as unknown as AppointmentDoc[]
+
+    if (rescheduleId) {
+      existingApts = existingApts.filter((apt) => String(apt.id) !== String(rescheduleId))
+    }
+
+    // Verify each new entry against total capacity
+    for (const entry of validatedEntries) {
+      const entryStart = dayjs(entry.appointmentDate)
+      const entryEnd = dayjs(entry.endDateTime)
+      let overlapCount = 0
+
+      // 1. Check against DB appointments
+      for (const apt of existingApts) {
+        const aptStart = dayjs(apt.appointmentDate)
+        const aptEnd = apt.endDateTime ? dayjs(apt.endDateTime) : aptStart.add(60, 'minute')
+
+        if (isOverlapping(entryStart, entryEnd, aptStart, aptEnd)) {
+          overlapCount++
+        }
       }
 
-      const conflict = await payload.find({
-        collection: 'appointments',
-        where: { and: conflictWhere },
-        overrideAccess: true,
-      })
+      // 2. Check against OTHER entries in this exact same cart/group
+      for (const otherEntry of validatedEntries) {
+        if (otherEntry === entry) continue
+        const otherStart = dayjs(otherEntry.appointmentDate)
+        const otherEnd = dayjs(otherEntry.endDateTime)
 
-      if (conflict.docs.length > 0) {
-        const timeLabel = dayjs(slot).tz('Asia/Manila').format('h:mm A')
-        return { error: `The ${timeLabel} slot was just reserved by another patient.` }
+        if (isOverlapping(entryStart, entryEnd, otherStart, otherEnd)) {
+          overlapCount++
+        }
+      }
+
+      if (overlapCount >= capacity) {
+        const timeLabel = dayjs(entry.appointmentDate).tz('Asia/Manila').format('h:mm A')
+        return {
+          error: `The ${timeLabel} slot does not have enough capacity for your combined treatments.`,
+        }
       }
     }
 
@@ -184,6 +341,7 @@ export async function createBookingAction(
           phone: item.phone,
           service: Number(item.serviceId),
           appointmentDate: item.appointmentDate,
+          endDateTime: item.endDateTime,
           bookingGroupId: item.bookingGroupId,
           isGuest: item.isGuest,
           status: 'confirmed',
@@ -207,7 +365,9 @@ export async function createBookingAction(
 
     if (groupDocs.length > 0) {
       const mainDoc = groupDocs.find((d) => !d.isGuest) || groupDocs[0]
-      const contactConfig = await payload.findGlobal({ slug: 'contact-config' })
+      const contactConfig = (await payload.findGlobal({ slug: 'contact-config' })) as unknown as {
+        address?: string
+      }
       const clinicLocation =
         typeof contactConfig?.address === 'string'
           ? contactConfig.address
@@ -301,4 +461,46 @@ export async function getCustomerByEmail(email: string) {
     email: mainRecord.email,
     appointments,
   }
+}
+
+export async function getClinicTimeSlots(): Promise<string[]> {
+  const payload = await getPayload({ config })
+  const bookingConfig = (await payload.findGlobal({
+    slug: 'booking-config',
+  })) as unknown as BookingConfigGlobal
+
+  const interval = Number(bookingConfig?.slotInterval) || 30
+  const openingStr = bookingConfig?.openingTime || '09:00'
+  const closingStr = bookingConfig?.closingTime || '17:00'
+  const lunchStartStr = bookingConfig?.lunchBreak?.start || '12:00'
+  const lunchEndStr = bookingConfig?.lunchBreak?.end || '13:00'
+
+  const slots: string[] = []
+  let currentSlot = dayjs()
+    .set('hour', parseInt(openingStr.split(':')[0]))
+    .set('minute', parseInt(openingStr.split(':')[1]))
+  const closingTime = dayjs()
+    .set('hour', parseInt(closingStr.split(':')[0]))
+    .set('minute', parseInt(closingStr.split(':')[1]))
+  const lunchStart = dayjs()
+    .set('hour', parseInt(lunchStartStr.split(':')[0]))
+    .set('minute', parseInt(lunchStartStr.split(':')[1]))
+  const lunchEnd = dayjs()
+    .set('hour', parseInt(lunchEndStr.split(':')[0]))
+    .set('minute', parseInt(lunchEndStr.split(':')[1]))
+
+  while (currentSlot.isBefore(closingTime)) {
+    const slotStart = currentSlot
+    const slotEnd = currentSlot.add(interval, 'minute')
+    const slotString = slotStart.format('HH:mm')
+
+    // Only push the slot if it does not overlap with the lunch break
+    const isOverlappingLunch = slotStart.isBefore(lunchEnd) && slotEnd.isAfter(lunchStart)
+    if (!isOverlappingLunch) {
+      slots.push(slotString)
+    }
+
+    currentSlot = currentSlot.add(interval, 'minute')
+  }
+  return slots
 }

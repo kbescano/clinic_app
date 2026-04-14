@@ -8,34 +8,44 @@ export const Appointments: CollectionConfig = {
     afterChange: [revalidatePage, sendConfirmationEmail],
   },
   admin: {
-    useAsTitle: 'surname', // Displays the Surname in the Admin list
+    useAsTitle: 'surname',
   },
   access: {
-    create: () => true, // Allows anyone to book an appointment
-    read: ({ req: { user } }) => !!user, // Only admins can see the list
-    update: ({ req: { user } }) => !!user, // Only admins can confirm/cancel
-    delete: ({ req: { user } }) => !!user, // Only admins can delete
+    create: () => true,
+    read: ({ req: { user } }) => !!user,
+    update: ({ req: { user } }) => !!user,
+    delete: ({ req: { user } }) => !!user,
   },
   fields: [
     {
-      name: 'firstName',
-      type: 'text',
-      required: true,
+      type: 'row',
+      fields: [
+        {
+          name: 'firstName',
+          type: 'text',
+          required: true,
+        },
+        {
+          name: 'surname',
+          type: 'text',
+          required: true,
+        },
+      ],
     },
     {
-      name: 'surname',
-      type: 'text',
-      required: true,
-    },
-    {
-      name: 'email',
-      type: 'email',
-      required: true,
-    },
-    {
-      name: 'phone',
-      type: 'text',
-      required: true,
+      type: 'row',
+      fields: [
+        {
+          name: 'email',
+          type: 'email',
+          required: true,
+        },
+        {
+          name: 'phone',
+          type: 'text',
+          required: true,
+        },
+      ],
     },
     {
       name: 'service',
@@ -43,12 +53,13 @@ export const Appointments: CollectionConfig = {
       relationTo: 'services',
       required: true,
       admin: {
-        allowCreate: false, // Prevents creating services from the appointment form
+        allowCreate: false,
       },
     },
     {
       name: 'appointmentDate',
       type: 'date',
+      label: 'Start Time',
       required: true,
     },
     {
@@ -63,14 +74,34 @@ export const Appointments: CollectionConfig = {
       ],
     },
     {
+      name: 'specialist',
+      type: 'relationship',
+      relationTo: 'specialists',
+      required: false,
+      admin: {
+        position: 'sidebar',
+        description:
+          'Leave empty for auto-capacity check. Assign a specialist manually for analytics tracking.',
+      },
+    },
+    {
+      name: 'endDateTime',
+      type: 'date',
+      label: 'Calculated End Time',
+      admin: {
+        readOnly: true,
+        position: 'sidebar',
+        description: 'Calculated based on Service duration + clinical buffer.',
+      },
+    },
+    {
       name: 'specialistNotes',
-      type: 'textarea', // Textarea is better for longer medical observations
+      type: 'textarea',
       admin: {
         description: 'Internal clinical notes added by the specialist after the visit.',
-        position: 'sidebar', // Keeps the main form tidy
+        position: 'sidebar',
       },
       access: {
-        // Patients should never see the internal clinical notes in the admin panel
         read: ({ req: { user } }) => user?.role === 'admin',
         update: ({ req: { user } }) => user?.role === 'admin',
       },
@@ -78,7 +109,7 @@ export const Appointments: CollectionConfig = {
     {
       name: 'bookingGroupId',
       type: 'text',
-      index: true, // Crucial for fast lookups
+      index: true,
       admin: {
         readOnly: true,
         position: 'sidebar',

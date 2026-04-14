@@ -97,11 +97,13 @@ export interface Config {
     'contact-config': ContactConfig;
     'color-config': ColorConfig;
     'header-config': HeaderConfig;
+    'booking-config': BookingConfig;
   };
   globalsSelect: {
     'contact-config': ContactConfigSelect<false> | ContactConfigSelect<true>;
     'color-config': ColorConfigSelect<false> | ColorConfigSelect<true>;
     'header-config': HeaderConfigSelect<false> | HeaderConfigSelect<true>;
+    'booking-config': BookingConfigSelect<false> | BookingConfigSelect<true>;
   };
   locale: null;
   widgets: {
@@ -172,6 +174,14 @@ export interface Appointment {
   appointmentDate: string;
   status?: ('pending' | 'confirmed' | 'cancelled' | 'completed') | null;
   /**
+   * Leave empty for auto-capacity check. Assign a specialist manually for analytics tracking.
+   */
+  specialist?: (number | null) | Specialist;
+  /**
+   * Calculated based on Service duration + clinical buffer.
+   */
+  endDateTime?: string | null;
+  /**
    * Internal clinical notes added by the specialist after the visit.
    */
   specialistNotes?: string | null;
@@ -207,6 +217,7 @@ export interface Service {
         id?: string | null;
       }[]
     | null;
+  duration: '30' | '60' | '90';
   updatedAt: string;
   createdAt: string;
 }
@@ -442,6 +453,8 @@ export interface AppointmentsSelect<T extends boolean = true> {
   service?: T;
   appointmentDate?: T;
   status?: T;
+  specialist?: T;
+  endDateTime?: T;
   specialistNotes?: T;
   bookingGroupId?: T;
   isGuest?: T;
@@ -476,6 +489,7 @@ export interface ServicesSelect<T extends boolean = true> {
         description?: T;
         id?: T;
       };
+  duration?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -631,6 +645,23 @@ export interface HeaderConfig {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "booking-config".
+ */
+export interface BookingConfig {
+  id: number;
+  openingTime: string;
+  closingTime: string;
+  slotInterval: '30' | '60';
+  specialistCapacity: number;
+  lunchBreak: {
+    start: string;
+    end: string;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "contact-config_select".
  */
 export interface ContactConfigSelect<T extends boolean = true> {
@@ -661,6 +692,25 @@ export interface HeaderConfigSelect<T extends boolean = true> {
   logo?: T;
   topLabel?: T;
   clinicName?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "booking-config_select".
+ */
+export interface BookingConfigSelect<T extends boolean = true> {
+  openingTime?: T;
+  closingTime?: T;
+  slotInterval?: T;
+  specialistCapacity?: T;
+  lunchBreak?:
+    | T
+    | {
+        start?: T;
+        end?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;
