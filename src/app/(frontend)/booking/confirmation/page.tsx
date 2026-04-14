@@ -1,21 +1,30 @@
 import Link from 'next/link'
 import FadeIn from '../../components/FadeIn'
 
-export default function ConfirmationPage({
-  searchParams,
-}: {
-  searchParams?: { [key: string]: string | string[] | undefined }
-}) {
-  // Extracting potential data passed from the booking redirect
-  const date = typeof searchParams?.date === 'string' ? searchParams.date : 'Pending Date'
-  const time = typeof searchParams?.time === 'string' ? searchParams.time : 'Pending Time'
-  const fn = typeof searchParams?.fn === 'string' ? searchParams.fn : 'Valued'
-  const sn = typeof searchParams?.sn === 'string' ? searchParams.sn : 'Patient'
+// 1. Define the props to expect a Promise
+type Props = {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}
+
+// 2. Make the component async
+export default async function ConfirmationPage({ searchParams }: Props) {
+  // 3. Await the searchParams before accessing any properties
+  const resolvedSearchParams = await searchParams
+
+  // Extracting data from the RESOLVED searchParams
+  const date =
+    typeof resolvedSearchParams.date === 'string' ? resolvedSearchParams.date : 'Pending Date'
+  const time =
+    typeof resolvedSearchParams.time === 'string' ? resolvedSearchParams.time : 'Pending Time'
+  const fn = typeof resolvedSearchParams.fn === 'string' ? resolvedSearchParams.fn : 'Valued'
+  const sn = typeof resolvedSearchParams.sn === 'string' ? resolvedSearchParams.sn : 'Patient'
   const service =
-    typeof searchParams?.service === 'string' ? searchParams.service : 'Clinical Treatment'
+    typeof resolvedSearchParams.service === 'string'
+      ? resolvedSearchParams.service
+      : 'Clinical Treatment'
 
   // Safely capture multiple guests as an array
-  const rawGuests = searchParams?.guests
+  const rawGuests = resolvedSearchParams.guests
   const guestsList = Array.isArray(rawGuests)
     ? rawGuests
     : typeof rawGuests === 'string'
@@ -128,7 +137,7 @@ export default function ConfirmationPage({
           {/* ACTION BUTTONS */}
           <div className="mt-5 md:mt-6 space-y-3">
             <Link
-              href={`/appointments?email=${searchParams?.email || ''}&ph=${searchParams?.ph || ''}`}
+              href={`/appointments?email=${resolvedSearchParams.email || ''}&ph=${resolvedSearchParams.ph || ''}`}
               className="block w-full bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[8px] md:text-[9px] py-6 rounded-full uppercase tracking-[0.4em] text-center transition-all hover:opacity-90 active:scale-[0.98] shadow-xl font-serif"
             >
               View Upcoming Schedule
