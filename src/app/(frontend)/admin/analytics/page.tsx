@@ -192,9 +192,9 @@ export default function AdminAnalytics() {
                   <RegistrySkeleton />
                 </div>
               )}
-              <div className="inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative">
+              <div className="inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative max-w-full overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden">
                 <div
-                  className="absolute top-1.5 bottom-1.5 w-[72px] sm:w-[84px] md:w-28 bg-white dark:bg-zinc-800 rounded-full shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                  className="absolute top-1.5 bottom-1.5 w-[60px] min-[375px]:w-[68px] sm:w-[84px] md:w-28 bg-white dark:bg-zinc-800 rounded-full shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
                   style={{
                     transform: `translateX(${activeIndex * 100}%)`,
                   }}
@@ -204,7 +204,7 @@ export default function AdminAnalytics() {
                   <button
                     key={r.id}
                     onClick={() => setRange(r.id)}
-                    className={`relative z-10 w-[72px] sm:w-[84px] md:w-28 py-2.5 md:py-2 text-[6px] sm:text-[7px] md:text-[8px] uppercase tracking-[0.2em] md:tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${
+                    className={`relative z-10 shrink-0 w-[60px] min-[375px]:w-[68px] sm:w-[84px] md:w-28 py-2.5 md:py-2 text-[5.5px] min-[375px]:text-[6px] sm:text-[7px] md:text-[8px] uppercase tracking-[0.1em] min-[375px]:tracking-[0.2em] md:tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${
                       range === r.id ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'
                     }`}
                   >
