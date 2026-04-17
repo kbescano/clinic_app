@@ -9,7 +9,7 @@ import AdminFilter from '../../components/AdminFilter'
 import BookingActions from './actions'
 import dayjs from '@/lib/dayjs'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { assignSpecialistAction } from './adminAction'
+import { assignSpecialistAction, getGlobalCacheAction } from './adminAction'
 
 export interface Specialist {
   id: string | number
@@ -24,7 +24,7 @@ interface BookingEntry {
   phone: string
   services: string[]
   appointmentDate: string | Date
-  endDateTime?: string | Date // NEW: Added to calculate overlaps accurately
+  endDateTime?: string | Date
   status: string
   isGuest?: boolean
   specialist?: string | Specialist | null
@@ -57,10 +57,24 @@ export default function AdminManagementClient({
   const [drawLine, setDrawLine] = useState(false)
   const [search, setSearch] = useState(searchParams.get('search') || '')
 
+  // CACHE ENGINE: Store the global database locally for 0ms search
+  const [globalCache, setGlobalCache] = useState<BookingEntry[]>([])
+  const [isCacheLoading, setIsCacheLoading] = useState(true)
+
   const [isHeaderVisible, setIsHeaderVisible] = useState(false)
   const [isSystemVisible, setIsSystemVisible] = useState(false)
   const headerRef = useRef<HTMLDivElement>(null)
   const systemRef = useRef<HTMLDivElement>(null)
+
+  // INITIAL MOUNT: Fetch the global cache quietly in the background
+  useEffect(() => {
+    getGlobalCacheAction()
+      .then((data) => {
+        setGlobalCache(data)
+        setIsCacheLoading(false)
+      })
+      .catch(() => setIsCacheLoading(false))
+  }, [])
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
@@ -93,10 +107,10 @@ export default function AdminManagementClient({
     } else {
       params.delete('search')
     }
-    router.replace(`?${params.toString()}`, { scroll: false })
+    // ZERO DELAY FIX: Update URL cosmetically without triggering a Next.js Server Re-render
+    window.history.replaceState(null, '', `?${params.toString()}`)
   }
 
-  // We combine all data so the tickets can check for overlaps globally
   const combinedData = useMemo(() => {
     const map = new Map<string, BookingEntry>()
     todayData.forEach((item) => map.set(item.id, item))
@@ -104,8 +118,11 @@ export default function AdminManagementClient({
     return Array.from(map.values())
   }, [todayData, otherData])
 
+  // THE MASTER DATASET: Use Cache if available, otherwise fallback to server props
+  const activeDataset = globalCache.length > 0 ? globalCache : combinedData
+
   const searchResults = useMemo(() => {
-    let dataToFilter = [...combinedData]
+    let dataToFilter = [...activeDataset]
 
     if (search) {
       const term = search.toLowerCase().trim()
@@ -123,7 +140,7 @@ export default function AdminManagementClient({
     }
 
     return dataToFilter
-  }, [combinedData, search])
+  }, [activeDataset, search])
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 px-4 md:px-8 selection:bg-zinc-100 overflow-x-hidden font-sans">
@@ -172,9 +189,14 @@ export default function AdminManagementClient({
             >
               <label
                 htmlFor="admin-search"
-                className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif"
+                className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif flex items-center gap-2"
               >
                 Registry
+                {isCacheLoading && (
+                  <span className="animate-pulse text-[#48a9a6] text-[7px] lowercase">
+                    (syncing archive...)
+                  </span>
+                )}
               </label>
               <div className="self-end md:self-auto w-full md:w-64 relative group">
                 <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#595f72]" />
@@ -212,7 +234,7 @@ export default function AdminManagementClient({
                         key={apt.id}
                         apt={apt}
                         specialists={specialists}
-                        allAppointments={combinedData} // Passed the global list here
+                        allAppointments={activeDataset} // SMART FIX: Uses cache to check overlaps across all days!
                       />
                     ))
                   ) : (
@@ -241,7 +263,7 @@ export default function AdminManagementClient({
                           key={apt.id}
                           apt={apt}
                           specialists={specialists}
-                          allAppointments={combinedData}
+                          allAppointments={activeDataset}
                         />
                       ))
                     ) : (
@@ -253,7 +275,7 @@ export default function AdminManagementClient({
                         key={apt.id}
                         apt={apt}
                         specialists={specialists}
-                        allAppointments={combinedData}
+                        allAppointments={activeDataset}
                       />
                     ))
                   ) : (
@@ -305,7 +327,7 @@ export default function AdminManagementClient({
 function AppointmentTicket({
   apt,
   specialists,
-  allAppointments, // Receiving the full list here
+  allAppointments,
 }: {
   apt: BookingEntry
   specialists: Specialist[]
@@ -319,11 +341,9 @@ function AppointmentTicket({
     typeof apt.specialist === 'object' ? apt.specialist?.id : apt.specialist || '',
   )
 
-  // SMART COLLISION CHECK: Find specialists already busy at this exact time
   const busySpecialistIds = useMemo(() => {
     return allAppointments
       .filter((other) => {
-        // Skip comparing against itself or appointments with no specialist assigned yet
         if (other.id === apt.id || !other.specialist || other.status === 'cancelled') return false
 
         const startA = dayjs(apt.appointmentDate)
@@ -332,7 +352,6 @@ function AppointmentTicket({
         const startB = dayjs(other.appointmentDate)
         const endB = other.endDateTime ? dayjs(other.endDateTime) : startB.add(60, 'minute')
 
-        // If they overlap, this specialist is busy
         return startA.isBefore(endB) && endA.isAfter(startB)
       })
       .map((other) =>
@@ -432,7 +451,6 @@ function AppointmentTicket({
                 <option value="">-- Unassigned --</option>
                 {specialists?.map((s) => {
                   const sId = String(s.id)
-                  // It is busy if their ID is in the overlap array, UNLESS it's the one already assigned to this exact ticket
                   const isBusy = busySpecialistIds.includes(sId) && currentSpecialistId !== sId
 
                   return (

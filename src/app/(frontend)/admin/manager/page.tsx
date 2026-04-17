@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic'
 interface SearchParams {
   range?: string
   status?: string
+  search?: string // Added search parameter
 }
 
 interface AppointmentDoc {
@@ -34,6 +35,7 @@ export default async function AdminManagementPage(props: { searchParams: Promise
   const searchParams = await props.searchParams
   const range = searchParams.range || 'today'
   const status = searchParams.status || 'all'
+  const search = searchParams.search // Extracted search term
 
   const payload = await getPayload({ config })
 
@@ -51,13 +53,16 @@ export default async function AdminManagementPage(props: { searchParams: Promise
   let dbEnd = nowPHT.endOf('day').add(7, 'day').toISOString()
   let secondaryLabel = 'Upcoming 7 Days'
 
-  if (range === 'today') {
+  // SMART OVERRIDE: If user is searching, force the database to pull 'all' records
+  const activeRange = search ? 'all' : range
+
+  if (activeRange === 'today') {
     dbEnd = endOfToday
-  } else if (range === 'thisMonth') {
+  } else if (activeRange === 'thisMonth') {
     dbStart = nowPHT.startOf('month').toISOString()
     dbEnd = nowPHT.endOf('month').toISOString()
     secondaryLabel = 'Monthly Roster'
-  } else if (range === 'all') {
+  } else if (activeRange === 'all') {
     dbStart = dayjs('2020-01-01').toISOString()
     dbEnd = dayjs('2100-01-01').toISOString()
     secondaryLabel = 'Archive Registry'
@@ -98,7 +103,7 @@ export default async function AdminManagementPage(props: { searchParams: Promise
     <AdminManagementClient
       todayData={todayRaw.map(mapToClient)}
       otherData={otherRaw.map(mapToClient)}
-      range={range}
+      range={range} // Passed the original, untouched range back to the client
       status={status}
       secondaryLabel={secondaryLabel}
       specialists={specialistsData.docs}
