@@ -1,129 +1,130 @@
+import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-import { NextResponse } from 'next/server'
 import dayjs from '@/lib/dayjs'
 
 export const dynamic = 'force-dynamic'
 
-// --- 1. DEFINE ANALYTICS INTERFACES ---
-
-interface Service {
-  title: string
-  price: number
-}
-
-interface Appointment {
-  id: string
-  firstName: string
-  surname: string
-  appointmentDate: string
-  status: 'confirmed' | 'cancelled' | 'pending' | 'completed'
-  service?: Service // Populated via depth: 1
-}
-
 export async function GET(request: Request) {
-  const payload = await getPayload({ config })
   const { searchParams } = new URL(request.url)
-  const range = searchParams.get('range') || 'thisMonth'
+  const range = searchParams.get('range') || 'today'
 
   const nowPHT = dayjs().tz('Asia/Manila')
-
-  // Determine Current and Previous Period Boundaries
-  let start = nowPHT.startOf('month')
-  const end = nowPHT.endOf('day')
-  let prevStart = nowPHT.subtract(1, 'month').startOf('month')
-  let prevEnd = nowPHT.subtract(1, 'month').endOf('month')
+  let dbStart, dbEnd, prevStart, prevEnd
 
   if (range === 'today') {
-    start = nowPHT.startOf('day')
+    dbStart = nowPHT.startOf('day')
+    dbEnd = nowPHT.endOf('day')
     prevStart = nowPHT.subtract(1, 'day').startOf('day')
     prevEnd = nowPHT.subtract(1, 'day').endOf('day')
-  } else if (range === '7days') {
-    start = nowPHT.subtract(7, 'day').startOf('day')
-    prevStart = nowPHT.subtract(14, 'day').startOf('day')
-    prevEnd = nowPHT.subtract(7, 'day').endOf('day')
-  } else if (range === 'all') {
-    start = dayjs('2020-01-01').tz('Asia/Manila')
-    prevStart = start
-    prevEnd = start
+  } else if (range === 'thisWeek') {
+    // BULLETPROOF MONDAY START: No plugins required.
+    // .day() returns 0 for Sunday, 1 for Monday, etc.
+    const currentDay = nowPHT.day()
+    const diffToMonday = currentDay === 0 ? 6 : currentDay - 1
+
+    dbStart = nowPHT.subtract(diffToMonday, 'day').startOf('day') // This Monday at 00:00:00
+    dbEnd = dbStart.add(6, 'day').endOf('day') // This Sunday at 23:59:59
+
+    prevStart = dbStart.subtract(7, 'day') // Last Monday
+    prevEnd = dbEnd.subtract(7, 'day') // Last Sunday
+  } else if (range === 'thisMonth') {
+    dbStart = nowPHT.startOf('month')
+    dbEnd = nowPHT.endOf('month')
+    prevStart = nowPHT.subtract(1, 'month').startOf('month')
+    prevEnd = nowPHT.subtract(1, 'month').endOf('month')
+  } else if (range === 'ytd') {
+    dbStart = nowPHT.startOf('year')
+    dbEnd = nowPHT.endOf('day')
+    prevStart = nowPHT.subtract(1, 'year').startOf('year')
+    prevEnd = nowPHT.subtract(1, 'year').endOf('day')
+  } else {
+    dbStart = dayjs('2020-01-01')
+    dbEnd = dayjs('2100-01-01')
+    prevStart = dayjs('2020-01-01')
+    prevEnd = dayjs('2020-01-01')
   }
 
-  try {
-    // 2. Fetch Data with depth for service prices/titles
-    const [currentResult, prevResult] = await Promise.all([
-      payload.find({
-        collection: 'appointments',
-        where: {
-          and: [
-            { status: { equals: 'completed' } },
-            { appointmentDate: { greater_than_equal: start.toISOString() } },
-            { appointmentDate: { less_than_equal: end.toISOString() } },
-          ],
-        },
-        sort: '-appointmentDate',
-        limit: 1000,
-        depth: 1,
-      }),
-      payload.find({
-        collection: 'appointments',
-        where: {
-          and: [
-            { status: { equals: 'completed' } },
-            { appointmentDate: { greater_than_equal: prevStart.toISOString() } },
-            { appointmentDate: { less_than_equal: prevEnd.toISOString() } },
-          ],
-        },
-        limit: 1000,
-        depth: 1, // Depth 1 is needed here too for prevPeriodRevenue
-      }),
-    ])
+  const payload = await getPayload({ config })
 
-    // 3. Cast results to our local interfaces
-    const currentDocs = currentResult.docs as unknown as Appointment[]
-    const prevDocs = prevResult.docs as unknown as Appointment[]
+  const currentData = await payload.find({
+    collection: 'appointments',
+    where: {
+      and: [
+        { appointmentDate: { greater_than_equal: dbStart.toISOString() } },
+        { appointmentDate: { less_than_equal: dbEnd.toISOString() } },
+        { status: { not_equals: 'cancelled' } },
+      ],
+    },
+    limit: 1000,
+    sort: '-appointmentDate',
+  })
 
-    // --- CALCULATIONS ---
-    const periodRevenue = currentDocs.reduce((sum, a) => sum + (a.service?.price || 0), 0)
-    const prevPeriodRevenue = prevDocs.reduce((sum, a) => sum + (a.service?.price || 0), 0)
+  const previousData = await payload.find({
+    collection: 'appointments',
+    where: {
+      and: [
+        { appointmentDate: { greater_than_equal: prevStart.toISOString() } },
+        { appointmentDate: { less_than_equal: prevEnd.toISOString() } },
+        { status: { not_equals: 'cancelled' } },
+      ],
+    },
+    limit: 1000,
+  })
 
-    // Calculate Growth Percentage
-    // Formula: $$\text{growth} = \frac{\text{periodRevenue} - \text{prevPeriodRevenue}}{\text{prevPeriodRevenue}} \times 100$$
-    let growth = 0
-    if (prevPeriodRevenue > 0) {
-      growth = ((periodRevenue - prevPeriodRevenue) / prevPeriodRevenue) * 100
-    } else if (periodRevenue > 0) {
-      growth = 100
+  if (currentData.docs.length > 0) {
+    console.log('Sample Document:', JSON.stringify(currentData.docs[0], null, 2))
+  }
+
+  const calculateRevenue = (docs: any[]) =>
+    docs.reduce((sum, doc) => {
+      const rawPrice = doc.service?.price || doc.price || 0
+      const numericPrice = Number(rawPrice) || 0
+      return sum + numericPrice
+    }, 0)
+
+  const periodRevenue = calculateRevenue(currentData.docs)
+  const prevPeriodRevenue = calculateRevenue(previousData.docs)
+
+  let growth = 0
+  if (prevPeriodRevenue > 0) {
+    growth = Math.round(((periodRevenue - prevPeriodRevenue) / prevPeriodRevenue) * 100)
+  } else if (periodRevenue > 0) {
+    growth = 100
+  }
+
+  const categorySales: Record<string, number> = {}
+  currentData.docs.forEach((doc: any) => {
+    const serviceName = doc.service?.title || 'General Consultation'
+    const rawPrice = doc.service?.price || doc.price || 0
+    const price = Number(rawPrice) || 0
+
+    if (!categorySales[serviceName]) {
+      categorySales[serviceName] = 0
     }
+    categorySales[serviceName] += price
+  })
 
-    // Category Distribution
-    const categorySales: Record<string, number> = {}
-    currentDocs.forEach((a) => {
-      const category = a.service?.title || 'Unknown'
-      const price = a.service?.price || 0
-      categorySales[category] = (categorySales[category] || 0) + price
-    })
+  const sortedCategorySales = Object.fromEntries(
+    Object.entries(categorySales).sort(([, a], [, b]) => b - a),
+  )
 
-    // Format Top 5 Recent
-    const recent = currentDocs.slice(0, 5).map((a) => ({
-      id: a.id,
-      firstName: a.firstName,
-      surname: a.surname,
-      service: a.service?.title || 'Unknown',
-      price: a.service?.price || 0,
-      time: dayjs(a.appointmentDate).tz('Asia/Manila').format('hh:mm A'),
-      date: dayjs(a.appointmentDate).tz('Asia/Manila').format('MMM D'),
-    }))
+  const recent = currentData.docs.slice(0, 8).map((doc: any) => ({
+    id: doc.id,
+    firstName: doc.firstName,
+    surname: doc.surname,
+    service: doc.service?.title || 'General Consultation',
+    price: Number(doc.service?.price || doc.price || 0),
+    time: dayjs(doc.appointmentDate).tz('Asia/Manila').format('hh:mm A'),
+    date: dayjs(doc.appointmentDate).tz('Asia/Manila').format('MMM D, YYYY'),
+  }))
 
-    return NextResponse.json({
-      periodRevenue,
-      prevPeriodRevenue,
-      growth: parseFloat(growth.toFixed(1)),
-      categorySales,
-      recent,
-      totalAppointments: currentDocs.length,
-    })
-  } catch (err) {
-    console.error('Analytics Route Error:', err)
-    return NextResponse.json({ error: 'Failed to load metrics' }, { status: 500 })
-  }
+  return NextResponse.json({
+    periodRevenue,
+    prevPeriodRevenue,
+    growth,
+    categorySales: sortedCategorySales,
+    totalAppointments: currentData.totalDocs,
+    recent,
+  })
 }

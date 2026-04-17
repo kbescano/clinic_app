@@ -5,10 +5,10 @@ import FadeIn from '../../components/FadeIn'
 import { ClockIcon } from '@heroicons/react/24/outline'
 import BackToHome from '../../components/BackToHome'
 import { RegistrySkeleton } from '../../components/RegistrySkeleton'
+import dayjs from '@/lib/dayjs'
 
 export const dynamic = 'force-dynamic'
 
-// 1. Define a specific interface for the Booking Activity
 interface BookingActivity {
   id: string
   firstName: string
@@ -25,8 +25,16 @@ interface AnalyticsData {
   growth: number
   categorySales: Record<string, number>
   totalAppointments: number
-  recent: BookingActivity[] // Use the interface here
+  recent: BookingActivity[]
 }
+
+const RANGES = [
+  { id: 'today', label: 'Today' },
+  { id: 'thisWeek', label: 'This Week' },
+  { id: 'thisMonth', label: 'This Month' },
+  { id: 'ytd', label: 'YTD' },
+  { id: 'all', label: 'All Time' },
+]
 
 export default function AdminAnalytics() {
   const [data, setData] = useState<AnalyticsData | null>(null)
@@ -35,6 +43,9 @@ export default function AdminAnalytics() {
   const [range, setRange] = useState('today')
   const [drawLine, setDrawLine] = useState(false)
 
+  // THE CACHE: useRef is perfect here because updating it doesn't force a re-render
+  const apiCache = useRef<Record<string, AnalyticsData>>({})
+
   // SCROLL REVEAL STATES
   const [isHeaderVisible, setIsHeaderVisible] = useState(false)
   const [isMetricsVisible, setIsMetricsVisible] = useState(false)
@@ -42,22 +53,51 @@ export default function AdminAnalytics() {
   const metricsRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const fetchAnalytics = async () => {
-      setLoading(true)
+    let isMounted = true
+
+    const fetchAnalytics = async (isSilentBackgroundSync = false) => {
+      // 1. INSTANT CACHE HIT: If we have it and this isn't a background sync, show it instantly
+      if (!isSilentBackgroundSync) {
+        if (apiCache.current[range]) {
+          setData(apiCache.current[range])
+          setTimeout(() => setDrawLine(true), 50)
+        } else {
+          setLoading(true) // Only show skeleton if we have literally zero data
+        }
+      }
+
       try {
         const res = await fetch(`/api/admin/analytics?range=${range}`)
         if (!res.ok) throw new Error('Failed to fetch')
         const json = await res.json()
-        setData(json)
+
+        if (isMounted) {
+          setData(json) // Updates UI instantly (either filling skeleton or silently updating old numbers)
+          apiCache.current[range] = json // Update the cache
+        }
       } catch (err) {
         console.error(err)
-        setError(true)
+        if (!isSilentBackgroundSync) setError(true)
       } finally {
-        setLoading(false)
-        setTimeout(() => setDrawLine(true), 200)
+        if (isMounted && !isSilentBackgroundSync) {
+          setLoading(false)
+          setTimeout(() => setDrawLine(true), 200)
+        }
       }
     }
+
+    // Run the initial fetch when the range changes
     fetchAnalytics()
+
+    // 2. SILENT BACKGROUND SYNC: Quietly check for new bookings every 30 seconds
+    const pollInterval = setInterval(() => {
+      fetchAnalytics(true) // Passing true ensures no loading spinners are triggered
+    }, 30000)
+
+    return () => {
+      isMounted = false
+      clearInterval(pollInterval)
+    }
   }, [range])
 
   useEffect(() => {
@@ -81,7 +121,34 @@ export default function AdminAnalytics() {
     }
   }, [])
 
+  const getDateLabel = (currentRange: string) => {
+    const now = dayjs().tz('Asia/Manila')
+
+    if (currentRange === 'today') return now.format('MMMM D, YYYY')
+
+    if (currentRange === 'thisWeek') {
+      const currentDay = now.day()
+      const diffToMonday = currentDay === 0 ? 6 : currentDay - 1
+      const start = now.subtract(diffToMonday, 'day')
+      const end = start.add(6, 'day')
+      return `${start.format('MMM D')} - ${end.format('MMM D, YYYY')}`
+    }
+
+    if (currentRange === 'thisMonth') return now.format('MMMM YYYY')
+
+    if (currentRange === 'ytd') {
+      return `Jan 1 - ${now.format('MMM D, YYYY')}`
+    }
+
+    return 'Full Archive Registry'
+  }
+
   if (error) return <ErrorState />
+
+  const activeIndex = Math.max(
+    0,
+    RANGES.findIndex((r) => r.id === range),
+  )
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 px-4 md:px-8 selection:bg-zinc-100 overflow-x-hidden font-sans">
@@ -129,40 +196,21 @@ export default function AdminAnalytics() {
                 <div
                   className="absolute top-1.5 bottom-1.5 w-[72px] sm:w-[84px] md:w-28 bg-white dark:bg-zinc-800 rounded-full shadow-sm transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
                   style={{
-                    transform:
-                      range === 'today'
-                        ? 'translateX(0)'
-                        : range === '7days'
-                          ? 'translateX(100%)'
-                          : range === 'thisMonth'
-                            ? 'translateX(200%)'
-                            : 'translateX(300%)',
+                    transform: `translateX(${activeIndex * 100}%)`,
                   }}
                 />
-                <button
-                  onClick={() => setRange('today')}
-                  className={`relative z-10 w-[72px] sm:w-[84px] md:w-28 py-2.5 md:py-2 text-[6px] sm:text-[7px] md:text-[8px] uppercase tracking-[0.2em] md:tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${range === 'today' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'}`}
-                >
-                  Today
-                </button>
-                <button
-                  onClick={() => setRange('7days')}
-                  className={`relative z-10 w-[72px] sm:w-[84px] md:w-28 py-2.5 md:py-2 text-[6px] sm:text-[7px] md:text-[8px] uppercase tracking-[0.2em] md:tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${range === '7days' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'}`}
-                >
-                  Last 7 Days
-                </button>
-                <button
-                  onClick={() => setRange('thisMonth')}
-                  className={`relative z-10 w-[72px] sm:w-[84px] md:w-28 py-2.5 md:py-2 text-[6px] sm:text-[7px] md:text-[8px] uppercase tracking-[0.2em] md:tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${range === 'thisMonth' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'}`}
-                >
-                  This Month
-                </button>
-                <button
-                  onClick={() => setRange('all')}
-                  className={`relative z-10 w-[72px] sm:w-[84px] md:w-28 py-2.5 md:py-2 text-[6px] sm:text-[7px] md:text-[8px] uppercase tracking-[0.2em] md:tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${range === 'all' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'}`}
-                >
-                  All Time
-                </button>
+
+                {RANGES.map((r) => (
+                  <button
+                    key={r.id}
+                    onClick={() => setRange(r.id)}
+                    className={`relative z-10 w-[72px] sm:w-[84px] md:w-28 py-2.5 md:py-2 text-[6px] sm:text-[7px] md:text-[8px] uppercase tracking-[0.2em] md:tracking-[0.3em] font-medium transition-colors duration-300 font-serif ${
+                      range === r.id ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
               </div>
             </div>
           </header>
@@ -180,12 +228,19 @@ export default function AdminAnalytics() {
                 <div
                   className={`absolute left-0 top-10 bottom-10 w-[2px] transition-all duration-1000 ${isMetricsVisible ? 'opacity-100' : 'opacity-0'} ${(data?.growth ?? 0) >= 0 ? 'bg-[#248232]/30' : 'bg-[#d7263d]/30'}`}
                 />
-                <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-6 md:mb-8 font-serif">
-                  Period Revenue
-                </p>
+
+                <div className="mb-6 md:mb-8 flex flex-col gap-1.5">
+                  <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif m-0 leading-none">
+                    Period Revenue
+                  </p>
+                  <span className="text-[7px] md:text-[8px] uppercase tracking-[0.2em] text-[#595f72] opacity-60 font-serif leading-none">
+                    {getDateLabel(range)}
+                  </span>
+                </div>
+
                 <div>
                   <div className="flex items-baseline gap-2 mb-8 md:mb-10">
-                    <span className="text-[32px] md:text-[48px] font-light tracking-tight font-serif tabular-nums text-[#251101] dark:text-zinc-100 leading-none">
+                    <span className="text-[32px] md:text-[48px] font-light tracking-tight font-serif tabular-nums text-[#251101] dark:text-zinc-100 leading-none transition-all duration-300">
                       ₱{data?.periodRevenue?.toLocaleString()}
                     </span>
                   </div>
@@ -203,7 +258,7 @@ export default function AdminAnalytics() {
                         Growth
                       </span>
                       <span
-                        className={`text-[14px] md:text-[16px] font-serif tabular-nums font-light ${(data?.growth ?? 0) >= 0 ? 'text-[#248232] dark:text-[#48a9a6]' : 'text-[#d7263d]'}`}
+                        className={`text-[14px] md:text-[16px] font-serif tabular-nums font-light transition-colors duration-500 ${(data?.growth ?? 0) >= 0 ? 'text-[#248232] dark:text-[#48a9a6]' : 'text-[#d7263d]'}`}
                       >
                         {(data?.growth ?? 0) > 0 ? '+' : ''}
                         {data?.growth}%
@@ -218,7 +273,7 @@ export default function AdminAnalytics() {
                   Growth Index
                 </p>
                 <div>
-                  <span className="text-[24px] md:text-[32px] font-light tracking-tight font-serif mb-4 md:mb-6 block text-[#251101] dark:text-zinc-100 tabular-nums">
+                  <span className="text-[24px] md:text-[32px] font-light tracking-tight font-serif mb-4 md:mb-6 block text-[#251101] dark:text-zinc-100 tabular-nums transition-all duration-300">
                     {data?.growth}%
                   </span>
                   <div className="w-full h-[1.5px] bg-zinc-100 dark:bg-zinc-900 rounded-full overflow-hidden">
@@ -239,7 +294,7 @@ export default function AdminAnalytics() {
                   <p className="text-[7px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-4 md:mb-6 font-serif">
                     Total Sessions
                   </p>
-                  <span className="text-[24px] md:text-[32px] font-light tracking-tight font-serif text-[#251101] dark:text-zinc-100 tabular-nums leading-none">
+                  <span className="text-[24px] md:text-[32px] font-light tracking-tight font-serif text-[#251101] dark:text-zinc-100 tabular-nums leading-none transition-all duration-300">
                     {data?.totalAppointments}
                   </span>
                 </div>
@@ -257,7 +312,7 @@ export default function AdminAnalytics() {
                         <span className="text-[7px] md:text-[8px] uppercase tracking-[0.15em] text-[#595f72] font-serif leading-none opacity-80">
                           {name}
                         </span>
-                        <span className="text-[10px] md:text-[11px] font-serif tabular-nums text-[#251101] dark:text-zinc-100 shrink-0 leading-none">
+                        <span className="text-[10px] md:text-[11px] font-serif tabular-nums text-[#251101] dark:text-zinc-100 shrink-0 leading-none transition-all duration-300">
                           ₱{val.toLocaleString()}
                         </span>
                       </div>
@@ -299,7 +354,6 @@ export default function AdminAnalytics() {
   )
 }
 
-// 2. Updated ActivityRow to use the new BookingActivity interface
 function ActivityRow({ booking }: { booking: BookingActivity }) {
   const [isVisible, setIsVisible] = useState(false)
   const rowRef = useRef<HTMLDivElement>(null)
