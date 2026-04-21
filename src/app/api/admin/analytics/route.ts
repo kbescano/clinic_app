@@ -78,6 +78,9 @@ export async function GET(request: Request) {
 
   const calculateRevenue = (docs: any[]) =>
     docs.reduce((sum, doc) => {
+      // ONLY calculate revenue if the status is completed
+      if (doc.status !== 'completed') return sum
+
       const rawPrice = doc.service?.price || doc.price || 0
       const numericPrice = Number(rawPrice) || 0
       return sum + numericPrice
@@ -95,6 +98,9 @@ export async function GET(request: Request) {
 
   const categorySales: Record<string, number> = {}
   currentData.docs.forEach((doc: any) => {
+    // ONLY tally category sales if the status is completed
+    if (doc.status !== 'completed') return
+
     const serviceName = doc.service?.title || 'General Consultation'
     const rawPrice = doc.service?.price || doc.price || 0
     const price = Number(rawPrice) || 0
@@ -109,22 +115,25 @@ export async function GET(request: Request) {
     Object.entries(categorySales).sort(([, a], [, b]) => b - a),
   )
 
-  const recent = currentData.docs.slice(0, 8).map((doc: any) => ({
-    id: doc.id,
-    firstName: doc.firstName,
-    surname: doc.surname,
-    service: doc.service?.title || 'General Consultation',
-    price: Number(doc.service?.price || doc.price || 0),
-    time: dayjs(doc.appointmentDate).tz('Asia/Manila').format('hh:mm A'),
-    date: dayjs(doc.appointmentDate).tz('Asia/Manila').format('MMM D, YYYY'),
-  }))
+  const recent = currentData.docs
+    .filter((doc: any) => doc.status === 'completed') // Filter completed status first
+    .slice(0, 8) // Then grab the latest 8
+    .map((doc: any) => ({
+      id: doc.id,
+      firstName: doc.firstName,
+      surname: doc.surname,
+      service: doc.service?.title || 'General Consultation',
+      price: Number(doc.service?.price || doc.price || 0),
+      time: dayjs(doc.appointmentDate).tz('Asia/Manila').format('hh:mm A'),
+      date: dayjs(doc.appointmentDate).tz('Asia/Manila').format('MMM D, YYYY'),
+    }))
 
   return NextResponse.json({
     periodRevenue,
     prevPeriodRevenue,
     growth,
     categorySales: sortedCategorySales,
-    totalAppointments: currentData.totalDocs,
+    totalAppointments: currentData.totalDocs, // Total sessions still counts everything not cancelled
     recent,
   })
 }
