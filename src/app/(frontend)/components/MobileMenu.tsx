@@ -21,16 +21,16 @@ import {
 export default function NavigationMenu() {
   const pathname = usePathname()
 
-  const [showDesktopMenu, setShowDesktopMenu] = useState(false)
+  const [showMenu, setShowMenu] = useState(false)
   const [lastScrollY, setLastScrollY] = useState(0)
 
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
       if (currentScrollY > lastScrollY && currentScrollY > 50) {
-        setShowDesktopMenu(true)
+        setShowMenu(true)
       } else if (currentScrollY < lastScrollY) {
-        setShowDesktopMenu(false)
+        setShowMenu(false)
       }
       setLastScrollY(currentScrollY)
     }
@@ -55,7 +55,11 @@ export default function NavigationMenu() {
   return (
     <>
       {/* MOBILE BOTTOM NAVIGATION */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-black/95 backdrop-blur-md border-t border-gray-100 dark:border-white/15 z-[9999] pb-safe shadow-[0_-1px_10px_rgba(0,0,0,0.05)]">
+      <nav
+        className={`lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-black/95 backdrop-blur-md border-t border-gray-100 dark:border-white/15 z-[9999] pb-safe shadow-[0_-1px_10px_rgba(0,0,0,0.05)] transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          showMenu ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
         <div className="flex justify-around items-center h-16 max-w-md mx-auto">
           {navItems.map((item) => {
             const isActive = pathname === item.href
@@ -86,12 +90,11 @@ export default function NavigationMenu() {
       {/* DESKTOP PREMIUM "DYNAMIC CAPSULE" NAVIGATION */}
       <nav
         className={`hidden lg:flex fixed top-1/2 right-6 -translate-y-1/2 z-[9999] transition-all duration-1000 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-          showDesktopMenu
+          showMenu
             ? 'opacity-100 translate-x-0 scale-100'
             : 'opacity-0 translate-x-8 scale-95 pointer-events-none'
         }`}
       >
-        {/* INCREASED PADDING: p-3 and gap-2 for a perfectly framed fit */}
         <div className="group flex flex-col items-end gap-2 p-2.5 bg-white/40 dark:bg-[#050505]/40 backdrop-blur-2xl border border-white/60 dark:border-zinc-800/50 rounded-full shadow-[0_8px_40px_-12px_rgba(0,0,0,0.15)] hover:shadow-[0_16px_60px_-15px_rgba(0,0,0,0.2)] transition-all duration-500">
           {navItems.map((item) => {
             const isActive = pathname === item.href

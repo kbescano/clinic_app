@@ -33,6 +33,8 @@
     "embla-carousel-react": "^8.6.0",
     "framer": "^3.0.4",
     "graphql": "^16.8.1",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.7",
     "motion": "^12.38.0",
     "next": "15.4.11",
     "payload": "3.79.0",

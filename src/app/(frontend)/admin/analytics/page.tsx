@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState, useRef } from 'react'
 import FadeIn from '../../components/FadeIn'
-import { ClockIcon } from '@heroicons/react/24/outline'
+import { ClockIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline' // Added ArrowDownTrayIcon
 import BackToHome from '../../components/BackToHome'
 import { RegistrySkeleton } from '../../components/RegistrySkeleton'
 import dayjs from '@/lib/dayjs'
+import Link from 'next/link' // Added Link
 
 export const dynamic = 'force-dynamic'
 
@@ -43,10 +44,8 @@ export default function AdminAnalytics() {
   const [range, setRange] = useState('today')
   const [drawLine, setDrawLine] = useState(false)
 
-  // THE CACHE: useRef is perfect here because updating it doesn't force a re-render
   const apiCache = useRef<Record<string, AnalyticsData>>({})
 
-  // SCROLL REVEAL STATES
   const [isHeaderVisible, setIsHeaderVisible] = useState(false)
   const [isMetricsVisible, setIsMetricsVisible] = useState(false)
   const headerRef = useRef<HTMLDivElement>(null)
@@ -56,13 +55,12 @@ export default function AdminAnalytics() {
     let isMounted = true
 
     const fetchAnalytics = async (isSilentBackgroundSync = false) => {
-      // 1. INSTANT CACHE HIT: If we have it and this isn't a background sync, show it instantly
       if (!isSilentBackgroundSync) {
         if (apiCache.current[range]) {
           setData(apiCache.current[range])
           setTimeout(() => setDrawLine(true), 50)
         } else {
-          setLoading(true) // Only show skeleton if we have literally zero data
+          setLoading(true)
         }
       }
 
@@ -72,8 +70,8 @@ export default function AdminAnalytics() {
         const json = await res.json()
 
         if (isMounted) {
-          setData(json) // Updates UI instantly (either filling skeleton or silently updating old numbers)
-          apiCache.current[range] = json // Update the cache
+          setData(json)
+          apiCache.current[range] = json
         }
       } catch (err) {
         console.error(err)
@@ -86,12 +84,10 @@ export default function AdminAnalytics() {
       }
     }
 
-    // Run the initial fetch when the range changes
     fetchAnalytics()
 
-    // 2. SILENT BACKGROUND SYNC: Quietly check for new bookings every 30 seconds
     const pollInterval = setInterval(() => {
-      fetchAnalytics(true) // Passing true ensures no loading spinners are triggered
+      fetchAnalytics(true)
     }, 30000)
 
     return () => {
@@ -183,12 +179,23 @@ export default function AdminAnalytics() {
             </div>
 
             <div
-              className={`self-end md:self-auto relative flex items-center transition-all duration-1000 delay-500 ${
+              className={`self-end md:self-auto relative flex flex-col sm:flex-row items-end sm:items-center gap-4 md:gap-6 transition-all duration-1000 delay-500 ${
                 isHeaderVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
               }`}
             >
+              {/* NEW EXPORT CENTER BUTTON */}
+              <Link
+                href="/admin/reports"
+                className="flex items-center gap-2 px-4 py-2 bg-transparent border border-zinc-200 dark:border-zinc-800 hover:border-[#251101] dark:hover:border-white rounded-full transition-colors group"
+              >
+                <span className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] font-serif font-medium text-[#251101] dark:text-zinc-100">
+                  Export Reports
+                </span>
+                <ArrowDownTrayIcon className="w-3 h-3 text-[#595f72] group-hover:text-[#251101] dark:group-hover:text-white transition-colors" />
+              </Link>
+
               {loading && (
-                <div className="absolute -left-6 top-1/2 -translate-y-1/2">
+                <div className="absolute -left-6 top-1/2 -translate-y-1/2 hidden sm:block">
                   <RegistrySkeleton />
                 </div>
               )}
