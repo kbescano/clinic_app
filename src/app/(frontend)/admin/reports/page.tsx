@@ -10,11 +10,20 @@ import {
   ChevronLeftIcon,
   CalendarDaysIcon,
   EyeIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import dayjs from '@/lib/dayjs'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import {
+  Listbox,
+  ListboxButton,
+  ListboxOption,
+  ListboxOptions,
+  Transition,
+} from '@headlessui/react'
+import { Fragment } from 'react'
 
 type ReportRange = 'thisMonth' | 'specificMonth' | 'ytd' | 'all'
 type ReportFormat = 'pdf' | 'csv' | null
@@ -216,6 +225,7 @@ export default function ReportsClient() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 px-4 md:px-8 selection:bg-zinc-100 font-sans">
+      <BackToHome />
       <FadeIn>
         <div className="max-w-6xl mx-auto">
           <header className="flex flex-col gap-6 relative mb-12 md:mb-16">
@@ -244,15 +254,16 @@ export default function ReportsClient() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
             {/* LEFT COLUMN: CONTROLS */}
             <div className="lg:col-span-5 flex flex-col gap-10">
-              <section className="flex flex-col gap-5">
+              <section className="flex flex-col gap-6">
                 <div className="flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
-                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-zinc-50 dark:bg-zinc-900 text-[8px] font-serif">
+                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-zinc-50 dark:bg-zinc-900 text-[8px] font-serif border border-zinc-200/50 dark:border-zinc-800">
                     1
                   </span>
                   <h2 className="text-[9px] uppercase tracking-[0.3em] text-[#595f72] font-serif">
                     Select Period
                   </h2>
                 </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <RangeCard
                     id="thisMonth"
@@ -261,35 +272,76 @@ export default function ReportsClient() {
                     onClick={() => setRange('thisMonth')}
                   />
 
+                  {/* REFACTORED SPECIFIC MONTH CARD */}
                   <div
-                    className={`relative flex flex-col justify-center gap-2 py-4 px-2 rounded-xl border transition-all duration-300 ${
+                    className={`relative flex flex-col justify-between p-4 min-h-[84px] rounded-xl border transition-all duration-300 cursor-pointer ${
                       range === 'specificMonth'
                         ? 'border-[#251101] dark:border-white bg-zinc-50 dark:bg-zinc-900/50 shadow-sm'
                         : 'border-zinc-100 dark:border-zinc-800/80 hover:border-zinc-300 dark:hover:border-zinc-700 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/20'
                     }`}
+                    onClick={() => setRange('specificMonth')}
                   >
-                    <div
-                      className="flex flex-col items-center gap-2"
-                      onClick={() => setRange('specificMonth')}
-                    >
-                      <CalendarDaysIcon
-                        className={`w-5 h-5 ${range === 'specificMonth' ? 'text-[#251101] dark:text-white' : 'text-[#595f72] opacity-50'}`}
-                      />
-                      <select
-                        value={selectedMonth}
-                        onChange={(e) => {
-                          setRange('specificMonth')
-                          setSelectedMonth(Number(e.target.value))
-                        }}
-                        className={`bg-transparent outline-none text-[8px] uppercase tracking-[0.2em] font-serif leading-none text-center appearance-none cursor-pointer ${range === 'specificMonth' ? 'text-[#251101] dark:text-white font-medium' : 'text-[#595f72]'}`}
+                    <div className="flex justify-between items-start">
+                      <span
+                        className={`text-[8px] uppercase tracking-widest font-serif ${range === 'specificMonth' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'}`}
                       >
-                        {availableMonths.map((month, idx) => (
-                          <option key={month} value={idx} className="text-[#251101]">
-                            {month}
-                          </option>
-                        ))}
-                      </select>
+                        Month
+                      </span>
+                      <CalendarDaysIcon
+                        className={`w-4 h-4 ${range === 'specificMonth' ? 'text-[#251101] dark:text-white' : 'text-[#595f72] opacity-40'}`}
+                      />
                     </div>
+
+                    <Listbox
+                      value={selectedMonth}
+                      onChange={(value) => {
+                        setRange('specificMonth')
+                        setSelectedMonth(value)
+                      }}
+                    >
+                      <div className="relative mt-auto">
+                        <ListboxButton
+                          className={`w-full text-left font-serif py-1 border-b border-zinc-200 dark:border-zinc-800 outline-none flex justify-between items-center group transition-colors focus:border-zinc-400
+                  ${range === 'specificMonth' ? 'text-[#251101] dark:text-white' : 'text-[#595f72]'}`}
+                        >
+                          <span className="text-[9px] uppercase tracking-[0.2em] leading-none truncate pr-2">
+                            {availableMonths[selectedMonth] || 'Month'}
+                          </span>
+                          <ChevronDownIcon className="w-3 h-3 opacity-40 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                        </ListboxButton>
+
+                        <Transition
+                          as={Fragment}
+                          leave="transition ease-in duration-100"
+                          leaveFrom="opacity-100"
+                          leaveTo="opacity-0"
+                        >
+                          <ListboxOptions
+                            anchor="bottom start"
+                            className="z-50 mt-1 max-h-60 w-[var(--button-width)] overflow-auto rounded-md bg-white dark:bg-zinc-950 py-1 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none"
+                          >
+                            {availableMonths.map((month, idx) => (
+                              <ListboxOption
+                                key={month}
+                                value={idx}
+                                className="group relative cursor-pointer select-none py-2 px-4 data-[focus]:bg-zinc-100 dark:data-[focus]:bg-zinc-900"
+                              >
+                                <span
+                                  className={`block font-serif uppercase tracking-widest text-[8px] transition-colors
+                        ${
+                          selectedMonth === idx
+                            ? 'text-[#251101] dark:text-white font-bold'
+                            : 'text-zinc-500 group-data-[focus]:text-[#251101] dark:group-data-[focus]:text-white'
+                        }`}
+                                >
+                                  {month}
+                                </span>
+                              </ListboxOption>
+                            ))}
+                          </ListboxOptions>
+                        </Transition>
+                      </div>
+                    </Listbox>
                   </div>
 
                   <RangeCard
@@ -306,7 +358,6 @@ export default function ReportsClient() {
                   />
                 </div>
               </section>
-
               <section className="flex flex-col gap-5">
                 <div className="flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
                   <span className="flex items-center justify-center w-5 h-5 rounded-full bg-zinc-50 dark:bg-zinc-900 text-[8px] font-serif">

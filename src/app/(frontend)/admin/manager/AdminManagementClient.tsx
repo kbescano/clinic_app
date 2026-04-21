@@ -2,7 +2,12 @@
 
 import React, { useEffect, useState, useRef, useMemo, useTransition } from 'react'
 import FadeIn from '../../components/FadeIn'
-import { TableCellsIcon, ClockIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import {
+  TableCellsIcon,
+  ClockIcon,
+  MagnifyingGlassIcon,
+  ChevronDownIcon,
+} from '@heroicons/react/24/outline'
 import MassUpload from '../../components/MassUpload'
 import BackToHome from '../../components/BackToHome'
 import AdminFilter from '../../components/AdminFilter'
@@ -10,6 +15,14 @@ import BookingActions from './actions'
 import dayjs from '@/lib/dayjs'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { assignSpecialistAction, getGlobalCacheAction } from './adminAction'
+import {
+  Listbox,
+  ListboxButton,
+  ListboxOption,
+  ListboxOptions,
+  Transition,
+} from '@headlessui/react'
+import { Fragment } from 'react'
 
 export interface Specialist {
   id: string | number
@@ -368,10 +381,10 @@ function AppointmentTicket({
     return () => observer.disconnect()
   }, [])
 
-  const handleSpecialistChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newId = e.target.value
+  const handleSpecialistChange = (newId: string) => {
     startTransition(async () => {
       if (assignSpecialistAction) {
+        // Logic remains identical: send null if the string is empty
         await assignSpecialistAction(apt.id, newId === '' ? null : newId)
       }
     })
@@ -442,26 +455,82 @@ function AppointmentTicket({
               <span className="text-[8px] uppercase tracking-[0.2em] text-[#595f72] mr-2">
                 Lane:
               </span>
-              <select
-                value={currentSpecialistId}
-                onChange={handleSpecialistChange}
-                disabled={isPending}
-                className="bg-transparent text-[9px] uppercase tracking-[0.2em] font-serif text-[#251101] dark:text-zinc-100 outline-none border-b border-transparent focus:border-zinc-300 dark:focus:border-zinc-700 transition-colors cursor-pointer disabled:opacity-50"
-              >
-                <option value="">-- Unassigned --</option>
-                {specialists?.map((s) => {
-                  const sId = String(s.id)
-                  const isBusy = busySpecialistIds.includes(sId) && currentSpecialistId !== sId
 
-                  return (
-                    <option key={sId} value={sId} disabled={isBusy}>
-                      {s.name} {isBusy ? '(Busy)' : ''}
-                    </option>
-                  )
-                })}
-              </select>
+              <div className="relative">
+                <Listbox value={currentSpecialistId} onChange={handleSpecialistChange}>
+                  <ListboxButton
+                    className={`flex items-center gap-2 text-left font-serif text-[9px] uppercase tracking-[0.2em] transition-colors border-b border-transparent focus:border-zinc-300 dark:focus:border-zinc-700 outline-none
+          ${isPending ? 'opacity-50' : 'text-[#251101] dark:text-zinc-100'}`}
+                  >
+                    <span className="truncate max-w-[120px]">
+                      {specialists?.find((s) => String(s.id) === currentSpecialistId)?.name ||
+                        '-- Unassigned --'}
+                    </span>
+                    <ChevronDownIcon className="w-3 h-3 opacity-40 group-hover:opacity-100" />
+                  </ListboxButton>
+
+                  <Transition
+                    as={Fragment}
+                    leave="transition ease-in duration-100"
+                    leaveFrom="opacity-100"
+                    leaveTo="opacity-0"
+                  >
+                    <ListboxOptions
+                      anchor="bottom start"
+                      className="z-[100] mt-1 max-h-60 w-48 overflow-auto rounded-md bg-white dark:bg-zinc-950 py-1 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none"
+                    >
+                      {/* Unassigned Option */}
+                      <ListboxOption
+                        value=""
+                        className="group relative cursor-pointer select-none py-2 px-4 data-[focus]:bg-zinc-100 dark:data-[focus]:bg-zinc-900"
+                      >
+                        <span className="block font-serif uppercase tracking-widest text-[8px] text-zinc-400 group-data-[focus]:text-zinc-600">
+                          -- Unassigned --
+                        </span>
+                      </ListboxOption>
+
+                      {specialists?.map((s) => {
+                        const sId = String(s.id)
+                        const isBusy =
+                          busySpecialistIds.includes(sId) && currentSpecialistId !== sId
+
+                        return (
+                          <ListboxOption
+                            key={sId}
+                            value={sId}
+                            disabled={isBusy}
+                            className={`group relative cursor-pointer select-none py-2 px-4 transition-colors
+                  ${isBusy ? 'opacity-30 cursor-not-allowed' : 'data-[focus]:bg-zinc-100 dark:data-[focus]:bg-zinc-900'}`}
+                          >
+                            <div className="flex justify-between items-center gap-4">
+                              <span
+                                className={`block font-serif uppercase tracking-widest text-[8px]
+                    ${
+                      currentSpecialistId === sId
+                        ? 'text-[#251101] dark:text-white font-bold'
+                        : 'text-zinc-600 dark:text-zinc-400 group-data-[focus]:text-[#251101] dark:group-data-[focus]:text-white'
+                    }`}
+                              >
+                                {s.name}
+                              </span>
+                              {isBusy && (
+                                <span className="text-[7px] italic font-serif opacity-70">
+                                  Busy
+                                </span>
+                              )}
+                            </div>
+                          </ListboxOption>
+                        )
+                      })}
+                    </ListboxOptions>
+                  </Transition>
+                </Listbox>
+              </div>
+
               {isPending && (
-                <span className="ml-2 text-[8px] animate-pulse text-[#48a9a6]">Saving...</span>
+                <span className="ml-3 text-[8px] uppercase tracking-tighter animate-pulse text-[#48a9a6] font-serif">
+                  Saving...
+                </span>
               )}
             </div>
           </div>

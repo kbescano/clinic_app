@@ -188,8 +188,8 @@ export default function AdminAnalytics() {
                 href="/admin/reports"
                 className="flex items-center gap-2 px-4 py-2 bg-transparent border border-zinc-200 dark:border-zinc-800 hover:border-[#251101] dark:hover:border-white rounded-full transition-colors group"
               >
-                <span className="text-[7px] md:text-[8px] uppercase tracking-[0.3em] font-serif font-medium text-[#251101] dark:text-zinc-100">
-                  Export Reports
+                <span className="text-[7px] md:text-[8px] uppercase font-serif font-medium text-[#251101] dark:text-zinc-100">
+                  Reports
                 </span>
                 <ArrowDownTrayIcon className="w-3 h-3 text-[#595f72] group-hover:text-[#251101] dark:group-hover:text-white transition-colors" />
               </Link>
