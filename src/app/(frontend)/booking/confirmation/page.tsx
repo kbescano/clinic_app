@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import FadeIn from '../../components/FadeIn'
+import BookingNotificationTrigger from '../../components/BookingNotificationTrigger'
 
 type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -35,6 +36,7 @@ export default async function ConfirmationPage({ searchParams }: Props) {
 
   return (
     <div className="min-h-[80vh] bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 flex items-center justify-center p-4 md:p-8 font-sans selection:bg-zinc-100">
+      <BookingNotificationTrigger />
       <FadeIn>
         <div className="max-w-[360px] md:max-w-sm w-full mx-auto relative mt-10 md:mt-0 flex flex-col gap-5 md:gap-6">
           {/* TICKET CONTAINER */}

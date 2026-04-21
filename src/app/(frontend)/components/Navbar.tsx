@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import ContactTrigger from './ContactTrigger'
 import FadeIn from './FadeIn'
+import NotificationTrigger from './NotificationTrigger'
 
 // --- TYPES & INTERFACES ---
 
@@ -110,6 +111,7 @@ export default function Navbar({ contactData, headerData }: NavbarProps) {
             >
               <ContactTrigger contactData={contactData} />
             </div>
+            <NotificationTrigger />
           </div>
         </div>
       </FadeIn>

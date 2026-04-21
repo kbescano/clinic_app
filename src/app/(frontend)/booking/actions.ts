@@ -490,3 +490,26 @@ export async function getClinicTimeSlots(): Promise<string[]> {
   }
   return slots
 }
+
+export async function getLatestActivity() {
+  const payload = await getPayload({ config })
+
+  const result = await payload.find({
+    collection: 'appointments',
+    sort: '-createdAt', // Get the absolute latest entries
+    limit: 10,
+    overrideAccess: true,
+    depth: 1, // Populate the service title
+  })
+
+  return result.docs.map((doc: any) => ({
+    id: String(doc.id),
+    bookerName: doc.isGuest
+      ? `${doc.firstName} ${doc.surname} (Guest)`
+      : `${doc.firstName} ${doc.surname}`,
+    phone: doc.phone,
+    service: typeof doc.service === 'object' ? doc.service.title : 'Treatment',
+    scheduleDate: dayjs(doc.appointmentDate).tz('Asia/Manila').format('MMM D • hh:mm A'),
+    timestamp: doc.createdAt, // Payload's internal creation time
+  }))
+}

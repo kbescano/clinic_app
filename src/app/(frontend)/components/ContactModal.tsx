@@ -43,7 +43,7 @@ export default function ContactModal({ isOpen, onClose, contactData }: ContactMo
             onClick={onClose}
           />
 
-          <SlideInRight>
+          <SlideInRight width="50vw">
             <div className="relative h-full p-8 md:p-16 lg:p-20 flex flex-col bg-white dark:bg-black">
               {/* Close Button: Subtle scale */}
               <button

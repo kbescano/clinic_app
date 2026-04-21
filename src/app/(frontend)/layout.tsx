@@ -5,10 +5,13 @@ import config from '@/payload.config'
 import MobileMenu from './components/MobileMenu'
 import { ColorConfig } from '@/payload-types'
 import { Ovo } from 'next/font/google'
-import './globals.css'
 import Navbar from './components/Navbar'
 import { ContactProvider } from './components/ContactContext'
 import ScrollToTop from './components/ScrollToTop'
+
+// 1. Import your new Notification context and modal
+import { NotificationProvider } from './components/NotificationContext'
+import NotificationModal from './components/NotificationModal'
 
 const ovo = Ovo({
   weight: '400', // Ovo only comes in regular weight
@@ -53,11 +56,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body className={`${ovo.variable} antialiased`}>
         <ScrollToTop />
-        <ContactProvider contactData={contactData}>
-          <Navbar contactData={contactData} headerData={headerData} />
-          <main className="min-h-screen pb-20 lg:pb-0 dark:bg-black">{children}</main>
-        </ContactProvider>
-        <MobileMenu />
+
+        {/* 2. Wrap the entire app architecture in the NotificationProvider */}
+        <NotificationProvider>
+          <ContactProvider contactData={contactData}>
+            <Navbar contactData={contactData} headerData={headerData} />
+            <main className="min-h-screen pb-20 lg:pb-0 dark:bg-black">{children}</main>
+          </ContactProvider>
+
+          <MobileMenu />
+
+          {/* 3. Mount the Modal here so it floats over everything globally */}
+          <NotificationModal />
+        </NotificationProvider>
       </body>
     </html>
   )
