@@ -227,7 +227,7 @@ export default function ReportsClient() {
     <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 px-4 md:px-8 selection:bg-zinc-100 font-sans">
       <BackToHome />
       <FadeIn>
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <header className="flex flex-col gap-6 relative mb-12 md:mb-16">
             <Link
               href="/admin/analytics"
@@ -352,7 +352,7 @@ export default function ReportsClient() {
                   />
                   <RangeCard
                     id="all"
-                    label="Full Archive"
+                    label="All Time"
                     active={range === 'all'}
                     onClick={() => setRange('all')}
                   />

@@ -1,17 +1,14 @@
 import Link from 'next/link'
 import FadeIn from '../../components/FadeIn'
 
-// 1. Define the props to expect a Promise
 type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-// 2. Make the component async
 export default async function ConfirmationPage({ searchParams }: Props) {
-  // 3. Await the searchParams before accessing any properties
   const resolvedSearchParams = await searchParams
 
-  // Extracting data from the RESOLVED searchParams
+  // Safely extract all variables to prevent Next.js array warnings
   const date =
     typeof resolvedSearchParams.date === 'string' ? resolvedSearchParams.date : 'Pending Date'
   const time =
@@ -22,6 +19,8 @@ export default async function ConfirmationPage({ searchParams }: Props) {
     typeof resolvedSearchParams.service === 'string'
       ? resolvedSearchParams.service
       : 'Clinical Treatment'
+  const email = typeof resolvedSearchParams.email === 'string' ? resolvedSearchParams.email : ''
+  const ph = typeof resolvedSearchParams.ph === 'string' ? resolvedSearchParams.ph : ''
 
   // Safely capture multiple guests as an array
   const rawGuests = resolvedSearchParams.guests
@@ -31,10 +30,13 @@ export default async function ConfirmationPage({ searchParams }: Props) {
       ? [rawGuests]
       : []
 
+  // Extract the last 4 digits for the auto-login note
+  const last4Digits = ph.length >= 4 ? ph.slice(-4) : '****'
+
   return (
     <div className="min-h-[80vh] bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 flex items-center justify-center p-4 md:p-8 font-sans selection:bg-zinc-100">
       <FadeIn>
-        <div className="max-w-[360px] max-h-[300px] md:max-w-sm w-full mx-auto relative mt-10 md:mt-0">
+        <div className="max-w-[360px] md:max-w-sm w-full mx-auto relative mt-10 md:mt-0 flex flex-col gap-5 md:gap-6">
           {/* TICKET CONTAINER */}
           <div className="bg-white dark:bg-[#0c0c0c] border border-zinc-100 dark:border-zinc-900 shadow-2xl rounded-2xl overflow-hidden relative z-10">
             {/* TICKET HEADER */}
@@ -120,24 +122,42 @@ export default async function ConfirmationPage({ searchParams }: Props) {
                 )}
               </div>
 
-              {/* PRE-ARRIVAL INSTRUCTIONS */}
-              <div className="bg-zinc-50 dark:bg-zinc-900/50 p-5 rounded-xl border border-zinc-100 dark:border-zinc-800/50">
-                <p className="text-[8px] uppercase tracking-[0.3em] text-[#595f72] font-serif mb-2.5">
-                  Pre-Arrival Note
-                </p>
-                <p className="text-[10px] font-serif text-[#595f72] leading-relaxed italic">
-                  Please arrive 10 minutes prior to your scheduled time. If you need to manage or
-                  modify your session, kindly access your records using the email address provided
-                  during booking.
-                </p>
+              {/* ACCOUNT ACCESS & PRE-ARRIVAL */}
+              <div className="space-y-4">
+                <div className="bg-zinc-50 dark:bg-zinc-900/50 p-5 rounded-xl border border-zinc-100 dark:border-zinc-800/50">
+                  <p className="text-[8px] uppercase tracking-[0.3em] text-[#251101] dark:text-zinc-300 font-serif mb-2.5">
+                    Client Portal Access
+                  </p>
+                  <p className="text-[10px] font-serif text-[#595f72] leading-relaxed italic">
+                    Your account is now active. To manage future sessions, log in using{' '}
+                    <strong className="font-medium text-[#251101] dark:text-zinc-300">
+                      {email || 'your email'}
+                    </strong>{' '}
+                    and the last 4 digits of your mobile (
+                    <strong className="font-medium text-[#251101] dark:text-zinc-300">
+                      {last4Digits}
+                    </strong>
+                    ) as your password.
+                  </p>
+                </div>
+
+                <div className="bg-zinc-50 dark:bg-zinc-900/50 p-5 rounded-xl border border-zinc-100 dark:border-zinc-800/50">
+                  <p className="text-[8px] uppercase tracking-[0.3em] text-[#595f72] font-serif mb-2.5">
+                    Pre-Arrival Note
+                  </p>
+                  <p className="text-[10px] font-serif text-[#595f72] leading-relaxed italic">
+                    Please arrive 10 minutes prior to your scheduled time. If you need to manage or
+                    modify your session, kindly access your records via the portal.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
           {/* ACTION BUTTONS */}
-          <div className="mt-5 md:mt-6 space-y-3">
+          <div className="space-y-3">
             <Link
-              href={`/appointments?email=${resolvedSearchParams.email || ''}&ph=${resolvedSearchParams.ph || ''}`}
+              href={`/appointments?email=${email}&ph=${ph}`}
               className="block w-full bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[8px] md:text-[9px] py-6 rounded-full uppercase tracking-[0.4em] text-center transition-all hover:opacity-90 active:scale-[0.98] shadow-xl font-serif"
             >
               View Upcoming Schedule
