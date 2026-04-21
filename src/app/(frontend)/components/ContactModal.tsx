@@ -8,7 +8,7 @@ import {
   DevicePhoneMobileIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline'
-import SlideInRight from './SlideInRight'
+import SlideFromBottom from './SlideFromBottom'
 
 interface ContactModalProps {
   isOpen: boolean
@@ -43,7 +43,7 @@ export default function ContactModal({ isOpen, onClose, contactData }: ContactMo
             onClick={onClose}
           />
 
-          <SlideInRight width="50vw">
+          <SlideFromBottom height="50vw">
             <div className="relative h-full p-8 md:p-16 lg:p-20 flex flex-col bg-white dark:bg-black">
               {/* Close Button: Subtle scale */}
               <button
@@ -91,7 +91,7 @@ export default function ContactModal({ isOpen, onClose, contactData }: ContactMo
                 <div className="h-[1px] w-full bg-zinc-100 dark:bg-zinc-900 mb-12" />
               </div>
             </div>
-          </SlideInRight>
+          </SlideFromBottom>
         </div>
       )}
     </AnimatePresence>

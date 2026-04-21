@@ -36,7 +36,7 @@ interface AppointmentDoc {
   email: string
   phone: string
   appointmentDate: string
-  endDateTime?: string // Added for duration tracking
+  endDateTime?: string
   status: 'confirmed' | 'cancelled' | 'pending' | 'completed'
   isGuest?: boolean
   bookingGroupId: string
@@ -46,6 +46,7 @@ interface AppointmentDoc {
     reminder24hSent?: boolean
     reminder2hSent?: boolean
   }
+  createdAt: string
 }
 
 interface BookingState {
@@ -60,7 +61,7 @@ interface ValidatedEntry {
   phone: string
   serviceId: string
   appointmentDate: string
-  endDateTime: string // Required for collision checking
+  endDateTime: string
   bookingGroupId: string
   isGuest: boolean
 }
@@ -78,16 +79,15 @@ const isOverlapping = (
 }
 
 /**
- * Fetches busy slots for a specific date, locked to Asia/Manila.
- * Now factors in Specialist Capacity, Durations, and Lunch Breaks.
+ * Fetches busy slots for a specific date.
  */
 export async function getBusySlots(dateString: string): Promise<string[]> {
   const payload = await getPayload({ config })
 
-  // 1. Fetch Config
   const bookingConfig = (await payload.findGlobal({
     slug: 'booking-config',
   })) as unknown as BookingConfigGlobal
+
   const capacity = bookingConfig?.specialistCapacity ?? 1
   const interval = Number(bookingConfig?.slotInterval) || 30
 
@@ -96,7 +96,6 @@ export async function getBusySlots(dateString: string): Promise<string[]> {
   const lunchStartStr = bookingConfig?.lunchBreak?.start || '12:00'
   const lunchEndStr = bookingConfig?.lunchBreak?.end || '13:00'
 
-  // 2. Fetch Appointments
   const targetDate = dayjs(dateString).tz('Asia/Manila')
   const startOfDay = targetDate.startOf('day').toISOString()
   const endOfDay = targetDate.endOf('day').toISOString()
@@ -115,8 +114,6 @@ export async function getBusySlots(dateString: string): Promise<string[]> {
   })
 
   const existingApts = busy.docs as unknown as AppointmentDoc[]
-
-  // 3. Generate Slots and Scan for Collisions
   const busySlotsOut: string[] = []
 
   let currentSlot = targetDate
@@ -134,22 +131,19 @@ export async function getBusySlots(dateString: string): Promise<string[]> {
 
   while (currentSlot.isBefore(closingTime)) {
     const slotStart = currentSlot
-    // Assuming the slot minimum footprint equals the interval for baseline checking
     const slotEnd = currentSlot.add(interval, 'minute')
     const slotString = slotStart.format('HH:mm')
 
-    // Filter A: Lunch Break Check
     if (isOverlapping(slotStart, slotEnd, lunchStart, lunchEnd)) {
       busySlotsOut.push(slotString)
       currentSlot = currentSlot.add(interval, 'minute')
       continue
     }
 
-    // Filter B: Capacity Check
     let overlapCount = 0
     for (const apt of existingApts) {
       const aptStart = dayjs(apt.appointmentDate)
-      const aptEnd = apt.endDateTime ? dayjs(apt.endDateTime) : aptStart.add(60, 'minute') // Fallback
+      const aptEnd = apt.endDateTime ? dayjs(apt.endDateTime) : aptStart.add(60, 'minute')
 
       if (isOverlapping(slotStart, slotEnd, aptStart, aptEnd)) {
         overlapCount++
@@ -167,12 +161,14 @@ export async function getBusySlots(dateString: string): Promise<string[]> {
 }
 
 /**
- * Creates bookings with a strict capacity and duration check
+ * Creates bookings with strict capacity and duration check.
  */
-export async function createBookingAction(prevState: any, formData: FormData) {
+export async function createBookingAction(
+  prevState: BookingState | null,
+  formData: FormData,
+): Promise<BookingState> {
   const payload = await getPayload({ config })
 
-  // 1. CLEAR EXISTING SESSION IMMEDIATELY
   const cookieStore = await cookies()
   cookieStore.delete(PATIENT_SESSION_KEY)
 
@@ -195,16 +191,15 @@ export async function createBookingAction(prevState: any, formData: FormData) {
   const rawDates = formData.getAll('appointmentDate').map((v) => String(v))
 
   const bookingGroupId = `GRP-${dayjs().format('YYMMDD')}-${crypto.randomBytes(2).toString('hex')}`
-  let validatedEntries: any[] = []
+  let validatedEntries: ValidatedEntry[] = []
 
   try {
-    // --- PHASE 1: PREPARE ENTRIES & CHAIN DURATIONS ---
     const servicesData = await payload.find({
       collection: 'services',
       where: { id: { in: Array.from(new Set(rawServiceIds)) } },
       overrideAccess: true,
     })
-    const servicesDocs = servicesData.docs as any[]
+    const servicesDocs = servicesData.docs as unknown as ServiceDoc[]
 
     const personEndTimes: Record<string, string> = {}
 
@@ -224,20 +219,14 @@ export async function createBookingAction(prevState: any, formData: FormData) {
         currentSurname === mainSurname
 
       const isGuest = i > 0 && !isSamePersonAsMain
-
-      // Create a unique key for this person on this specific date
       const personKey = `${currentEmail}-${currentFirstName}-${currentSurname}-${baseIsoDate}`
-
-      // CHAINING LOGIC: If this person already has a service, start this one when the last one ends
       const actualStartIso = personEndTimes[personKey] ? personEndTimes[personKey] : baseIsoDate
 
-      // Duration Calculation
       const serviceId = rawServiceIds[i]
       const serviceDoc = servicesDocs.find((s) => String(s.id) === String(serviceId))
       const duration = Number(serviceDoc?.duration) || 60
       const actualEndIso = dayjs(actualStartIso).add(duration, 'minute').toISOString()
 
-      // Update the tracker so the next service starts after this one
       personEndTimes[personKey] = actualEndIso
 
       return {
@@ -246,15 +235,16 @@ export async function createBookingAction(prevState: any, formData: FormData) {
         email: currentEmail,
         phone: rawPhones[i],
         serviceId: serviceId,
-        appointmentDate: actualStartIso, // Uses the chained start time
-        endDateTime: actualEndIso, // Uses the chained end time
+        appointmentDate: actualStartIso,
+        endDateTime: actualEndIso,
         bookingGroupId,
         isGuest,
       }
     })
 
-    // --- PHASE 2: ATOMIC CAPACITY & OVERLAP CHECK ---
-    const bookingConfig = (await payload.findGlobal({ slug: 'booking-config' })) as any
+    const bookingConfig = (await payload.findGlobal({
+      slug: 'booking-config',
+    })) as unknown as BookingConfigGlobal
     const capacity = bookingConfig?.specialistCapacity ?? 1
 
     const earliestStart = validatedEntries.reduce(
@@ -276,51 +266,32 @@ export async function createBookingAction(prevState: any, formData: FormData) {
         ],
       },
       overrideAccess: true,
-      limit: 100,
     })
 
-    let existingApts = existingAptsData.docs as any[]
-
+    let existingApts = existingAptsData.docs as unknown as AppointmentDoc[]
     if (rescheduleId) {
       existingApts = existingApts.filter((apt) => String(apt.id) !== String(rescheduleId))
     }
 
-    // Verify each new entry against total capacity
     for (const entry of validatedEntries) {
+      let overlapCount = 0
       const entryStart = dayjs(entry.appointmentDate)
       const entryEnd = dayjs(entry.endDateTime)
-      let overlapCount = 0
 
-      // 1. Check against DB appointments
       for (const apt of existingApts) {
-        const aptStart = dayjs(apt.appointmentDate)
-        const aptEnd = apt.endDateTime ? dayjs(apt.endDateTime) : aptStart.add(60, 'minute')
-
-        if (isOverlapping(entryStart, entryEnd, aptStart, aptEnd)) {
-          overlapCount++
-        }
-      }
-
-      // 2. Check against OTHER entries in this exact same cart/group
-      for (const otherEntry of validatedEntries) {
-        if (otherEntry === entry) continue
-        const otherStart = dayjs(otherEntry.appointmentDate)
-        const otherEnd = dayjs(otherEntry.endDateTime)
-
-        if (isOverlapping(entryStart, entryEnd, otherStart, otherEnd)) {
+        if (
+          entryStart.isBefore(dayjs(apt.endDateTime)) &&
+          dayjs(apt.appointmentDate).isBefore(entryEnd)
+        ) {
           overlapCount++
         }
       }
 
       if (overlapCount >= capacity) {
-        const timeLabel = dayjs(entry.appointmentDate).tz('Asia/Manila').format('h:mm A')
-        return {
-          error: `The ${timeLabel} slot does not have enough capacity for your combined treatments.`,
-        }
+        return { error: `Slot no longer available.` }
       }
     }
 
-    // --- PHASE 3: RELEASE OLD SLOT ---
     if (rescheduleId) {
       await payload.update({
         collection: 'appointments',
@@ -330,7 +301,6 @@ export async function createBookingAction(prevState: any, formData: FormData) {
       })
     }
 
-    // --- PHASE 4: SEQUENTIAL REGISTRY CREATION ---
     for (const item of validatedEntries) {
       await payload.create({
         collection: 'appointments',
@@ -345,62 +315,70 @@ export async function createBookingAction(prevState: any, formData: FormData) {
           bookingGroupId: item.bookingGroupId,
           isGuest: item.isGuest,
           status: 'confirmed',
-          emailStatus: {
-            confirmationSent: true,
-            reminder24hSent: false,
-            reminder2hSent: false,
-          },
         },
       })
     }
 
-    // --- PHASE 5: AUTO-LOGIN FOR MAIN PATIENT (CUSTOM COOKIE) ---
     const mainPatient = validatedEntries.find((e) => !e.isGuest) || validatedEntries[0]
-
     if (mainPatient && mainPatient.email) {
-      // Set the custom cookie just like verifyPatientProfile does!
       cookieStore.set(PATIENT_SESSION_KEY, mainPatient.email.trim().toLowerCase(), {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        maxAge: 60 * 60 * 24 * 7, // 1 week
+        maxAge: 60 * 60 * 24 * 7,
         path: '/',
       })
     }
 
-    // --- PHASE 6: CONSOLIDATED NOTIFICATION ---
     const groupData = await payload.find({
       collection: 'appointments',
       where: { bookingGroupId: { equals: bookingGroupId } },
       depth: 1,
     })
 
-    const groupDocs = groupData.docs as any[]
+    const groupDocs = groupData.docs as unknown as AppointmentDoc[]
 
     if (groupDocs.length > 0) {
       const mainDoc = groupDocs.find((d) => !d.isGuest) || groupDocs[0]
-      const contactConfig = (await payload.findGlobal({ slug: 'contact-config' })) as any
-      const clinicLocation =
-        typeof contactConfig?.address === 'string'
-          ? contactConfig.address
-          : 'Atelier Clinical Suite'
+      const contactConfig = (await payload.findGlobal({ slug: 'contact-config' })) as unknown as {
+        address?: string
+      }
+      const clinicLocation = contactConfig?.address || 'Atelier Clinical Suite'
 
       const displayDate = dayjs(mainDoc.appointmentDate).tz('Asia/Manila').format('MMMM D, YYYY')
       const displayTime = dayjs(mainDoc.appointmentDate).tz('Asia/Manila').format('hh:mm A')
 
-      // Optional: Add email sending logic back here using getEmailHtml
+      const attendees = groupDocs.map((doc) => ({
+        name: `${doc.firstName} ${doc.surname}`,
+        service: typeof doc.service === 'object' ? doc.service?.title : 'Treatment',
+        isPrimary: !doc.isGuest,
+      }))
+
+      try {
+        await payload.sendEmail({
+          to: mainDoc.email,
+          from: process.env.FROM_EMAIL || 'registry@atelier.clinic',
+          subject: isReschedule ? `Reschedule Confirmed` : `Booking Confirmed`,
+          html: getEmailHtml(
+            mainDoc.firstName,
+            displayDate,
+            displayTime,
+            'confirmation',
+            clinicLocation,
+            attendees,
+          ),
+        })
+      } catch (emailErr) {
+        console.error('Email failed:', emailErr)
+      }
     }
   } catch (err: unknown) {
-    if (err instanceof Error && (err as any).digest?.includes('NEXT_REDIRECT')) throw err
-    console.error('CRITICAL REGISTRY ERROR:', err)
-    return { error: 'Server error. Please check your data.' }
+    if (err instanceof Error && (err as { digest?: string }).digest?.includes('NEXT_REDIRECT'))
+      throw err
+    return { error: 'Server error.' }
   }
 
   const redirectQuery = formData.get('redirectQuery')
-  if (redirectQuery && typeof redirectQuery === 'string') {
-    redirect(`/booking/confirmation?${redirectQuery}`)
-  } else {
-    redirect('/booking/confirmation')
-  }
+  redirect(`/booking/confirmation?${redirectQuery || ''}`)
 }
 
 /**
@@ -480,7 +458,6 @@ export async function getClinicTimeSlots(): Promise<string[]> {
     const slotEnd = currentSlot.add(interval, 'minute')
     const slotString = slotStart.format('HH:mm')
 
-    // Only push the slot if it does not overlap with the lunch break
     const isOverlappingLunch = slotStart.isBefore(lunchEnd) && slotEnd.isAfter(lunchStart)
     if (!isOverlappingLunch) {
       slots.push(slotString)
@@ -496,20 +473,23 @@ export async function getLatestActivity() {
 
   const result = await payload.find({
     collection: 'appointments',
-    sort: '-createdAt', // Get the absolute latest entries
+    sort: '-createdAt',
     limit: 10,
     overrideAccess: true,
-    depth: 1, // Populate the service title
+    depth: 1,
   })
 
-  return result.docs.map((doc: any) => ({
-    id: String(doc.id),
-    bookerName: doc.isGuest
-      ? `${doc.firstName} ${doc.surname} (Guest)`
-      : `${doc.firstName} ${doc.surname}`,
-    phone: doc.phone,
-    service: typeof doc.service === 'object' ? doc.service.title : 'Treatment',
-    scheduleDate: dayjs(doc.appointmentDate).tz('Asia/Manila').format('MMM D • hh:mm A'),
-    timestamp: doc.createdAt, // Payload's internal creation time
-  }))
+  return result.docs.map((doc) => {
+    const appt = doc as unknown as AppointmentDoc
+    return {
+      id: String(appt.id),
+      bookerName: appt.isGuest
+        ? `${appt.firstName} ${appt.surname} (Guest)`
+        : `${appt.firstName} ${appt.surname}`,
+      phone: appt.phone,
+      service: typeof appt.service === 'object' ? appt.service.title : 'Treatment',
+      scheduleDate: dayjs(appt.appointmentDate).tz('Asia/Manila').format('MMM D • hh:mm A'),
+      timestamp: appt.createdAt,
+    }
+  })
 }

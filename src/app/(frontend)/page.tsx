@@ -5,6 +5,8 @@ import Services from './components/Services'
 import SpecialistSection from './components/SpecialistSection'
 import BookNowButton from './components/BookNowButton'
 import HeroVideo from './components/Hero'
+import ContactTrigger from './components/ContactTrigger'
+import { ContactProvider } from './components/ContactContext'
 
 export default async function HomePage() {
   const payload = await getPayload({ config })
@@ -12,11 +14,22 @@ export default async function HomePage() {
     collection: 'specialists',
   })
 
+  // Cast the global data to the format the provider expects
+  const contactData = (await payload.findGlobal({ slug: 'contact-config' })) as {
+    email: string
+    address: string
+    phoneNumber: string
+    officeHours: string
+  }
   const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
 
   return (
     <main className="relative bg-white dark:bg-black w-full overflow-x-hidden min-h-screen">
+      {/* GLOBAL ACTIONS */}
       <BookNowButton />
+      <ContactProvider contactData={contactData}>
+        <ContactTrigger contactData={contactData} />
+      </ContactProvider>
       <HeroVideo />
       <div className="space-y-0">
         <Suspense fallback={<SectionSkeleton items={3} />}>
@@ -33,7 +46,6 @@ export default async function HomePage() {
   )
 }
 
-// --- KEEPING SKELETON UNTOUCHED ---
 function SectionSkeleton({ items = 3, dark = false }: { items?: number; dark?: boolean }) {
   return (
     <div

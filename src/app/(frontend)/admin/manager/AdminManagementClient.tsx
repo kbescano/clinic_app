@@ -13,7 +13,7 @@ import BackToHome from '../../components/BackToHome'
 import AdminFilter from '../../components/AdminFilter'
 import BookingActions from './actions'
 import dayjs from '@/lib/dayjs'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { assignSpecialistAction, getGlobalCacheAction } from './adminAction'
 import {
   Listbox,
@@ -65,7 +65,6 @@ export default function AdminManagementClient({
   status,
   secondaryLabel,
 }: AdminProps) {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const [drawLine, setDrawLine] = useState(false)
   const [search, setSearch] = useState(searchParams.get('search') || '')
@@ -83,7 +82,7 @@ export default function AdminManagementClient({
   useEffect(() => {
     getGlobalCacheAction()
       .then((data) => {
-        setGlobalCache(data)
+        setGlobalCache(data as BookingEntry[])
         setIsCacheLoading(false)
       })
       .catch(() => setIsCacheLoading(false))

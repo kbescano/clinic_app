@@ -5,12 +5,31 @@ import dayjs from '@/lib/dayjs'
 
 export const dynamic = 'force-dynamic'
 
+// --- 1. DEFINE INTERFACES ---
+
+interface AppointmentDoc {
+  id: string | number
+  status: 'confirmed' | 'completed' | 'pending' | 'cancelled'
+  firstName: string
+  surname: string
+  appointmentDate: string
+  price?: number | string // Fallback price on the doc
+  service?:
+    | {
+        title: string
+        price?: number | string
+      }
+    | number
+    | string
+    | null
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const range = searchParams.get('range') || 'today'
 
   const nowPHT = dayjs().tz('Asia/Manila')
-  let dbStart, dbEnd, prevStart, prevEnd
+  let dbStart: dayjs.Dayjs, dbEnd: dayjs.Dayjs, prevStart: dayjs.Dayjs, prevEnd: dayjs.Dayjs
 
   if (range === 'today') {
     dbStart = nowPHT.startOf('day')
@@ -18,16 +37,12 @@ export async function GET(request: Request) {
     prevStart = nowPHT.subtract(1, 'day').startOf('day')
     prevEnd = nowPHT.subtract(1, 'day').endOf('day')
   } else if (range === 'thisWeek') {
-    // BULLETPROOF MONDAY START: No plugins required.
-    // .day() returns 0 for Sunday, 1 for Monday, etc.
     const currentDay = nowPHT.day()
     const diffToMonday = currentDay === 0 ? 6 : currentDay - 1
-
-    dbStart = nowPHT.subtract(diffToMonday, 'day').startOf('day') // This Monday at 00:00:00
-    dbEnd = dbStart.add(6, 'day').endOf('day') // This Sunday at 23:59:59
-
-    prevStart = dbStart.subtract(7, 'day') // Last Monday
-    prevEnd = dbEnd.subtract(7, 'day') // Last Sunday
+    dbStart = nowPHT.subtract(diffToMonday, 'day').startOf('day')
+    dbEnd = dbStart.add(6, 'day').endOf('day')
+    prevStart = dbStart.subtract(7, 'day')
+    prevEnd = dbEnd.subtract(7, 'day')
   } else if (range === 'thisMonth') {
     dbStart = nowPHT.startOf('month')
     dbEnd = nowPHT.endOf('month')
@@ -47,6 +62,7 @@ export async function GET(request: Request) {
 
   const payload = await getPayload({ config })
 
+  // --- 2. FETCH DATA WITH TYPES ---
   const currentData = await payload.find({
     collection: 'appointments',
     where: {
@@ -58,6 +74,7 @@ export async function GET(request: Request) {
     },
     limit: 1000,
     sort: '-appointmentDate',
+    depth: 1, // Ensure we can see service.title and service.price
   })
 
   const previousData = await payload.find({
@@ -72,22 +89,23 @@ export async function GET(request: Request) {
     limit: 1000,
   })
 
-  if (currentData.docs.length > 0) {
-    console.log('Sample Document:', JSON.stringify(currentData.docs[0], null, 2))
-  }
+  const currentDocs = currentData.docs as unknown as AppointmentDoc[]
+  const previousDocs = previousData.docs as unknown as AppointmentDoc[]
 
-  const calculateRevenue = (docs: any[]) =>
+  // --- 3. REVENUE CALCULATION HELPER ---
+  const calculateRevenue = (docs: AppointmentDoc[]) =>
     docs.reduce((sum, doc) => {
-      // ONLY calculate revenue if the status is completed
       if (doc.status !== 'completed') return sum
 
-      const rawPrice = doc.service?.price || doc.price || 0
-      const numericPrice = Number(rawPrice) || 0
-      return sum + numericPrice
+      // Safe extraction of price from nested service or root doc
+      const servicePrice = typeof doc.service === 'object' ? doc.service?.price : null
+      const rawPrice = servicePrice ?? doc.price ?? 0
+
+      return sum + (Number(rawPrice) || 0)
     }, 0)
 
-  const periodRevenue = calculateRevenue(currentData.docs)
-  const prevPeriodRevenue = calculateRevenue(previousData.docs)
+  const periodRevenue = calculateRevenue(currentDocs)
+  const prevPeriodRevenue = calculateRevenue(previousDocs)
 
   let growth = 0
   if (prevPeriodRevenue > 0) {
@@ -96,14 +114,15 @@ export async function GET(request: Request) {
     growth = 100
   }
 
+  // --- 4. TALLY CATEGORY SALES ---
   const categorySales: Record<string, number> = {}
-  currentData.docs.forEach((doc: any) => {
-    // ONLY tally category sales if the status is completed
+  currentDocs.forEach((doc) => {
     if (doc.status !== 'completed') return
 
-    const serviceName = doc.service?.title || 'General Consultation'
-    const rawPrice = doc.service?.price || doc.price || 0
-    const price = Number(rawPrice) || 0
+    const serviceName =
+      (typeof doc.service === 'object' ? doc.service?.title : null) || 'General Consultation'
+    const servicePrice = typeof doc.service === 'object' ? doc.service?.price : null
+    const price = Number(servicePrice ?? doc.price ?? 0)
 
     if (!categorySales[serviceName]) {
       categorySales[serviceName] = 0
@@ -115,25 +134,29 @@ export async function GET(request: Request) {
     Object.entries(categorySales).sort(([, a], [, b]) => b - a),
   )
 
-  const recent = currentData.docs
-    .filter((doc: any) => doc.status === 'completed') // Filter completed status first
-    .slice(0, 8) // Then grab the latest 8
-    .map((doc: any) => ({
-      id: doc.id,
-      firstName: doc.firstName,
-      surname: doc.surname,
-      service: doc.service?.title || 'General Consultation',
-      price: Number(doc.service?.price || doc.price || 0),
-      time: dayjs(doc.appointmentDate).tz('Asia/Manila').format('hh:mm A'),
-      date: dayjs(doc.appointmentDate).tz('Asia/Manila').format('MMM D, YYYY'),
-    }))
+  // --- 5. RECENT COMPLETED APPOINTMENTS ---
+  const recent = currentDocs
+    .filter((doc) => doc.status === 'completed')
+    .slice(0, 8)
+    .map((doc) => {
+      const serviceObj = typeof doc.service === 'object' ? doc.service : null
+      return {
+        id: doc.id,
+        firstName: doc.firstName,
+        surname: doc.surname,
+        service: serviceObj?.title || 'General Consultation',
+        price: Number(serviceObj?.price || doc.price || 0),
+        time: dayjs(doc.appointmentDate).tz('Asia/Manila').format('hh:mm A'),
+        date: dayjs(doc.appointmentDate).tz('Asia/Manila').format('MMM D, YYYY'),
+      }
+    })
 
   return NextResponse.json({
     periodRevenue,
     prevPeriodRevenue,
     growth,
     categorySales: sortedCategorySales,
-    totalAppointments: currentData.totalDocs, // Total sessions still counts everything not cancelled
+    totalAppointments: currentData.totalDocs,
     recent,
   })
 }

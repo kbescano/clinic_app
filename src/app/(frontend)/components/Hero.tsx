@@ -30,16 +30,20 @@ const SLIDES = [
 export default function CinematicVideoHero() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const [isReady, setIsReady] = useState(false)
+  const [isMounted, setIsMounted] = useState(false) // Trigger for first-load animation
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
 
-  // SVG Circle Constants
   const radius = 8
   const circumference = 2 * Math.PI * radius
+  const SLIDE_DURATION = 6000
 
   useEffect(() => {
+    // Force a re-render to start the first animation
+    setIsMounted(true)
+
     const slideTimer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % SLIDES.length)
-    }, 6000)
+    }, SLIDE_DURATION)
 
     const readyTimer = setTimeout(() => setIsReady(true), 400)
 
@@ -154,13 +158,12 @@ export default function CinematicVideoHero() {
                 }`}
               />
 
-              {/* Progress Circle */}
+              {/* Progress Circle Container */}
               <svg
                 className={`absolute inset-0 w-full h-full -rotate-90 transform transition-all duration-1000 ${slowEase} ${
                   isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
                 }`}
               >
-                {/* Track - cx/cy updated to 12 to center in the w-6 (24px) container */}
                 <circle
                   cx="12"
                   cy="12"
@@ -170,7 +173,6 @@ export default function CinematicVideoHero() {
                   fill="transparent"
                   className="text-white/10"
                 />
-                {/* Active Progress Border */}
                 <circle
                   cx="12"
                   cy="12"
@@ -180,8 +182,9 @@ export default function CinematicVideoHero() {
                   fill="transparent"
                   strokeDasharray={circumference}
                   style={{
-                    strokeDashoffset: isActive ? 0 : circumference,
-                    transition: isActive ? 'stroke-dashoffset 6000ms linear' : 'none',
+                    // Logic: Start at full circumference, transition to 0 ONLY if mounted and active
+                    strokeDashoffset: isActive && isMounted ? 0 : circumference,
+                    transition: isActive ? `stroke-dashoffset ${SLIDE_DURATION}ms linear` : 'none',
                   }}
                   className="text-white"
                 />

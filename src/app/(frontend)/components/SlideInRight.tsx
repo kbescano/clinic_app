@@ -19,8 +19,10 @@ export default function SlideInRight({ children, width = '50vw' }: SlideInRightP
         duration: 0.8,
         ease: [0.33, 1, 0.68, 1], // Luxury "weighted" cubic bezier
       }}
-      /* Applied dynamic width via Tailwind arbitrary value syntax */
-      className={`fixed top-0 right-0 h-full w-full md:w-[${width}] bg-white dark:bg-black z-[210] shadow-2xl border-l border-zinc-100 dark:border-zinc-900 overflow-y-auto`}
+      // 1. Pass the dynamic value as a CSS variable
+      style={{ '--slide-width': width } as React.CSSProperties}
+      // 2. Reference the variable in a static Tailwind class
+      className="fixed top-0 right-0 h-full w-full md:w-[var(--slide-width)] bg-white dark:bg-black z-[210] shadow-2xl border-l border-zinc-100 dark:border-zinc-900 overflow-y-auto"
     >
       {children}
     </motion.div>

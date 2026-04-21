@@ -6,7 +6,6 @@ import MobileMenu from './components/MobileMenu'
 import { ColorConfig } from '@/payload-types'
 import { Ovo } from 'next/font/google'
 import Navbar from './components/Navbar'
-import { ContactProvider } from './components/ContactContext'
 import ScrollToTop from './components/ScrollToTop'
 
 // 1. Import your new Notification context and modal
@@ -32,7 +31,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     slug: 'color-config',
   })) as ColorConfig
 
-  const contactData = await payload.findGlobal({ slug: 'contact-config' })
   const headerData = await payload.findGlobal({ slug: 'header-config' })
 
   // Fallback colors in case the CMS is empty
@@ -59,10 +57,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
         {/* 2. Wrap the entire app architecture in the NotificationProvider */}
         <NotificationProvider>
-          <ContactProvider contactData={contactData}>
-            <Navbar contactData={contactData} headerData={headerData} />
-            <main className="min-h-screen pb-20 lg:pb-0 dark:bg-black">{children}</main>
-          </ContactProvider>
+          <Navbar headerData={headerData} />
+          <main className="min-h-screen pb-20 lg:pb-0 dark:bg-black">{children}</main>
 
           <MobileMenu />
 

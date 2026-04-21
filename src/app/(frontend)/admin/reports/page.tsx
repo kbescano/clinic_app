@@ -15,7 +15,7 @@ import {
 import Link from 'next/link'
 import dayjs from '@/lib/dayjs'
 import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import autoTable, { UserOptions } from 'jspdf-autotable'
 import {
   Listbox,
   ListboxButton,
@@ -25,8 +25,50 @@ import {
 } from '@headlessui/react'
 import { Fragment } from 'react'
 
+// --- TYPES & INTERFACES ---
+
 type ReportRange = 'thisMonth' | 'specificMonth' | 'ytd' | 'all'
 type ReportFormat = 'pdf' | 'csv' | null
+
+interface CategorySale {
+  service: string
+  total: number
+}
+
+interface MonthlyBreakdown {
+  month: string
+  sessions: number
+  revenue: number
+  categorySales: CategorySale[]
+}
+
+interface ReportSummary {
+  totalSessions: number
+  totalRevenue: number
+  overallCategorySales: CategorySale[]
+  monthlyReports: MonthlyBreakdown[]
+}
+
+interface ReportEntry {
+  date: string
+  patient: string
+  email: string
+  phone: string
+  service: string
+  price: number
+}
+
+interface ReportApiResponse {
+  reports: ReportEntry[]
+  summary: ReportSummary
+}
+
+// Extension for jsPDF to handle autoTable's internal state tracking
+interface jsPDFWithAutoTable extends jsPDF {
+  lastAutoTable: {
+    finalY: number
+  }
+}
 
 const MONTHS = [
   'January',
@@ -78,9 +120,8 @@ export default function ReportsClient() {
         throw new Error(`Server Error ${res.status}: ${errorData}`)
       }
 
-      const { reports, summary } = await res.json()
+      const { reports, summary }: ReportApiResponse = await res.json()
 
-      // SMART FILENAME GENERATOR WITH EXPORT DATE
       const exportDate = dayjs().format('YYYYMMDD')
       let filenameLabel = 'Clinic_Report'
 
@@ -98,13 +139,13 @@ export default function ReportsClient() {
         let csvContent = `CLINIC REPORT: ${getRangeLabel()}\nTotal Sessions: ${summary.totalSessions}\nTotal Revenue: PHP ${summary.totalRevenue}\n\n`
 
         csvContent += `CATEGORY SALES SUMMARY\nService,Total Revenue\n`
-        summary.overallCategorySales.forEach((c: any) => {
+        summary.overallCategorySales.forEach((c: CategorySale) => {
           csvContent += `"${c.service}",${c.total}\n`
         })
 
         csvContent += `\nRAW LEDGER\nDate,Patient,Email,Phone,Service,Price (PHP)\n`
         const csvRows = reports.map(
-          (r: any) =>
+          (r: ReportEntry) =>
             `"${r.date}","${r.patient}","${r.email}","${r.phone}","${r.service}",${r.price}`,
         )
         csvContent += csvRows.join('\n')
@@ -118,7 +159,7 @@ export default function ReportsClient() {
         link.click()
         document.body.removeChild(link)
       } else if (format === 'pdf') {
-        const doc = new jsPDF()
+        const doc = new jsPDF() as jsPDFWithAutoTable
         let currentY = 20
 
         const addHeader = (title: string, yPos: number) => {
@@ -152,7 +193,7 @@ export default function ReportsClient() {
         autoTable(doc, {
           startY: currentY + 4,
           head: [['Service Category', 'Total Revenue']],
-          body: summary.overallCategorySales.map((c: any) => [
+          body: summary.overallCategorySales.map((c: CategorySale) => [
             c.service,
             `PHP ${c.total.toLocaleString()}`,
           ]),
@@ -160,11 +201,11 @@ export default function ReportsClient() {
           headStyles: { fillColor: [37, 17, 1], textColor: [255, 255, 255], font: 'times' },
           bodyStyles: { font: 'times' },
           alternateRowStyles: { fillColor: [250, 250, 250] },
-        })
-        currentY = (doc as any).lastAutoTable.finalY + 15
+        } as UserOptions)
+        currentY = doc.lastAutoTable.finalY + 15
 
         if ((range === 'ytd' || range === 'all') && summary.monthlyReports.length > 0) {
-          summary.monthlyReports.forEach((monthData: any) => {
+          summary.monthlyReports.forEach((monthData: MonthlyBreakdown) => {
             if (currentY > 250) {
               doc.addPage()
               currentY = 20
@@ -183,15 +224,15 @@ export default function ReportsClient() {
             autoTable(doc, {
               startY: currentY + 4,
               head: [['Service Category', 'Revenue']],
-              body: monthData.categorySales.map((c: any) => [
+              body: monthData.categorySales.map((c: CategorySale) => [
                 c.service,
                 `PHP ${c.total.toLocaleString()}`,
               ]),
               theme: 'grid',
               headStyles: { fillColor: [100, 100, 100], textColor: [255, 255, 255], font: 'times' },
               bodyStyles: { font: 'times' },
-            })
-            currentY = (doc as any).lastAutoTable.finalY + 15
+            } as UserOptions)
+            currentY = doc.lastAutoTable.finalY + 15
           })
         }
 
@@ -201,7 +242,7 @@ export default function ReportsClient() {
         autoTable(doc, {
           startY: currentY + 4,
           head: [['Date', 'Patient', 'Service', 'Price']],
-          body: reports.map((r: any) => [
+          body: reports.map((r: ReportEntry) => [
             r.date,
             r.patient,
             r.service,
@@ -211,13 +252,14 @@ export default function ReportsClient() {
           headStyles: { fillColor: [37, 17, 1], textColor: [255, 255, 255], font: 'times' },
           bodyStyles: { font: 'times' },
           alternateRowStyles: { fillColor: [250, 250, 250] },
-        })
+        } as UserOptions)
 
         doc.save(`${filenameLabel}.pdf`)
       }
-    } catch (error: any) {
-      console.error('Download failed:', error)
-      alert(`Export Failed: ${error.message}`)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error'
+      console.error('Download failed:', message)
+      alert(`Export Failed: ${message}`)
     } finally {
       setIsGenerating(false)
     }
@@ -252,7 +294,6 @@ export default function ReportsClient() {
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
-            {/* LEFT COLUMN: CONTROLS */}
             <div className="lg:col-span-5 flex flex-col gap-10">
               <section className="flex flex-col gap-6">
                 <div className="flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-900/50 pb-3">
@@ -266,13 +307,11 @@ export default function ReportsClient() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <RangeCard
-                    id="thisMonth"
                     label="This Month"
                     active={range === 'thisMonth'}
                     onClick={() => setRange('thisMonth')}
                   />
 
-                  {/* REFACTORED SPECIFIC MONTH CARD */}
                   <div
                     className={`relative flex flex-col justify-between p-4 min-h-[84px] rounded-xl border transition-all duration-300 cursor-pointer ${
                       range === 'specificMonth'
@@ -345,13 +384,11 @@ export default function ReportsClient() {
                   </div>
 
                   <RangeCard
-                    id="ytd"
                     label="Year to Date"
                     active={range === 'ytd'}
                     onClick={() => setRange('ytd')}
                   />
                   <RangeCard
-                    id="all"
                     label="All Time"
                     active={range === 'all'}
                     onClick={() => setRange('all')}
@@ -369,7 +406,6 @@ export default function ReportsClient() {
                 </div>
                 <div className="flex flex-col gap-3">
                   <FormatCard
-                    id="pdf"
                     title="Executive Summary (PDF)"
                     desc={
                       range === 'ytd' || range === 'all'
@@ -381,7 +417,6 @@ export default function ReportsClient() {
                     onClick={() => setFormat('pdf')}
                   />
                   <FormatCard
-                    id="csv"
                     title="Raw Ledger (CSV)"
                     desc="Spreadsheet of all completed sessions and summary tables."
                     icon={TableCellsIcon}
@@ -420,7 +455,6 @@ export default function ReportsClient() {
               </div>
             </div>
 
-            {/* RIGHT COLUMN: LIVE PREVIEW */}
             <div className="lg:col-span-7 flex flex-col">
               <div className="flex items-center gap-3 border-b border-zinc-100 dark:border-zinc-900/50 pb-3 mb-6">
                 <EyeIcon className="w-4 h-4 text-[#595f72]" />
@@ -524,12 +558,10 @@ export default function ReportsClient() {
 }
 
 function RangeCard({
-  id,
   label,
   active,
   onClick,
 }: {
-  id: string
   label: string
   active: boolean
   onClick: () => void
@@ -556,17 +588,15 @@ function RangeCard({
 }
 
 function FormatCard({
-  id,
   title,
   desc,
   icon: Icon,
   active,
   onClick,
 }: {
-  id: string
   title: string
   desc: string
-  icon: any
+  icon: React.ElementType
   active: boolean
   onClick: () => void
 }) {

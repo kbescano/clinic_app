@@ -3,6 +3,7 @@
 import React from 'react'
 import { usePathname } from 'next/navigation'
 import { useContact } from './ContactContext'
+import { motion } from 'framer-motion'
 
 interface ContactTriggerProps {
   contactData: {
@@ -17,60 +18,48 @@ export default function ContactTrigger({ contactData }: ContactTriggerProps) {
   const { onOpen } = useContact()
   const pathname = usePathname()
 
-  // Logic gate: Use white on the homepage top, black everywhere else
+  // Detect if we are on the Hero/Dark section
   const isHomePage = pathname === '/'
 
   return (
-    <button
-      onClick={onOpen}
-      // Use contactData here to give screen readers context
-      aria-label={`Contact us at ${contactData.email}`}
-      className="flex items-center gap-3 group outline-none transition-all duration-500 hover:scale-110"
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.5, duration: 1, ease: [0.19, 1, 0.22, 1] }}
+      className="fixed bottom-20 right-5 md:right-10 z-[150]"
     >
-      <svg
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="transition-opacity duration-500"
+      <button
+        onClick={onOpen}
+        aria-label={`Contact ${contactData.email}`}
+        className="relative group flex items-center justify-center w-12 h-12 md:w-14 md:h-14 outline-none transition-all duration-700"
       >
-        <defs>
-          {/* STEALTH BLACK GRADIENT: For internal pages / Clinical look */}
-          <linearGradient id="blackAtelierGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#000000" />
-            <stop offset="40%" stopColor="#050505" />
-            <stop offset="75%" stopColor="#121212" />
-            <stop offset="100%" stopColor="#251101" />
-          </linearGradient>
+        {/* HAIRLINE OUTER RING: Static and elegant */}
+        <div
+          className={`absolute inset-[-4px] rounded-full border-[0.5px] transition-all duration-700 ${
+            isHomePage
+              ? 'border-white/20 group-hover:border-white/40'
+              : 'border-zinc-200 dark:border-zinc-800 group-hover:border-[#251101]'
+          }`}
+        />
 
-          {/* ALABASTER WHITE GRADIENT: For homepage hero / Cinematic look */}
-          <linearGradient id="whiteAtelierGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FFFFFF" />
-            <stop offset="30%" stopColor="#FAFAFA" />
-            <stop offset="70%" stopColor="#F5F5F4" />
-            <stop offset="100%" stopColor="#ECECEB" />
-          </linearGradient>
-        </defs>
+        {/* BUBBLE BODY: Pure solid fill with no gradients */}
 
-        {/* ENVELOPE ICON: Stroke switches ID based on route */}
-        <path
-          d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z"
-          stroke={isHomePage ? 'url(#whiteAtelierGradient)' : 'url(#blackAtelierGradient)'}
-          strokeWidth="1.5"
+        {/* ICON: Minimalist stroke, no gradients */}
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="white"
+          stroke="currentColor"
+          strokeWidth="1.2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="transition-all duration-700"
-        />
-        <path
-          d="M22 6L12 13L2 6"
-          stroke={isHomePage ? 'url(#whiteAtelierGradient)' : 'url(#blackAtelierGradient)'}
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="transition-all duration-700"
-        />
-      </svg>
-    </button>
+          className="relative z-10 transition-transform duration-700 group-hover:scale-110"
+        >
+          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+          <polyline points="22,6 12,13 2,6" />
+        </svg>
+      </button>
+    </motion.div>
   )
 }
