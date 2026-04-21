@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react'
-import { getLatestActivity } from '../booking/actions' // Adjust path
+import { getLatestActivity } from '../booking/actions'
 
 export interface ApptNotification {
   id: string
@@ -18,7 +18,7 @@ interface NotificationContextType {
   isOpen: boolean
   onOpen: () => void
   onClose: () => void
-  refresh: () => void // New refresh trigger
+  refresh: () => void
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
@@ -28,25 +28,34 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [notifications, setNotifications] = useState<ApptNotification[]>([])
   const [lastSeenId, setLastSeenId] = useState<string | null>(null)
 
-  // 1. FETCH LOGIC
+  // 1. Define fetchActivity first with useCallback
   const fetchActivity = useCallback(async () => {
-    const data = await getLatestActivity()
-    setNotifications(data)
+    try {
+      const data = await getLatestActivity()
+      setNotifications(data)
+    } catch (error) {
+      console.error('Atelier Registry Sync Error:', error)
+    }
   }, [])
 
+  // 2. Include fetchActivity in the dependency array
   useEffect(() => {
+    const saved = localStorage.getItem('atelier_last_seen_id')
+    if (saved) setLastSeenId(saved)
+
     fetchActivity()
   }, [fetchActivity])
 
-  // 2. UNREAD LOGIC (Session-based: Badge shows if latest ID is new to this session)
-  const unreadCount = notifications.length > 0 && notifications[0].id !== lastSeenId ? 1 : 0
+  const topId = notifications[0]?.id || null
+  const unreadCount = topId && topId !== lastSeenId ? 1 : 0
 
   const onOpen = useCallback(() => {
-    setIsOpen(true)
-    if (notifications.length > 0) {
-      setLastSeenId(notifications[0].id) // Clear badge by marking the latest ID as "seen"
+    if (topId) {
+      setLastSeenId(topId)
+      localStorage.setItem('atelier_last_seen_id', topId)
     }
-  }, [notifications])
+    setIsOpen(true)
+  }, [topId])
 
   const onClose = useCallback(() => setIsOpen(false), [])
 
