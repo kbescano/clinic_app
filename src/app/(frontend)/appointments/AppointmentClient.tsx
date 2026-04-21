@@ -14,7 +14,6 @@ import {
 import dayjs from '@/lib/dayjs'
 import { useSearchParams } from 'next/navigation'
 
-// 1. Define specific interfaces for the Patient Portal
 interface PatientVisit {
   id: string
   date: string | Date
@@ -99,7 +98,8 @@ export default function AppointmentClient({ initialData }: { initialData: Patien
     let sCount = 0
 
     patientData.history.forEach((h) => {
-      const isPast = dayjs(h.date).isBefore(now)
+      const isPast = dayjs(h.date).add(1, 'hour').isBefore(now)
+
       if (filter === 'upcoming' && isPast) return
       if (filter === 'past' && !isPast) return
 
@@ -131,9 +131,16 @@ export default function AppointmentClient({ initialData }: { initialData: Patien
     })
 
     const sorted = Object.values(groups).sort((a, b) => {
-      const timeA = dayjs(a.date).valueOf()
-      const timeB = dayjs(b.date).valueOf()
+      const timeA = dayjs(a.date).startOf('day').valueOf()
+      const timeB = dayjs(b.date).startOf('day').valueOf()
       return filter === 'upcoming' ? timeA - timeB : timeB - timeA
+    })
+
+    sorted.forEach((group) => {
+      group.main.sort((a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf())
+      Object.values(group.guests).forEach((guestVisits) => {
+        guestVisits.sort((a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf())
+      })
     })
 
     return { timelineRegistry: sorted, totalServices: sCount }
@@ -482,18 +489,38 @@ function AppointmentRow({
     pending: 'text-amber-600',
     cancelled: 'text-[#d7263d]',
   }
+
+  const now = dayjs()
+  const visitDate = dayjs(visit.date)
+
+  const isCurrentlyOngoing = now.isAfter(visitDate) && now.isBefore(visitDate.add(1, 'hour'))
+  const isFutureTime = now.isBefore(visitDate)
+
   const rescheduleUrl = `/booking?reschedule=true&id=${visit.id || ''}&service=${encodeURIComponent(visit.service || '')}&date=${dayjs(visit.date).format('YYYY-MM-DD')}&time=${dayjs(visit.date).format('HH:mm')}&fn=${encodeURIComponent(visit.firstName || '')}&sn=${encodeURIComponent(visit.surname || '')}&email=${encodeURIComponent(patientData?.email || '')}&ph=${encodeURIComponent(patientData?.phone || '')}`
 
   return (
     <div className="flex justify-between items-baseline gap-6 font-serif group">
       <div className="space-y-1">
+        {isUpcoming && isCurrentlyOngoing && visit.status !== 'cancelled' && (
+          <span className="text-[10px] text-[#248232] uppercase tracking-[0.2em] font-bold animate-pulse">
+            ● Ongoing
+          </span>
+        )}
+        {isUpcoming && isFutureTime && visit.status !== 'cancelled' && (
+          <span className="text-[10px] text-[#48a9a6] uppercase tracking-[0.2em] font-medium">
+            Upcoming
+          </span>
+        )}
         <h3 className="text-[15px] md:text-[18px] font-serif font-light tracking-tight capitalize text-[#251101] dark:text-zinc-100 leading-none">
           {visit.service}
         </h3>
-        <p className="text-[11px] font-serif opacity-40 tabular-nums">
-          {dayjs(visit.date).format('hh:mm A')}
-        </p>
+        <div className="flex items-center gap-2 pt-0.5">
+          <p className="text-[11px] font-serif opacity-40 tabular-nums leading-none">
+            {dayjs(visit.date).format('hh:mm A')}
+          </p>
+        </div>
       </div>
+
       <div className="flex items-center gap-6">
         <span
           className={`text-[12px] md:text-[13px] uppercase font-medium tracking-[0.1em] shrink-0 leading-none ${statusColors[visit.status] || 'text-[#595f72]'}`}
