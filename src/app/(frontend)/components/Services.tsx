@@ -34,7 +34,10 @@ interface ServiceCardProps {
   setExpandedId: (id: string | null) => void
   detailsOpenId: string | null
   setDetailsOpenId: (id: string | null) => void
+  index: number
 }
+
+const atelierEase = 'ease-[cubic-bezier(0.16,1,0.3,1)]'
 
 // --- SUB-COMPONENT: CHOREOGRAPHED SERVICE CARD ---
 const ServiceCard = ({
@@ -43,21 +46,25 @@ const ServiceCard = ({
   setExpandedId,
   detailsOpenId,
   setDetailsOpenId,
+  index,
 }: ServiceCardProps) => {
   const [isVisible, setIsVisible] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Increased threshold to 0.2: Animation won't start until 20% of the card is on-screen
-    const observer = new IntersectionObserver(([entry]) => setIsVisible(entry.isIntersecting), {
-      threshold: 0.2,
-      rootMargin: '0px 0px -50px 0px',
-    })
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsVisible(entry.isIntersecting)
+      },
+      {
+        threshold: 0.1,
+        rootMargin: '-10% 0px -10% 0px',
+      },
+    )
+
     if (cardRef.current) observer.observe(cardRef.current)
     return () => observer.disconnect()
   }, [])
-
-  const atelierEase = 'ease-[cubic-bezier(0.16,1,0.3,1)]'
 
   return (
     <div
@@ -66,21 +73,23 @@ const ServiceCard = ({
     >
       {/* IMAGE CONTAINER */}
       <div className="relative w-full md:w-[45%] shrink-0 overflow-hidden h-[550px] md:h-auto md:min-h-[750px] bg-zinc-50 dark:bg-black">
-        {/* 1. THE CURTAIN REVEAL: Solid block that slides away */}
+        {/* 1. THE CURTAIN REVEAL */}
         <div
           className={`absolute inset-0 z-20 bg-white dark:bg-[#050505] origin-right transition-transform duration-[2000ms] ${atelierEase} ${
-            isVisible ? 'scale-x-0' : 'scale-x-100'
+            isVisible ? 'scale-x-0 delay-[100ms]' : 'scale-x-100 delay-0'
           }`}
         />
 
-        {/* The Image (Scales down and un-blurs as the curtain opens) */}
+        {/* 2. IMAGE FOCUS */}
         <div
-          className={`h-full w-full transition-all duration-[2500ms] delay-200 ${atelierEase} origin-center ${
-            isVisible ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-[1.1] blur-[15px]'
+          className={`h-full w-full transition-all duration-[2500ms] ${atelierEase} origin-center ${
+            isVisible
+              ? 'opacity-100 scale-100 blur-0 delay-[200ms]'
+              : 'opacity-0 scale-[1.1] blur-[15px] delay-0'
           }`}
         >
           {service.images && service.images.length > 0 ? (
-            <ServiceSlider images={service.images} />
+            <ServiceSlider images={service.images} priority={index < 2} />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-[7px] uppercase tracking-[0.8em] text-zinc-400 font-serif">
               Media Offline
@@ -93,20 +102,22 @@ const ServiceCard = ({
       <div className="flex flex-col flex-1 p-8 md:p-20 lg:p-28 justify-center relative">
         <div className="max-w-md w-full mx-auto">
           <div className="space-y-8">
-            {/* 2. TYPOGRAPHY COLLAPSE: Letter spacing collapses as it rises */}
+            {/* 3. TYPOGRAPHY COLLAPSE: Fixed wrap issue by using static tracking and animating blur instead */}
             <h3
-              className={`text-[18px] md:text-[22px] font-normal font-serif text-[#251101] dark:text-zinc-100 leading-tight transition-all duration-[2000ms] delay-[400ms] ${atelierEase} ${
+              className={`text-[18px] md:text-[22px] font-normal font-serif text-[#251101] dark:text-zinc-100 leading-tight tracking-tight transition-all duration-[2000ms] ${atelierEase} ${
                 isVisible
-                  ? 'opacity-100 translate-y-0 tracking-tight blur-0'
-                  : 'opacity-0 translate-y-12 tracking-[0.3em] blur-md'
+                  ? 'opacity-100 translate-y-0 blur-0 delay-[400ms]'
+                  : 'opacity-0 translate-y-8 blur-[4px] delay-0'
               }`}
             >
               {service.title}
             </h3>
 
             <div
-              className={`space-y-6 transition-all duration-[1500ms] delay-[600ms] ${atelierEase} ${
-                isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-12'
+              className={`space-y-6 transition-all duration-[1500ms] ${atelierEase} ${
+                isVisible
+                  ? 'opacity-100 translate-y-0 delay-[600ms]'
+                  : 'opacity-0 translate-y-12 delay-0'
               }`}
             >
               <div className="flex flex-col items-start gap-4">
@@ -130,10 +141,10 @@ const ServiceCard = ({
             {/* DETAILS ACCORDION */}
             {service.details && service.details.length > 0 && (
               <div className="relative pt-4 mt-8">
-                {/* 3. DRAW-IN BORDER: Top line draws itself */}
+                {/* Top Border Draw-in */}
                 <div
-                  className={`absolute top-0 left-0 h-[0.5px] bg-zinc-200 dark:bg-zinc-800 transition-all duration-[2000ms] delay-[800ms] ${atelierEase} ${
-                    isVisible ? 'w-full' : 'w-0'
+                  className={`absolute top-0 left-0 h-[0.5px] bg-zinc-200 dark:bg-zinc-800 transition-all duration-[2000ms] ${atelierEase} ${
+                    isVisible ? 'w-full delay-[800ms]' : 'w-0 delay-0'
                   }`}
                 />
 
@@ -145,17 +156,16 @@ const ServiceCard = ({
                       key={idx}
                       className={`relative border-b border-transparent transition-all duration-[1000ms] ${atelierEase}`}
                       style={{
-                        transitionDelay: `${900 + idx * 150}ms`,
+                        transitionDelay: isVisible ? `${900 + idx * 150}ms` : '0ms',
                         opacity: isVisible ? 1 : 0,
                         transform: isVisible ? 'translateY(0)' : 'translateY(20px)',
                       }}
                     >
-                      {/* Individual accordion bottom borders draw themselves */}
                       <div
                         className={`absolute bottom-0 left-0 h-[0.5px] bg-zinc-100 dark:bg-zinc-900 transition-all duration-[1500ms] ${atelierEase}`}
                         style={{
                           width: isVisible ? '100%' : '0%',
-                          transitionDelay: `${1000 + idx * 150}ms`,
+                          transitionDelay: isVisible ? `${1000 + idx * 150}ms` : '0ms',
                         }}
                       />
 
@@ -193,15 +203,18 @@ const ServiceCard = ({
           </div>
 
           <footer className="relative flex items-end justify-between pt-12 mt-12">
-            {/* Draw-in Border for Footer */}
             <div
-              className={`absolute top-0 left-0 h-[0.5px] bg-zinc-200 dark:bg-zinc-800 transition-all duration-[2000ms] delay-[1200ms] ${atelierEase} ${
-                isVisible ? 'w-full' : 'w-0'
+              className={`absolute top-0 left-0 h-[0.5px] bg-zinc-200 dark:bg-zinc-800 transition-all duration-[2000ms] ${atelierEase} ${
+                isVisible ? 'w-full delay-[1200ms]' : 'w-0 delay-0'
               }`}
             />
 
             <div
-              className={`space-y-1 transition-all duration-[1500ms] delay-[1400ms] ${atelierEase} ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+              className={`space-y-1 transition-all duration-[1500ms] ${atelierEase} ${
+                isVisible
+                  ? 'opacity-100 translate-y-0 delay-[1400ms]'
+                  : 'opacity-0 translate-y-8 delay-0'
+              }`}
             >
               <span className="block text-[7px] uppercase tracking-[0.6em] text-[#595f72] font-serif opacity-50">
                 Price
@@ -213,7 +226,11 @@ const ServiceCard = ({
 
             <Link
               href={`/booking?serviceId=${service.id}`}
-              className={`group/book flex items-center gap-4 text-[9px] font-bold uppercase tracking-[0.4em] font-serif outline-none transition-all duration-[1500ms] delay-[1500ms] ${atelierEase} ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+              className={`group/book flex items-center gap-4 text-[9px] font-bold uppercase tracking-[0.4em] font-serif outline-none transition-all duration-[1500ms] ${atelierEase} ${
+                isVisible
+                  ? 'opacity-100 translate-y-0 delay-[1500ms]'
+                  : 'opacity-0 translate-y-8 delay-0'
+              }`}
             >
               <span className="relative pb-1">
                 Book now
@@ -228,8 +245,8 @@ const ServiceCard = ({
   )
 }
 
-// --- SUB-COMPONENT: SLIDER (LOGIC UNTOUCHED) ---
-const ServiceSlider = ({ images }: { images: ServiceImage[] }) => {
+// --- SUB-COMPONENT: SLIDER ---
+const ServiceSlider = ({ images, priority }: { images: ServiceImage[]; priority?: boolean }) => {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, align: 'start' })
   const [selectedIndex, setSelectedIndex] = useState(0)
 
@@ -257,6 +274,7 @@ const ServiceSlider = ({ images }: { images: ServiceImage[] }) => {
                 src={item.image?.url || item.url || ''}
                 alt="Service"
                 fill
+                priority={priority && index === 0}
                 className="object-cover transition-transform duration-[4000ms] ease-out group-hover/slider:scale-110"
                 sizes="(max-width: 768px) 100vw, 50vw"
               />
@@ -308,12 +326,17 @@ export default function Services() {
   const [detailsOpenId, setDetailsOpenId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const pathname = usePathname()
-  const [isHeaderMounted, setIsHeaderMounted] = useState(false)
+
+  const [isHeaderVisible, setIsHeaderVisible] = useState(false)
+  const headerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Slight delay to ensure the page is fully loaded before the header animates in
-    const timer = setTimeout(() => setIsHeaderMounted(true), 100)
-    return () => clearTimeout(timer)
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsHeaderVisible(entry.isIntersecting),
+      { threshold: 0.1, rootMargin: '0px 0px -10% 0px' },
+    )
+    if (headerRef.current) observer.observe(headerRef.current)
+    return () => observer.disconnect()
   }, [])
 
   useEffect(() => {
@@ -331,69 +354,71 @@ export default function Services() {
     fetchServices()
   }, [])
 
-  if (loading)
-    return (
-      <div className="bg-white dark:bg-[#050505] min-h-screen flex flex-col items-center justify-center space-y-4">
-        <div className="w-8 h-8 border-[0.5px] border-[#251101] dark:border-white rounded-full animate-ping opacity-20" />
-        <span className="text-zinc-400 uppercase tracking-[0.8em] text-[7px] font-serif animate-pulse">
-          Registry
-        </span>
-      </div>
-    )
-
-  const atelierEase = 'ease-[cubic-bezier(0.16,1,0.3,1)]'
-
   return (
     <section
       id="services"
-      className="relative z-10 bg-white dark:bg-[#050505] shadow-[0_-20px_40px_rgba(0,0,0,0.05)] dark:shadow-[0_-20px_50px_rgba(0,0,0,0.5)] selection:bg-zinc-100"
+      className="relative z-10 bg-white dark:bg-[#050505] shadow-[0_-20px_40px_rgba(0,0,0,0.05)] dark:shadow-[0_-20px_50px_rgba(0,0,0,0.5)] selection:bg-zinc-100 min-h-screen flex flex-col"
     >
-      {/* SMALL HEADER: Staggered entrance */}
+      {/* HEADER */}
       {pathname === '/services' && (
-        <div className="max-w-[1440px] mx-auto pt-32 pb-16 px-8 border-x border-zinc-100 dark:border-zinc-900 overflow-hidden">
+        <div
+          ref={headerRef}
+          className="max-w-[1440px] w-full mx-auto pt-32 pb-16 px-8 border-x border-zinc-100 dark:border-zinc-900 overflow-hidden"
+        >
           <div className="space-y-5">
+            {/* Removed tracking animation here as well to prevent wrap issues */}
             <span
-              className={`text-[8px] uppercase text-[#595f72] font-serif block transition-all duration-[2000ms] ${atelierEase} ${
-                isHeaderMounted
-                  ? 'opacity-50 translate-y-0 tracking-[0.8em]'
-                  : 'opacity-0 translate-y-8 tracking-[1.5em]'
+              className={`text-[8px] uppercase tracking-[0.8em] text-[#595f72] font-serif block transition-all duration-[2000ms] ${atelierEase} ${
+                isHeaderVisible
+                  ? 'opacity-50 translate-y-0 blur-0 delay-0'
+                  : 'opacity-0 translate-y-6 blur-[2px] delay-0'
               }`}
             >
               Treatment Registry
             </span>
             <h2
-              className={`text-[24px] md:text-[32px] font-normal font-serif text-[#251101] dark:text-zinc-100 leading-none transition-all duration-[2000ms] delay-[200ms] ${atelierEase} ${
-                isHeaderMounted
-                  ? 'opacity-100 translate-y-0 tracking-tight'
-                  : 'opacity-0 translate-y-12 tracking-[0.2em]'
+              className={`text-[24px] md:text-[32px] font-normal font-serif tracking-tight text-[#251101] dark:text-zinc-100 leading-none transition-all duration-[2000ms] ${atelierEase} ${
+                isHeaderVisible
+                  ? 'opacity-100 translate-y-0 blur-0 delay-[200ms]'
+                  : 'opacity-0 translate-y-8 blur-[4px] delay-0'
               }`}
             >
               The Collection
             </h2>
             <div
-              className={`h-[0.5px] bg-[#251101] dark:bg-white transition-all duration-[2500ms] delay-[400ms] ${atelierEase} ${
-                isHeaderMounted ? 'w-12 opacity-20' : 'w-0 opacity-0'
+              className={`h-[0.5px] bg-[#251101] dark:bg-white transition-all duration-[2500ms] ${atelierEase} ${
+                isHeaderVisible ? 'w-12 opacity-20 delay-[400ms]' : 'w-0 opacity-0 delay-0'
               }`}
             />
           </div>
         </div>
       )}
 
-      {/* SERVICE LIST: Replaced solid borders with draw-in borders in the children */}
-      <div className="max-w-[1440px] mx-auto border-x border-zinc-100 dark:border-zinc-900 relative">
-        <div className="flex flex-col">
-          {services.map((service) => (
-            <ServiceCard
-              key={service.id}
-              service={service}
-              expandedId={expandedId}
-              setExpandedId={setExpandedId}
-              detailsOpenId={detailsOpenId}
-              setDetailsOpenId={setDetailsOpenId}
-            />
-          ))}
+      {/* DYNAMIC CONTENT AREA */}
+      {loading ? (
+        <div className="flex-1 max-w-[1440px] w-full mx-auto border-x border-t border-zinc-100 dark:border-zinc-900 flex flex-col items-center justify-center py-40">
+          <div className="w-8 h-8 border-[0.5px] border-[#251101] dark:border-white rounded-full animate-ping opacity-20 mb-4" />
+          <span className="text-zinc-400 uppercase tracking-[0.8em] text-[7px] font-serif animate-pulse">
+            Registry
+          </span>
         </div>
-      </div>
+      ) : (
+        <div className="flex-1 max-w-[1440px] w-full mx-auto border-x border-zinc-100 dark:border-zinc-900 relative">
+          <div className="flex flex-col border-t border-zinc-100 dark:border-zinc-900">
+            {services.map((service, index) => (
+              <ServiceCard
+                key={service.id}
+                service={service}
+                expandedId={expandedId}
+                setExpandedId={setExpandedId}
+                detailsOpenId={detailsOpenId}
+                setDetailsOpenId={setDetailsOpenId}
+                index={index}
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </section>
   )
 }

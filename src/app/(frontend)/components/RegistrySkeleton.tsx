@@ -1,47 +1,76 @@
 'use client'
 
-import React, { useId } from 'react'
+import React, { useId, useEffect, useState } from 'react'
 
 export function RegistrySkeleton() {
   const gradientId = useId()
 
+  const [isRevealed, setIsRevealed] = useState(false)
+  const [showContent, setShowContent] = useState(false)
+
+  useEffect(() => {
+    // 1. Instantly trigger the pitch-black curtain rising from the bottom
+    setIsRevealed(true)
+
+    // 2. Wait for the curtain to settle before fading in the minimalist line spinner
+    const timer = setTimeout(() => {
+      setShowContent(true)
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [])
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black z-[100]">
-      <div className="relative animate-in fade-in zoom-in-95 duration-1000 ease-out">
-        {/* CENTERED CLOCKWISE SPINNER */}
+    <div
+      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-[#050505] transition-transform duration-[1500ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        isRevealed ? 'translate-y-0' : 'translate-y-full'
+      }`}
+    >
+      <div
+        className={`relative flex items-center justify-center transition-all duration-[2000ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          showContent ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-[15px] scale-90'
+        }`}
+      >
+        {/* ULTRA-MINIMALIST HAIRLINE SPINNER */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          fill="none"
           viewBox="0 0 24 24"
-          strokeWidth="1.2" /* Slightly increased for better visibility of the gradient */
-          className="w-5 h-5 md:w-6 md:h-6 animate-spin"
+          className="w-10 h-10 animate-spin"
+          style={{ animationDuration: '1.5s' }}
         >
           <defs>
-            {/* High-end Metallic Midnight Gradient */}
-            <linearGradient
-              id={gradientId}
-              x1="2"
-              y1="2"
-              x2="22"
-              y2="22"
-              gradientUnits="userSpaceOnUse"
-            >
-              <stop offset="0%" stopColor="#FFFFFF" /> {/* Pure White */}
-              <stop offset="40%" stopColor="#FAFAFA" /> {/* Alabaster / Bone */}
-              <stop offset="70%" stopColor="#F4F4F5" /> {/* Zinc Highlight (This shows depth) */}
-              <stop offset="100%" stopColor="#FDFDFF" /> {/* Silken Finish */}
+            {/* Comet-trail gradient fading into absolute transparency */}
+            <linearGradient id={gradientId} x1="100%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+              <stop offset="30%" stopColor="#FFFFFF" stopOpacity="0.5" />
+              <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
             </linearGradient>
           </defs>
-          <path
+
+          {/* Faint structural background track */}
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="#FFFFFF"
+            strokeWidth="0.5"
+            strokeOpacity="0.05"
+            fill="none"
+          />
+
+          {/* Foreground spinning hairline */}
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
             stroke={`url(#${gradientId})`}
+            strokeWidth="1"
+            fill="none"
             strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+            strokeDasharray="60"
+            strokeDashoffset="20"
           />
         </svg>
-
-        {/* The pulse ring also updated to a darker, more subtle tone */}
-        <div className="absolute inset-0 rounded-full border border-black/5 dark:border-white/5 animate-ping opacity-10" />
       </div>
     </div>
   )
