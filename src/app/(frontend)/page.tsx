@@ -24,20 +24,33 @@ export default async function HomePage() {
   const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:3000'
 
   return (
-    <main className="relative bg-white dark:bg-black w-full overflow-x-hidden min-h-screen">
+    // Removed the global background color so the sticky hero can be seen underneath
+    <main className="relative w-full min-h-screen selection:bg-zinc-100">
       {/* GLOBAL ACTIONS */}
       <BookNowButton />
       <ContactProvider contactData={contactData}>
         <ContactTrigger contactData={contactData} />
       </ContactProvider>
-      <HeroVideo />
-      <div className="space-y-0">
+
+      {/* HERO CONTAINER
+        Sticky positioning locks the video in place as the user scrolls down.
+        The -z-0 keeps it structurally behind the content blocks.
+      */}
+      <div className="sticky top-0 w-full h-[100dvh] overflow-hidden z-0">
+        <HeroVideo />
+      </div>
+
+      {/* SCROLLING CONTENT CONTAINER
+        Relative positioning with z-10 allows this entire block to glide 
+        over the pinned Hero video, creating the "curtain cover" effect.
+      */}
+      <div className="relative z-10 bg-white dark:bg-[#050505] shadow-[0_-20px_50px_rgba(0,0,0,0.5)]">
         <Suspense fallback={<SectionSkeleton items={3} />}>
           <Services />
         </Suspense>
 
         <Suspense fallback={<SectionSkeleton items={2} dark />}>
-          <div className="bg-zinc-50 dark:bg-zinc-950">
+          <div className="bg-zinc-50 dark:bg-[#080808]">
             <SpecialistSection specialists={specialistsData.docs} serverUrl={serverUrl} />
           </div>
         </Suspense>
@@ -46,6 +59,7 @@ export default async function HomePage() {
   )
 }
 
+// --- KEEPING SKELETON UNTOUCHED ---
 function SectionSkeleton({ items = 3, dark = false }: { items?: number; dark?: boolean }) {
   return (
     <div
