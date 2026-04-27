@@ -203,7 +203,7 @@ export default function AdminManagementClient({
                 htmlFor="admin-search"
                 className="text-[8px] md:text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif flex items-center gap-2"
               >
-                Registry
+                Database
                 {isCacheLoading && (
                   <span className="animate-pulse text-[#48a9a6] text-[7px] lowercase">
                     (syncing archive...)
@@ -250,7 +250,7 @@ export default function AdminManagementClient({
                       />
                     ))
                   ) : (
-                    <EmptyState message="The registry is clear for today" />
+                    <EmptyState message="The appointments are clear for today" />
                   )}
                 </div>
               </section>

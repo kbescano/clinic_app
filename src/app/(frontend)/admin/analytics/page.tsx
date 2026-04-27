@@ -136,7 +136,7 @@ export default function AdminAnalytics() {
       return `Jan 1 - ${now.format('MMM D, YYYY')}`
     }
 
-    return 'Full Archive Registry'
+    return 'All Time'
   }
 
   if (error) return <ErrorState />
@@ -344,7 +344,7 @@ export default function AdminAnalytics() {
                 ) : (
                   <div className="py-24 flex items-center justify-center border border-dashed border-zinc-200 dark:border-zinc-800 mt-2">
                     <p className="text-[8px] md:text-[10px] uppercase tracking-widest text-[#595f72] font-serif">
-                      Archive Clear
+                      Records Clear
                     </p>
                   </div>
                 )}

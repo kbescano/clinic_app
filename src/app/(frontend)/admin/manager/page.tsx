@@ -61,11 +61,11 @@ export default async function AdminManagementPage(props: { searchParams: Promise
   } else if (activeRange === 'thisMonth') {
     dbStart = nowPHT.startOf('month').toISOString()
     dbEnd = nowPHT.endOf('month').toISOString()
-    secondaryLabel = 'Monthly Roster'
+    secondaryLabel = 'Monthly Records'
   } else if (activeRange === 'all') {
     dbStart = dayjs('2020-01-01').toISOString()
     dbEnd = dayjs('2100-01-01').toISOString()
-    secondaryLabel = 'Archive Registry'
+    secondaryLabel = 'All records'
   }
 
   // 2. Change the type from Record to Where[]

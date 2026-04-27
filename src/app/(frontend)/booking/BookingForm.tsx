@@ -1,22 +1,7 @@
 'use client'
 
-import React, {
-  useActionState,
-  useState,
-  useEffect,
-  Suspense,
-  useTransition,
-  useMemo,
-  Fragment,
-} from 'react'
+import React, { useActionState, useState, useEffect, Suspense, useTransition, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
-import {
-  Listbox,
-  ListboxButton,
-  ListboxOption,
-  ListboxOptions,
-  Transition,
-} from '@headlessui/react'
 import {
   createBookingAction,
   getBusySlots,
@@ -24,13 +9,24 @@ import {
   getClinicTimeSlots,
 } from './actions'
 import { Service } from '@/payload-types'
-import FadeIn from '../components/FadeIn'
 import Notification from '../components/Notification'
-import { ChevronDownIcon, ArrowRightIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import {
+  ArrowRightIcon,
+  ArrowLeftIcon,
+  CheckIcon,
+  XMarkIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+} from '@heroicons/react/24/outline'
 import dayjs from '@/lib/dayjs'
 import { RegistrySkeleton } from '../components/RegistrySkeleton'
 
-// --- TYPES ---
+const atelierEase = 'ease-[cubic-bezier(0.16,1,0.3,1)]'
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const PHONE_REGEX = /^(09|639)\d{9}$/
+const STEPS = ['TREATMENT', 'SCHEDULE', 'DOSSIER', 'CONFIRMATION']
+const WEEKDAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+
 interface BookingEntry {
   isGuest: boolean
   firstName: string
@@ -44,10 +40,6 @@ interface BookingEntry {
   time: string
 }
 
-// 1. Move Regex outside to prevent useMemo dependency warnings and unnecessary re-creations
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const PHONE_REGEX = /^(09|639)\d{9}$/
-
 export default function BookingForm({
   services,
   initialData,
@@ -57,24 +49,25 @@ export default function BookingForm({
 }) {
   return (
     <Suspense fallback={<RegistrySkeleton />}>
-      <BookingFormContent services={services} initialData={initialData} />
+      <BookingFlowContent services={services} initialData={initialData} />
     </Suspense>
   )
 }
 
-function BookingFormContent({
+function BookingFlowContent({
   services,
   initialData,
 }: {
   services: Service[]
   initialData: { email: string; fn: string; sn: string; ph: string }
 }) {
-  // 2. Removed 'router' since redirects are handled by the Server Action
   const searchParams = useSearchParams()
-
   const isReschedule = searchParams.get('reschedule') === 'true'
   const rescheduleId = searchParams.get('id')
   const hasPrefillData = !!(initialData.email && initialData.fn)
+
+  const [currentStep, setCurrentStep] = useState(0)
+  const [isMounted, setIsMounted] = useState(false)
 
   const [activeTabIndex, setActiveTabIndex] = useState(0)
   const [bookings, setBookings] = useState<BookingEntry[]>([
@@ -93,8 +86,8 @@ function BookingFormContent({
   ])
 
   const activeBooking = bookings[activeTabIndex] || bookings[0]
+  const isPrimaryDraft = activeTabIndex === 0
 
-  // 3. Replaced 'any' with strict value typing
   const updateActiveBooking = (field: keyof BookingEntry, value: string | boolean) => {
     setBookings((prev) => {
       const next = [...prev]
@@ -110,10 +103,29 @@ function BookingFormContent({
     })
   }
 
+  const handleAddGuest = () => {
+    const sharedDate = bookings[0].date
+    setBookings((prev) => [
+      ...prev,
+      {
+        isGuest: true,
+        firstName: '',
+        surname: '',
+        phone: '',
+        email: '',
+        serviceId: '',
+        extraServiceId: '',
+        showExtraService: false,
+        date: sharedDate,
+        time: '',
+      },
+    ])
+    setActiveTabIndex(bookings.length)
+  }
+
   const handleDeleteGuest = (e: React.MouseEvent, indexToDelete: number) => {
     e.stopPropagation()
     setBookings((prev) => prev.filter((_, i) => i !== indexToDelete))
-
     if (activeTabIndex === indexToDelete) {
       setActiveTabIndex(indexToDelete - 1)
     } else if (activeTabIndex > indexToDelete) {
@@ -124,52 +136,19 @@ function BookingFormContent({
   const [wasVerifiedInSession, setWasVerifiedInSession] = useState(false)
   const [showModal, setShowModal] = useState(!hasPrefillData && !isReschedule)
   const [isExisting, setIsExisting] = useState<boolean | null>(null)
-
   const [existingEmail, setExistingEmail] = useState('')
   const [isVerifying, setIsVerifying] = useState(false)
   const [errorToast, setErrorToast] = useState<string | null>(null)
-
-  // 4. Removed unused 'modalError' and 'loadingSlots' state destructures
   const [, setModalError] = useState<string | null>(null)
+
   const [isPendingTransition, startTransition] = useTransition()
   const [state, formAction] = useActionState(createBookingAction, null)
-  const [busySlots, setBusySlots] = useState<string[]>([])
-  const [, setLoadingSlots] = useState(false)
-  const [touched, setTouched] = useState({ email: false, phone: false })
 
-  const isEmailValid = EMAIL_REGEX.test(activeBooking.email.trim())
-  const isPhoneValid = PHONE_REGEX.test(activeBooking.phone.replace(/\D/g, ''))
+  const [busySlots, setBusySlots] = useState<string[]>([])
+  const [timeSlots, setTimeSlots] = useState<string[]>([])
+  const [, setLoadingSlots] = useState(false)
 
   const isRecognized = isReschedule || hasPrefillData || wasVerifiedInSession
-  const isPrimaryDraft = activeTabIndex === 0
-
-  const showMainIdentity = !isRecognized && isPrimaryDraft
-  const identitySatisfied = !isPrimaryDraft
-    ? activeBooking.firstName.trim() !== '' && activeBooking.surname.trim() !== ''
-    : isRecognized
-      ? true
-      : activeBooking.firstName.trim() !== '' &&
-        activeBooking.surname.trim() !== '' &&
-        isEmailValid &&
-        isPhoneValid
-
-  const showDateSection = isPrimaryDraft && activeBooking.serviceId !== '' && identitySatisfied
-  const showTimeOnlySection = !isPrimaryDraft && activeBooking.serviceId !== '' && identitySatisfied
-
-  const isAllValid = useMemo(() => {
-    return bookings.every((b, i) => {
-      const identityOk =
-        i === 0
-          ? isRecognized ||
-            (b.firstName.trim() !== '' &&
-              b.surname.trim() !== '' &&
-              EMAIL_REGEX.test(b.email.trim()) &&
-              PHONE_REGEX.test(b.phone.replace(/\D/g, '')))
-          : b.firstName.trim() !== '' && b.surname.trim() !== ''
-
-      return identityOk && b.serviceId && b.date && b.time
-    })
-  }, [bookings, isRecognized])
 
   const { todayStr, manilaTimeNow, minSelectableDate } = useMemo(() => {
     const nowPHT = dayjs().tz('Asia/Manila')
@@ -183,43 +162,46 @@ function BookingFormContent({
     }
   }, [])
 
-  // 5. Removed unused 'setViewDate' setter
-  const [viewDate] = useState(dayjs(minSelectableDate).startOf('month'))
+  const [viewDate, setViewDate] = useState(dayjs(minSelectableDate).startOf('month'))
+  const maxDate = useMemo(() => dayjs().add(3, 'month').endOf('month'), [])
+
+  const handleNextMonth = () => {
+    if (viewDate.add(1, 'month').isBefore(maxDate))
+      setViewDate(viewDate.add(1, 'month').startOf('month'))
+  }
+  const handlePrevMonth = () => {
+    if (viewDate.subtract(1, 'month').isAfter(dayjs().startOf('month').subtract(1, 'day')))
+      setViewDate(viewDate.subtract(1, 'month').startOf('month'))
+  }
+
   const calendarGrid = useMemo(() => {
     const startOfMonth = viewDate.startOf('month')
     const startDay = startOfMonth.day()
-    return [...Array(35)].map((_, i) => startOfMonth.subtract(startDay, 'day').add(i, 'day'))
+    const daysInMonth = viewDate.endOf('month').date()
+    const totalCells = Math.ceil((startDay + daysInMonth) / 7) * 7
+    return [...Array(totalCells)].map((_, i) =>
+      startOfMonth.subtract(startDay, 'day').add(i, 'day'),
+    )
   }, [viewDate])
 
-  // DURATION-AWARE REAL-TIME CART CHECK
   const localBusySlots = useMemo(() => {
     const busy: string[] = []
-
     bookings.forEach((b, i) => {
-      // Ignore the current tab we are editing, or incomplete bookings
       if (i === activeTabIndex || !b.date || !b.time || b.date !== activeBooking.date) return
-
-      // 1. Calculate total duration for this specific person
       const service1 = services.find((s) => String(s.id) === b.serviceId)
       const duration1 = Number(service1?.duration) || 60
-
       const service2 = b.extraServiceId
         ? services.find((s) => String(s.id) === b.extraServiceId)
         : null
       const duration2 = b.extraServiceId ? Number(service2?.duration) || 60 : 0
-
       const totalDuration = duration1 + duration2
-
-      // 2. Block out every 30-minute chunk this person occupies
       let current = dayjs(`${b.date}T${b.time}:00`)
       const end = current.add(totalDuration, 'minute')
-
       while (current.isBefore(end)) {
         busy.push(current.format('HH:mm'))
-        current = current.add(30, 'minute') // Steps forward by your standard grid interval
+        current = current.add(30, 'minute')
       }
     })
-
     return busy
   }, [bookings, activeBooking.date, activeTabIndex, services])
 
@@ -227,10 +209,8 @@ function BookingFormContent({
     return (id: string) => services.find((s) => String(s.id) === id)?.title || 'Service'
   }, [services])
 
-  // DYNAMIC TIME SLOTS STATE
-  const [timeSlots, setTimeSlots] = useState<string[]>([])
-
   useEffect(() => {
+    setIsMounted(true)
     async function fetchDynamicSlots() {
       try {
         const generatedSlots = await getClinicTimeSlots()
@@ -258,31 +238,7 @@ function BookingFormContent({
     updateAvailability()
   }, [activeBooking.date])
 
-  const handleAddPerson = () => {
-    const sharedDate = bookings[0].date
-    setBookings((prev) => [
-      ...prev,
-      {
-        isGuest: true,
-        firstName: '',
-        surname: '',
-        phone: '',
-        email: '',
-        serviceId: '',
-        extraServiceId: '',
-        showExtraService: false,
-        date: sharedDate,
-        time: '',
-      },
-    ])
-    setActiveTabIndex(bookings.length)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
-
-  const handleFinalSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!isAllValid) return
-
+  const handleFinalSubmit = () => {
     const fd = new FormData()
     const params = new URLSearchParams()
     params.append('date', dayjs(bookings[0].date).format('MMMM D, YYYY'))
@@ -295,13 +251,11 @@ function BookingFormContent({
     if (bookings[0].extraServiceId) serviceTitles.push(getServiceTitle(bookings[0].extraServiceId))
     params.append('service', serviceTitles.join(' + '))
 
-    // 6. Removed unused 'guestNames' variable assignment
     bookings.slice(1).forEach((b) => {
       const gName = `${b.firstName} ${b.surname}`
       const gServices = []
       if (b.serviceId) gServices.push(getServiceTitle(b.serviceId))
       if (b.extraServiceId) gServices.push(getServiceTitle(b.extraServiceId))
-
       const formattedGuestDetails = `${gName} — ${gServices.join(' + ')}`
       params.append('guests', formattedGuestDetails)
     })
@@ -336,8 +290,62 @@ function BookingFormContent({
     })
   }
 
+  const nextStep = () => {
+    if (currentStep === STEPS.length - 1) handleFinalSubmit()
+    else setCurrentStep((p) => Math.min(p + 1, STEPS.length - 1))
+  }
+
+  const prevStep = () => setCurrentStep((p) => Math.max(p - 1, 0))
+
+  const jumpToStep = (tabIndex: number, stepIndex: number) => {
+    setActiveTabIndex(tabIndex)
+    setCurrentStep(stepIndex)
+  }
+
+  const isStepValid = () => {
+    if (currentStep === 0) return bookings.every((b) => b.serviceId !== '')
+    if (currentStep === 1) return bookings.every((b) => b.date !== '' && b.time !== '')
+    if (currentStep === 2)
+      return bookings.every((b, i) => {
+        if (i === 0 && !isRecognized) {
+          return (
+            b.firstName.trim() !== '' &&
+            b.surname.trim() !== '' &&
+            EMAIL_REGEX.test(b.email) &&
+            PHONE_REGEX.test(b.phone)
+          )
+        }
+        return b.firstName.trim() !== '' && b.surname.trim() !== ''
+      })
+    return true
+  }
+
+  const isActiveTabValid = () => {
+    if (currentStep === 0) return activeBooking.serviceId !== ''
+    if (currentStep === 1) return activeBooking.date !== '' && activeBooking.time !== ''
+    if (currentStep === 2) {
+      if (activeTabIndex === 0 && !isRecognized)
+        return (
+          activeBooking.firstName.trim() !== '' &&
+          activeBooking.surname.trim() !== '' &&
+          EMAIL_REGEX.test(activeBooking.email) &&
+          PHONE_REGEX.test(activeBooking.phone)
+        )
+      return activeBooking.firstName.trim() !== '' && activeBooking.surname.trim() !== ''
+    }
+    return true
+  }
+
+  // Progressive Disclosure Conditions
+  const showLastName = activeBooking.firstName.trim().length > 0
+  const showEmail =
+    showLastName && activeBooking.surname.trim().length > 0 && isPrimaryDraft && !isRecognized
+  const showPhone = showEmail && EMAIL_REGEX.test(activeBooking.email.trim())
+
+  if (!isMounted) return null
+
   return (
-    <div className="min-h-screen bg-white dark:bg-[#050505] text-[#251101] dark:text-zinc-100 pt-24 md:pt-32 pb-32 px-4 md:px-8 font-sans">
+    <>
       {errorToast && (
         <Notification message={errorToast} type="error" onClose={() => setErrorToast(null)} />
       )}
@@ -353,13 +361,13 @@ function BookingFormContent({
                 <div className="flex flex-col gap-4">
                   <button
                     onClick={() => setIsExisting(true)}
-                    className="w-full py-5 bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[8px] uppercase tracking-[0.4em] rounded-full transition-all"
+                    className="w-full py-5 bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[8px] uppercase tracking-[0.4em] rounded-full transition-all outline-none"
                   >
                     Yes, I am current Customer.
                   </button>
                   <button
                     onClick={() => setShowModal(false)}
-                    className="w-full py-5 border border-zinc-100 dark:border-zinc-900 text-[#595f72] text-[8px] uppercase tracking-[0.4em] rounded-full transition-all"
+                    className="w-full py-5 border border-zinc-100 dark:border-zinc-900 text-[#595f72] hover:text-[#251101] text-[8px] uppercase tracking-[0.4em] rounded-full transition-all outline-none"
                   >
                     No, I&apos;m a new Customer.
                   </button>
@@ -407,13 +415,13 @@ function BookingFormContent({
                       })
                   }}
                   disabled={isVerifying || !EMAIL_REGEX.test(existingEmail.trim())}
-                  className="w-full py-5 bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[9px] uppercase tracking-[0.4em] rounded-full mb-10 disabled:opacity-20"
+                  className="w-full py-5 bg-[#251101] dark:bg-white text-white dark:text-[#251101] text-[9px] uppercase tracking-[0.4em] rounded-full mb-10 disabled:opacity-20 outline-none"
                 >
                   {isVerifying ? 'Searching...' : 'Access Records'}
                 </button>
                 <button
                   onClick={() => setIsExisting(null)}
-                  className="text-[7px] uppercase tracking-[0.4em] text-[#595f72]"
+                  className="text-[7px] uppercase tracking-[0.4em] text-[#595f72] outline-none"
                 >
                   [ Return ]
                 </button>
@@ -423,389 +431,535 @@ function BookingFormContent({
         </div>
       )}
 
-      <FadeIn>
-        <div className="max-w-4xl mx-auto flex flex-col gap-14">
-          <header className="flex items-end justify-between border-b border-zinc-100 dark:border-zinc-900 pb-8">
-            <h1 className="text-[32px] md:text-[48px] font-light tracking-tighter font-serif leading-none text-[#251101] dark:text-white">
-              {isReschedule ? 'Reschedule' : 'Appointment Registry'}
-            </h1>
-          </header>
+      {/* APP-LIKE BOUNDED CONTAINER */}
+      <div className="relative w-full max-w-[1440px] mx-auto h-[calc(100dvh-5rem)] md:h-[80vh] min-h-[600px] flex flex-col md:flex-row border-x border-zinc-100 dark:border-zinc-900 mt-20 md:mt-32 border-t md:border-t-0 bg-white dark:bg-[#050505] overflow-hidden">
+        {/* LEFT COLUMN: Sticky Progress (No Scroll) */}
+        <div className="w-full md:w-1/3 p-6 md:p-12 border-b md:border-b-0 md:border-r border-zinc-100 dark:border-zinc-900 flex flex-col justify-between shrink-0 z-20">
+          <div className="space-y-6 md:space-y-12">
+            <header className="space-y-3">
+              <span className="text-[8px] uppercase tracking-[0.8em] text-[#595f72] font-serif block">
+                {isReschedule ? 'Reschedule' : 'Reservation'}
+              </span>
+              <h1 className="text-[24px] md:text-[32px] font-normal font-serif tracking-tight text-[#251101] dark:text-zinc-100 leading-none">
+                Secure your <br /> appointment.
+              </h1>
+            </header>
 
-          <form
-            onSubmit={handleFinalSubmit}
-            className="grid grid-cols-1 lg:grid-cols-12 gap-12 md:gap-20"
-          >
-            <div className="lg:col-span-6 flex flex-col">
-              {/* TABS HEADER */}
-              <div className="flex overflow-x-auto border-b border-zinc-100 dark:border-zinc-900 mb-8 gap-8 scrollbar-hide">
-                {bookings.map((b, i) => (
-                  <div
-                    key={i}
-                    className={`flex items-center gap-2 pb-3 border-b transition-colors whitespace-nowrap ${
-                      activeTabIndex === i
-                        ? 'border-[#251101] dark:border-white text-[#251101] dark:text-white'
-                        : 'border-transparent text-[#595f72] hover:text-[#251101] dark:hover:text-white'
-                    }`}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setActiveTabIndex(i)}
-                      className="text-[10px] uppercase tracking-[0.2em] font-serif outline-none"
+            {/* Perfect Layout Stepper: Flex Wrap prevents horizontal scrolling */}
+            <div className="flex flex-row md:flex-col items-center md:items-start justify-between md:justify-start w-full gap-2 md:gap-0 md:space-y-4">
+              {STEPS.map((step, index) => {
+                const isActive = index === currentStep
+                const isPast = index < currentStep
+                return (
+                  <div key={step} className="flex items-center gap-3 md:gap-4 group shrink-0">
+                    <span
+                      className={`text-[9px] font-serif tracking-[0.3em] transition-all duration-700 ${isActive ? 'text-[#251101] dark:text-white scale-110' : 'text-zinc-300 dark:text-zinc-700'}`}
                     >
-                      {i === 0 ? 'Main Patient' : `Guest ${i}`}
-                    </button>
-                    {i > 0 && (
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteGuest(e, i)}
-                        className="p-1 rounded-full hover:bg-black/5 dark:hover:bg-white/10 opacity-40 hover:opacity-100 transition-all outline-none"
-                        title="Remove guest"
-                      >
-                        <XMarkIcon className="w-3 h-3" />
-                      </button>
-                    )}
+                      0{index + 1}
+                    </span>
+                    <div
+                      className={`h-[1px] transition-all duration-1000 ${atelierEase} ${isActive ? 'w-8 md:w-12 bg-[#251101] dark:bg-white' : isPast ? 'w-4 bg-zinc-300 dark:bg-zinc-700' : 'w-0 md:w-0 w-2 bg-transparent'}`}
+                    />
+                    <span
+                      className={`text-[8px] uppercase tracking-[0.4em] font-serif transition-all duration-700 ${isActive ? 'text-[#251101] dark:text-white opacity-100 block' : 'text-[#595f72] opacity-0 md:-translate-x-4 hidden md:block'}`}
+                    >
+                      {step}
+                    </span>
                   </div>
-                ))}
-              </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
 
-              {/* ACTIVE TAB CONTENT */}
-              <div className="bg-white dark:bg-[#050505] p-6 md:p-8 space-y-10 border border-zinc-100 dark:border-zinc-900 rounded-2xl shadow-sm relative">
-                <div className="relative animate-in fade-in">
-                  <label className="text-[9px] uppercase tracking-[0.4em] text-[#595f72] mb-3 block font-serif">
-                    Treatment
-                  </label>
-                  <Listbox
-                    value={activeBooking.serviceId}
-                    onChange={(v) => updateActiveBooking('serviceId', v)}
+        {/* RIGHT COLUMN: Flex Flow */}
+        <div className="w-full md:w-2/3 flex flex-col bg-zinc-50 dark:bg-[#080808] flex-1 min-h-0 relative">
+          {/* PERSISTENT PATIENT TABS */}
+          {currentStep < 3 && (
+            <div className="w-full bg-zinc-50 dark:bg-[#080808] border-b border-zinc-200 dark:border-zinc-900 px-6 md:px-12 pt-6 flex gap-6 overflow-x-auto scrollbar-hide shrink-0 z-20 relative">
+              {bookings.map((b, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center gap-2 pb-3 border-b-2 transition-colors whitespace-nowrap ${activeTabIndex === i ? 'border-[#251101] dark:border-white text-[#251101] dark:text-white' : 'border-transparent text-[#595f72] hover:text-[#251101] dark:hover:text-white'}`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setActiveTabIndex(i)}
+                    className="text-[9px] uppercase tracking-[0.3em] font-serif outline-none flex items-center gap-2"
                   >
-                    <div className="relative z-40">
-                      <ListboxButton className="w-full text-left font-serif text-[16px] py-1.5 border-b border-zinc-100 dark:border-zinc-900 outline-none flex justify-between group transition-colors focus:border-zinc-400">
-                        <span className={!activeBooking.serviceId ? 'opacity-40' : ''}>
-                          {activeBooking.serviceId
-                            ? getServiceTitle(activeBooking.serviceId)
-                            : 'Select Service...'}
-                        </span>
-                        <ChevronDownIcon className="w-4 h-4 opacity-40 group-hover:opacity-100 transition-opacity" />
-                      </ListboxButton>
-                      <Transition as={Fragment} leave="transition duration-100" leaveTo="opacity-0">
-                        <ListboxOptions className="absolute z-50 mt-1 w-full max-h-60 overflow-auto rounded-xl bg-white dark:bg-[#0c0c0c] border border-zinc-100 dark:border-zinc-900 shadow-2xl">
-                          {services.map((s) => (
-                            <ListboxOption
-                              key={s.id}
-                              value={String(s.id)}
-                              className={({ active }) =>
-                                `cursor-pointer py-4 px-6 text-[14px] font-serif ${active ? 'bg-zinc-50 dark:bg-zinc-900' : ''}`
-                              }
-                            >
-                              {s.title}
-                            </ListboxOption>
-                          ))}
-                        </ListboxOptions>
-                      </Transition>
-                    </div>
-                  </Listbox>
-                  {activeBooking.serviceId && !activeBooking.showExtraService && (
+                    {i === 0 ? 'Main Patient' : `Guest ${i}`}
+                    {activeTabIndex !== i &&
+                      (!b.serviceId ||
+                        (currentStep > 0 && !b.time) ||
+                        (currentStep > 1 && !b.firstName)) && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500/50" />
+                      )}
+                  </button>
+                  {i > 0 && (
                     <button
                       type="button"
-                      onClick={() => updateActiveBooking('showExtraService', true)}
-                      className="mt-4 text-[7px] uppercase tracking-[0.3em] text-[#595f72] font-serif hover:text-[#251101] animate-in fade-in"
+                      onClick={(e) => handleDeleteGuest(e, i)}
+                      className="p-1 rounded-full opacity-40 hover:opacity-100 transition-all outline-none"
                     >
-                      + Add second service
+                      <XMarkIcon className="w-3 h-3" />
                     </button>
                   )}
                 </div>
+              ))}
+              {!isReschedule && (
+                <button
+                  type="button"
+                  onClick={handleAddGuest}
+                  className="text-[9px] uppercase tracking-[0.3em] text-zinc-400 hover:text-[#251101] dark:hover:text-white font-serif outline-none pb-3 whitespace-nowrap"
+                >
+                  + Add Guest
+                </button>
+              )}
+            </div>
+          )}
 
-                {activeBooking.showExtraService && (
-                  <div className="relative animate-in fade-in slide-in-from-top-2">
-                    <div className="flex justify-between mb-3 font-serif">
-                      <label className="text-[9px] uppercase tracking-[0.4em] text-[#595f72]">
-                        Additional Treatment
-                      </label>
+          {/* Form Slide Container */}
+          <div className="flex-1 relative w-full overflow-hidden">
+            {/* STEP 1: TREATMENT */}
+            <FormSlide isActive={currentStep === 0}>
+              <div className="p-6 md:p-12 pb-8">
+                <h2 className="text-[14px] font-serif uppercase tracking-[0.3em] text-[#251101] dark:text-white mb-6">
+                  {isPrimaryDraft
+                    ? 'Select Treatment'
+                    : `Select Treatment for Guest ${activeTabIndex}`}
+                </h2>
+                <div className="space-y-3">
+                  {services.map((treatment) => {
+                    const tId = String(treatment.id)
+                    const isSelected =
+                      activeBooking.serviceId === tId || activeBooking.extraServiceId === tId
+                    const isMain = activeBooking.serviceId === tId
+                    return (
                       <button
-                        type="button"
+                        key={tId}
                         onClick={() => {
-                          updateActiveBooking('showExtraService', false)
-                          updateActiveBooking('extraServiceId', '')
+                          if (isMain) return
+                          if (!activeBooking.serviceId) updateActiveBooking('serviceId', tId)
+                          else if (!activeBooking.extraServiceId)
+                            updateActiveBooking('extraServiceId', tId)
                         }}
-                        className="text-[7px] text-[#d7263d] uppercase tracking-[0.2em] hover:underline"
+                        className={`w-full text-left p-5 md:p-6 border transition-all duration-500 flex justify-between items-center group outline-none ${
+                          isSelected
+                            ? 'border-[#251101] dark:border-white bg-white dark:bg-[#050505]'
+                            : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 bg-transparent'
+                        }`}
                       >
-                        [ Remove ]
-                      </button>
-                    </div>
-                    <Listbox
-                      value={activeBooking.extraServiceId}
-                      onChange={(v) => updateActiveBooking('extraServiceId', v)}
-                    >
-                      <div className="relative z-30">
-                        <ListboxButton className="w-full text-left font-serif text-[16px] py-1.5 border-b border-zinc-100 dark:border-zinc-900 outline-none flex justify-between group transition-colors focus:border-zinc-400">
-                          <span className={!activeBooking.extraServiceId ? 'opacity-40' : ''}>
-                            {activeBooking.extraServiceId
-                              ? getServiceTitle(activeBooking.extraServiceId)
-                              : 'Select Additional Service...'}
+                        <div className="space-y-1">
+                          <h3
+                            className={`font-serif text-[13px] md:text-[15px] transition-colors ${isSelected ? 'text-[#251101] dark:text-white' : 'text-[#595f72] dark:text-zinc-400'}`}
+                          >
+                            {treatment.title}
+                          </h3>
+                          <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-400 font-serif">
+                            {treatment.duration} Min
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <span
+                            className={`text-[12px] font-serif transition-colors ${isSelected ? 'text-[#251101] dark:text-white' : 'text-zinc-400'}`}
+                          >
+                            PHP {treatment.price}
                           </span>
-                          <ChevronDownIcon className="w-4 h-4 opacity-40 group-hover:opacity-100 transition-opacity" />
-                        </ListboxButton>
-                        <Transition
-                          as={Fragment}
-                          leave="transition duration-100"
-                          leaveTo="opacity-0"
-                        >
-                          <ListboxOptions className="absolute z-50 mt-1 w-full max-h-60 overflow-auto rounded-xl bg-white dark:bg-[#0c0c0c] border border-zinc-100 dark:border-zinc-900 shadow-2xl">
-                            {services
-                              .filter((s) => String(s.id) !== activeBooking.serviceId)
-                              .map((s) => (
-                                <ListboxOption
-                                  key={s.id}
-                                  value={String(s.id)}
-                                  className={({ active }) =>
-                                    `cursor-pointer py-4 px-6 text-[14px] font-serif ${active ? 'bg-zinc-50 dark:bg-zinc-900' : ''}`
-                                  }
-                                >
-                                  {s.title}
-                                </ListboxOption>
-                              ))}
-                          </ListboxOptions>
-                        </Transition>
-                      </div>
-                    </Listbox>
-                  </div>
+                          <div
+                            className={`w-4 h-4 border rounded-full flex items-center justify-center transition-all ${isSelected ? 'border-[#251101] dark:border-white' : 'border-zinc-300 dark:border-zinc-700'}`}
+                          >
+                            <div
+                              className={`w-2 h-2 rounded-full transition-all ${isSelected ? 'bg-[#251101] dark:bg-white scale-100' : 'bg-transparent scale-0'}`}
+                            />
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+                {(activeBooking.serviceId || activeBooking.extraServiceId) && (
+                  <button
+                    onClick={() => {
+                      updateActiveBooking('serviceId', '')
+                      updateActiveBooking('extraServiceId', '')
+                    }}
+                    className="text-[7px] uppercase tracking-[0.3em] text-red-500 font-serif hover:underline outline-none mt-6 block"
+                  >
+                    [ Clear Selections ]
+                  </button>
                 )}
+              </div>
+            </FormSlide>
 
-                {/* DYNAMIC IDENTITY FORM */}
-                {(!isPrimaryDraft || !isRecognized) && activeBooking.serviceId && (
-                  <div className="grid grid-cols-1 gap-10 animate-in fade-in">
-                    <Field
-                      label="First Name"
-                      value={activeBooking.firstName}
-                      onChange={(v: string) => updateActiveBooking('firstName', v)}
-                      placeholder="Juan"
-                    />
-                    {activeBooking.firstName.trim().length > 0 && (
-                      <Field
-                        label="Surname"
-                        value={activeBooking.surname}
-                        onChange={(v: string) => updateActiveBooking('surname', v)}
-                        placeholder="Dela Cruz"
-                      />
-                    )}
-                    {showMainIdentity && activeBooking.surname.trim().length > 0 && (
-                      <>
-                        <Field
-                          label="Email Address"
-                          type="email"
-                          value={activeBooking.email}
-                          onChange={(v) => {
-                            updateActiveBooking('email', v)
-                            setTouched({ ...touched, email: false })
-                          }}
-                          onBlur={() => setTouched({ ...touched, email: true })}
-                          placeholder="juan@example.com"
-                          error={
-                            touched.email && !EMAIL_REGEX.test(activeBooking.email.trim())
-                              ? 'Invalid email format'
-                              : ''
-                          }
-                        />
-                        {isEmailValid && (
-                          <Field
-                            label="Mobile Number"
-                            type="tel"
-                            value={activeBooking.phone}
-                            onChange={(v) => {
-                              updateActiveBooking('phone', v)
-                              setTouched({ ...touched, phone: false })
-                            }}
-                            onBlur={() => setTouched({ ...touched, phone: true })}
-                            placeholder="0917 123 4567"
-                            error={
-                              touched.phone &&
-                              !PHONE_REGEX.test(activeBooking.phone.replace(/\D/g, ''))
-                                ? 'Valid PH mobile number required'
-                                : ''
-                            }
-                          />
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {/* PRIMARY PATIENT: DATE + TIME */}
-                {showDateSection && (
-                  <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4">
-                    <div className="relative">
-                      <h3 className="text-[20px] font-serif font-light mb-8 text-[#251101] dark:text-white">
+            {/* STEP 2: SCHEDULE */}
+            <FormSlide isActive={currentStep === 1}>
+              <div className="p-6 md:p-12 space-y-8 pb-8">
+                <h2 className="text-[14px] font-serif uppercase tracking-[0.3em] text-[#251101] dark:text-white mb-6">
+                  {isPrimaryDraft
+                    ? 'Select Date & Time'
+                    : `Select Time for Guest ${activeTabIndex}`}
+                </h2>
+                {isPrimaryDraft ? (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                      <button
+                        onClick={handlePrevMonth}
+                        className="p-2 outline-none hover:text-[#595f72] transition-colors"
+                      >
+                        <ChevronLeftIcon className="w-4 h-4" />
+                      </button>
+                      <h3 className="text-[13px] font-serif font-light text-[#251101] dark:text-white uppercase tracking-[0.2em]">
                         {viewDate.format('MMMM YYYY')}
                       </h3>
-                      <div className="grid grid-cols-7 gap-px bg-zinc-100 dark:bg-zinc-800 rounded-xl overflow-hidden shadow-sm border border-zinc-100 dark:border-zinc-900">
-                        {calendarGrid.map((date, i) => {
-                          const dateStr = date.format('YYYY-MM-DD')
-                          const isSelected = activeBooking.date === dateStr
-                          const isDisabled = date.isBefore(dayjs(minSelectableDate), 'day')
-                          return (
-                            <button
-                              key={i}
-                              type="button"
-                              disabled={isDisabled}
-                              onClick={() => {
-                                updateActiveBooking('date', dateStr)
-                                updateActiveBooking('time', '')
-                              }}
-                              className={`h-12 flex items-center justify-center font-serif text-[13px] ${isSelected ? 'bg-[#251101] text-white' : 'bg-white dark:bg-[#050505] hover:bg-zinc-50 dark:hover:bg-zinc-900 text-[#251101] dark:text-zinc-100'} ${isDisabled ? 'opacity-10 cursor-not-allowed' : ''}`}
-                            >
-                              {date.date()}
-                            </button>
-                          )
-                        })}
-                      </div>
+                      <button
+                        onClick={handleNextMonth}
+                        className="p-2 outline-none hover:text-[#595f72] transition-colors"
+                      >
+                        <ChevronRightIcon className="w-4 h-4" />
+                      </button>
                     </div>
-                    {activeBooking.date && (
-                      <div className="grid grid-cols-3 gap-px bg-zinc-100 dark:bg-zinc-800 rounded-xl overflow-hidden animate-in fade-in border border-zinc-100 dark:border-zinc-900">
-                        {timeSlots.map((slot) => {
-                          const isFull =
-                            (activeBooking.date === todayStr && slot <= manilaTimeNow) ||
-                            busySlots.includes(slot) ||
-                            localBusySlots.includes(slot)
-                          return (
-                            <button
-                              key={slot}
-                              type="button"
-                              disabled={isFull}
-                              onClick={() => updateActiveBooking('time', slot)}
-                              className={`py-6 text-[14px] font-serif transition-all ${activeBooking.time === slot ? 'bg-[#251101] text-white' : 'bg-white dark:bg-[#050505] hover:bg-zinc-50 dark:hover:bg-zinc-900 text-[#251101] dark:text-zinc-100'}${isFull ? ' opacity-20 cursor-not-allowed' : ''}`}
-                            >
-                              {slot}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* GUEST PATIENT: TIME ONLY */}
-                {showTimeOnlySection && (
-                  <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                    <label className="text-[9px] uppercase tracking-[0.4em] text-[#595f72] block font-serif">
-                      Available Slots for {dayjs(activeBooking.date).format('MMM D')}
-                    </label>
-                    <div className="grid grid-cols-3 gap-px bg-zinc-100 dark:bg-zinc-800 rounded-xl overflow-hidden border border-zinc-100 dark:border-zinc-900">
-                      {timeSlots.map((slot) => {
-                        const isFull =
-                          (activeBooking.date === todayStr && slot <= manilaTimeNow) ||
-                          busySlots.includes(slot) ||
-                          localBusySlots.includes(slot)
+                    <div className="grid grid-cols-7 gap-px mb-2">
+                      {WEEKDAYS.map((day) => (
+                        <div
+                          key={day}
+                          className="text-center text-[8px] uppercase tracking-[0.2em] text-[#595f72] font-serif"
+                        >
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-px bg-zinc-200 dark:bg-zinc-800 rounded-none border border-zinc-200 dark:border-zinc-800">
+                      {calendarGrid.map((date, i) => {
+                        const dateStr = date.format('YYYY-MM-DD')
+                        const isSelected = activeBooking.date === dateStr
+                        const isCurrentMonth = date.month() === viewDate.month()
+                        const isDisabled =
+                          date.isBefore(dayjs(minSelectableDate), 'day') || !isCurrentMonth
                         return (
                           <button
-                            key={slot}
+                            key={i}
                             type="button"
-                            disabled={isFull}
-                            onClick={() => updateActiveBooking('time', slot)}
-                            className={`py-6 text-[14px] font-serif transition-all ${activeBooking.time === slot ? 'bg-[#251101] text-white' : 'bg-white dark:bg-[#050505] hover:bg-zinc-50 dark:hover:bg-zinc-900 text-[#251101] dark:text-zinc-100'}${isFull ? ' opacity-20 cursor-not-allowed' : ''}`}
+                            disabled={isDisabled}
+                            onClick={() => {
+                              updateActiveBooking('date', dateStr)
+                              updateActiveBooking('time', '')
+                            }}
+                            className={`h-10 md:h-12 flex items-center justify-center font-serif text-[12px] md:text-[13px] transition-colors outline-none ${isSelected ? 'bg-[#251101] dark:bg-white text-white dark:text-[#251101]' : 'bg-zinc-50 dark:bg-[#080808] hover:bg-white dark:hover:bg-[#121212] text-[#251101] dark:text-zinc-100'} ${isDisabled ? 'opacity-0 cursor-not-allowed pointer-events-none' : ''}`}
                           >
-                            {slot}
+                            {date.date()}
                           </button>
                         )
                       })}
                     </div>
                   </div>
+                ) : (
+                  <div className="p-5 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#050505]">
+                    <span className="text-[8px] uppercase tracking-[0.4em] text-zinc-400 font-serif block mb-2">
+                      Locked Date
+                    </span>
+                    <p className="text-[15px] font-serif text-[#251101] dark:text-white">
+                      {dayjs(bookings[0].date).format('dddd, MMMM D, YYYY')}
+                    </p>
+                  </div>
                 )}
-
-                {activeBooking.time && !isReschedule && (
-                  <button
-                    type="button"
-                    onClick={handleAddPerson}
-                    className="w-full py-8 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl text-[8px] uppercase tracking-[0.4em] text-[#595f72] hover:text-[#251101] dark:hover:text-white transition-all font-serif hover:bg-zinc-50 dark:hover:bg-zinc-900"
-                  >
-                    + Add another guest
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* SUMMARY SIDEBAR */}
-            <div className="lg:col-span-6 flex flex-col gap-10 pt-16">
-              <div className="bg-[#251101] dark:bg-white text-white dark:text-[#251101] p-8 md:p-10 min-h-[300px] rounded-2xl shadow-xl flex flex-col font-serif">
-                <p className="text-[7px] uppercase tracking-[0.4em] opacity-40 font-serif mb-10">
-                  Registry Summary
-                </p>
-                <div className="space-y-8 flex-1">
-                  {bookings.map((b, i) => (
-                    <div
-                      key={i}
-                      className="pb-6 border-b border-white/10 dark:border-[#251101]/10 flex justify-between items-start"
-                    >
-                      <div className="space-y-1">
-                        <h4 className="text-[16px] font-serif capitalize">
-                          {b.firstName || b.surname
-                            ? `${b.firstName} ${b.surname}`
-                            : i === 0 && isRecognized
-                              ? 'Recognized Session'
-                              : i === 0
-                                ? 'New Patient'
-                                : `Guest ${i}`}
-                        </h4>
-                        <p className="text-[11px] opacity-70 italic">
-                          {b.serviceId ? getServiceTitle(b.serviceId) : '-- Treatment'}{' '}
-                          {b.extraServiceId && `+ ${getServiceTitle(b.extraServiceId)}`} —{' '}
-                          {b.date ? dayjs(b.date).format('MMM D, YYYY') : '--'} @{' '}
-                          {b.time || '--:--'}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                <div
+                  className={`transition-all duration-700 ${atelierEase} ${activeBooking.date ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}
+                >
+                  <p className="text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif mb-3 block">
+                    Available Slots
+                  </p>
+                  <div className="grid grid-cols-3 gap-px bg-zinc-200 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800">
+                    {timeSlots.map((slot) => {
+                      const isFull =
+                        (activeBooking.date === todayStr && slot <= manilaTimeNow) ||
+                        busySlots.includes(slot) ||
+                        localBusySlots.includes(slot)
+                      const isSelected = activeBooking.time === slot
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          disabled={isFull}
+                          onClick={() => updateActiveBooking('time', slot)}
+                          className={`py-4 text-[12px] md:text-[13px] font-serif transition-colors outline-none ${isSelected ? 'bg-[#251101] dark:bg-white text-white dark:text-[#251101]' : 'bg-zinc-50 dark:bg-[#080808] hover:bg-white dark:hover:bg-[#121212] text-[#251101] dark:text-zinc-100'} ${isFull ? ' opacity-20 cursor-not-allowed' : ''}`}
+                        >
+                          {slot}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
+            </FormSlide>
 
-              <div className="flex flex-col gap-4">
-                <button
-                  type="submit"
-                  disabled={isPendingTransition || !isAllValid}
-                  className="w-full bg-[#251101] dark:bg-white text-white dark:text-[#251101] py-7 uppercase tracking-[0.4em] rounded-full text-[9px] font-serif transition-all active:scale-[0.98] disabled:opacity-20 shadow-lg flex items-center justify-center gap-3"
-                >
-                  {isPendingTransition ? 'Processing...' : 'Confirm Appointment'}{' '}
-                  <ArrowRightIcon className="w-4 h-4" />
-                </button>
+            {/* STEP 3: DOSSIER (Progressive Disclosure) */}
+            <FormSlide isActive={currentStep === 2}>
+              <div className="p-6 md:p-12 pb-8">
+                <h2 className="text-[14px] font-serif uppercase tracking-[0.3em] text-[#251101] dark:text-white mb-10">
+                  {isPrimaryDraft ? 'Main Client Dossier' : `Guest ${activeTabIndex} Dossier`}
+                </h2>
+
+                {/* Clean vertical stacking for sequential revelation */}
+                <div className="max-w-md">
+                  <FloatingInput
+                    label="First Name"
+                    value={activeBooking.firstName}
+                    onChange={(e) => updateActiveBooking('firstName', e.target.value)}
+                  />
+
+                  <ProgressiveReveal show={showLastName}>
+                    <FloatingInput
+                      label="Last Name"
+                      value={activeBooking.surname}
+                      onChange={(e) => updateActiveBooking('surname', e.target.value)}
+                    />
+                  </ProgressiveReveal>
+
+                  <ProgressiveReveal show={showEmail}>
+                    <FloatingInput
+                      label="Email Address"
+                      type="email"
+                      value={activeBooking.email}
+                      onChange={(e) => updateActiveBooking('email', e.target.value)}
+                    />
+                  </ProgressiveReveal>
+
+                  <ProgressiveReveal show={showPhone}>
+                    <FloatingInput
+                      label="Contact Number"
+                      type="tel"
+                      value={activeBooking.phone}
+                      onChange={(e) => updateActiveBooking('phone', e.target.value)}
+                    />
+                  </ProgressiveReveal>
+                </div>
               </div>
+            </FormSlide>
+
+            {/* STEP 4: CONFIRMATION */}
+            <FormSlide isActive={currentStep === 3}>
+              <div className="p-6 md:p-12 space-y-8 pb-8">
+                <header>
+                  <h2 className="text-[14px] font-serif uppercase tracking-[0.3em] text-[#251101] dark:text-white mb-3">
+                    Final Review
+                  </h2>
+                  <p className="text-[12px] font-light text-[#595f72] font-serif">
+                    Please verify your details before securing the reservation.
+                  </p>
+                </header>
+
+                <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#050505] p-6 md:p-10 space-y-10">
+                  {bookings.map((b, i) => {
+                    const missingService = !b.serviceId
+                    const missingTime = !b.date || !b.time
+                    const missingIdentity =
+                      b.firstName.trim() === '' ||
+                      b.surname.trim() === '' ||
+                      (i === 0 &&
+                        !isRecognized &&
+                        (!EMAIL_REGEX.test(b.email) || !PHONE_REGEX.test(b.phone)))
+                    const isError = missingService || missingTime || missingIdentity
+
+                    if (isError) {
+                      return (
+                        <div
+                          key={i}
+                          className="pb-8 border-b border-zinc-100 dark:border-zinc-900 last:border-0 last:pb-0"
+                        >
+                          <div className="flex items-center gap-4 mb-5">
+                            <span className="text-[8px] uppercase tracking-[0.4em] text-red-500 font-serif">
+                              {i === 0 ? 'Main Patient' : `Guest ${i}`} — Incomplete
+                            </span>
+                            <div className="flex-1 h-[1px] bg-red-500/20" />
+                          </div>
+                          <div className="space-y-4 flex flex-col items-start">
+                            {missingService && (
+                              <button
+                                onClick={() => jumpToStep(i, 0)}
+                                className="text-[12px] uppercase tracking-[0.2em] font-serif text-[#251101] dark:text-white hover:opacity-50 transition-opacity outline-none text-left"
+                              >
+                                Select Treatment →
+                              </button>
+                            )}
+                            {!missingService && missingTime && (
+                              <button
+                                onClick={() => jumpToStep(i, 1)}
+                                className="text-[12px] uppercase tracking-[0.2em] font-serif text-[#251101] dark:text-white hover:opacity-50 transition-opacity outline-none text-left"
+                              >
+                                Select Schedule →
+                              </button>
+                            )}
+                            {!missingService && !missingTime && missingIdentity && (
+                              <button
+                                onClick={() => jumpToStep(i, 2)}
+                                className="text-[12px] uppercase tracking-[0.2em] font-serif text-[#251101] dark:text-white hover:opacity-50 transition-opacity outline-none text-left"
+                              >
+                                Complete Dossier →
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    }
+
+                    return (
+                      <div
+                        key={i}
+                        className="pb-8 border-b border-zinc-100 dark:border-zinc-900 last:border-0 last:pb-0 space-y-6"
+                      >
+                        <div className="flex items-center gap-4">
+                          <span className="text-[8px] uppercase tracking-[0.4em] text-zinc-400 font-serif">
+                            {i === 0 ? 'Main Patient' : `Guest ${i}`}
+                          </span>
+                          <div className="flex-1 h-[1px] bg-zinc-100 dark:bg-zinc-900" />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-1">
+                            <span className="text-[7px] uppercase tracking-[0.4em] text-zinc-400 font-serif block">
+                              Name
+                            </span>
+                            <p className="text-[13px] font-serif text-[#251101] dark:text-white">
+                              {b.firstName} {b.surname}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[7px] uppercase tracking-[0.4em] text-zinc-400 font-serif block">
+                              Treatment(s)
+                            </span>
+                            <p className="text-[13px] font-serif text-[#251101] dark:text-white">
+                              {getServiceTitle(b.serviceId)}{' '}
+                              {b.extraServiceId && `+ ${getServiceTitle(b.extraServiceId)}`}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[7px] uppercase tracking-[0.4em] text-zinc-400 font-serif block">
+                              Date
+                            </span>
+                            <p className="text-[13px] font-serif text-[#251101] dark:text-white">
+                              {dayjs(b.date).format('MMM D, YYYY')}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <span className="text-[7px] uppercase tracking-[0.4em] text-zinc-400 font-serif block">
+                              Time
+                            </span>
+                            <p className="text-[13px] font-serif text-[#251101] dark:text-white">
+                              {b.time}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </FormSlide>
+          </div>
+
+          {/* BOTTOM NAVIGATION ACTION BAR (Pinned) */}
+          <div className="p-5 md:p-8 border-t border-zinc-200 dark:border-zinc-900 flex justify-between items-center bg-zinc-50 dark:bg-[#080808] shrink-0 relative z-20">
+            <button
+              onClick={prevStep}
+              disabled={currentStep === 0 || isPendingTransition}
+              className={`flex items-center gap-3 md:gap-4 text-[9px] font-bold uppercase tracking-[0.4em] font-serif outline-none transition-all duration-700 group ${currentStep === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100 hover:text-[#595f72]'}`}
+            >
+              <ArrowLeftIcon className="w-3 h-3 md:w-3.5 md:h-3.5 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-x-1" />
+              <span className="relative pb-1">
+                Return
+                <span className="absolute bottom-0 left-0 w-0 h-[0.5px] bg-[#251101] dark:bg-white transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:w-full" />
+              </span>
+            </button>
+
+            <div className="flex items-center gap-6">
+              {!isStepValid() && isActiveTabValid() && currentStep < 3 && (
+                <span className="text-[8px] uppercase tracking-[0.2em] text-red-500 font-serif animate-pulse hidden md:block">
+                  Action Required on Guest Tabs
+                </span>
+              )}
+
+              <button
+                onClick={nextStep}
+                disabled={!isStepValid() && currentStep === 3}
+                className={`flex items-center gap-3 md:gap-4 text-[9px] font-bold uppercase tracking-[0.4em] font-serif outline-none transition-all duration-700 group ${(!isStepValid() && currentStep === 3) || isPendingTransition ? 'opacity-30 cursor-not-allowed' : 'opacity-100 hover:text-[#595f72]'}`}
+              >
+                <span className="relative pb-1">
+                  {isPendingTransition
+                    ? 'Processing'
+                    : currentStep === STEPS.length - 1
+                      ? 'Confirm Booking'
+                      : currentStep === 2
+                        ? 'Review'
+                        : 'Continue'}
+                  <span className="absolute bottom-0 right-0 w-0 h-[0.5px] bg-[#251101] dark:bg-white transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:w-full" />
+                </span>
+                {currentStep === STEPS.length - 1 ? (
+                  <CheckIcon
+                    className={`w-3 h-3 md:w-3.5 md:h-3.5 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isPendingTransition ? 'animate-pulse' : 'group-hover:scale-110'}`}
+                  />
+                ) : (
+                  <ArrowRightIcon className="w-3 h-3 md:w-3.5 md:h-3.5 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-1" />
+                )}
+              </button>
             </div>
-          </form>
+          </div>
         </div>
-      </FadeIn>
+      </div>
+    </>
+  )
+}
+
+function FormSlide({ children, isActive }: { children: React.ReactNode; isActive: boolean }) {
+  return (
+    <div
+      className={`absolute inset-0 w-full h-full transition-all duration-[1200ms] ${atelierEase} overflow-y-auto scrollbar-hide ${isActive ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 translate-x-12 pointer-events-none z-0'}`}
+    >
+      {children}
     </div>
   )
 }
 
-function Field({
+// Custom wrapper for pure CSS progressive disclosure
+function ProgressiveReveal({ show, children }: { show: boolean; children: React.ReactNode }) {
+  return (
+    <div
+      className={`transition-all duration-[1200ms] ${atelierEase} overflow-hidden ${show ? 'max-h-[200px] opacity-100 translate-y-0 pt-6 md:pt-8' : 'max-h-0 opacity-0 -translate-y-4 pt-0'}`}
+    >
+      {children}
+    </div>
+  )
+}
+
+function FloatingInput({
   label,
+  type = 'text',
   value,
   onChange,
-  onBlur,
-  placeholder,
-  type = 'text',
-  error,
 }: {
   label: string
-  value: string
-  onChange: (v: string) => void
-  onBlur?: () => void
-  placeholder: string
   type?: string
-  error?: string
+  value: string
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
 }) {
+  const [isFocused, setIsFocused] = useState(false)
+  const isFilled = value.length > 0 || isFocused
+
   return (
-    <div className="group relative">
-      <label
-        className={`text-[9px] uppercase tracking-[0.4em] block font-serif mb-3 ${error ? 'text-red-500' : 'text-[#595f72]'}`}
-      >
-        {label} {error && <span className="normal-case opacity-60 ml-2">({error})</span>}
-      </label>
+    <div className="relative group">
       <input
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={onBlur}
-        placeholder={placeholder}
-        className={`w-full bg-transparent text-[16px] font-serif outline-none py-1.5 border-b transition-colors text-[#251101] dark:text-white ${error ? 'border-red-500' : 'border-zinc-100 dark:border-zinc-900 focus:border-zinc-400'}`}
+        onChange={onChange}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        className="w-full bg-transparent border-b border-zinc-200 dark:border-zinc-800 focus:outline-none py-3 md:py-4 text-[16px] md:text-[14px] font-serif text-[#251101] dark:text-zinc-100 transition-colors z-10 relative rounded-none"
+      />
+      <label
+        className={`absolute left-0 transition-all duration-500 ${atelierEase} font-serif pointer-events-none z-0 ${isFilled ? '-top-3 text-[7px] uppercase tracking-[0.3em] text-[#251101] dark:text-zinc-400' : 'top-1/2 -translate-y-1/2 text-[14px] md:text-[12px] text-[#595f72] tracking-wide'}`}
+      >
+        {label}
+      </label>
+      <div
+        className={`absolute bottom-0 left-0 h-[1px] bg-[#251101] dark:bg-white transition-all duration-700 ${atelierEase} ${isFocused ? 'w-full' : 'w-0'}`}
       />
     </div>
   )
