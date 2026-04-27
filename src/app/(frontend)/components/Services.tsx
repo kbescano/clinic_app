@@ -35,6 +35,7 @@ interface ServiceCardProps {
   detailsOpenId: string | null
   setDetailsOpenId: (id: string | null) => void
   index: number
+  onInView: (id: string) => void
 }
 
 const atelierEase = 'ease-[cubic-bezier(0.16,1,0.3,1)]'
@@ -47,6 +48,7 @@ const ServiceCard = ({
   detailsOpenId,
   setDetailsOpenId,
   index,
+  onInView,
 }: ServiceCardProps) => {
   const [isVisible, setIsVisible] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -54,35 +56,39 @@ const ServiceCard = ({
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        setIsVisible(entry.isIntersecting)
+        if (entry.isIntersecting) {
+          setIsVisible(true) // Triggers the reveal animation once
+          onInView(service.id) // Updates the active state in the side index
+        }
       },
       {
-        threshold: 0.1,
-        rootMargin: '-10% 0px -10% 0px',
+        threshold: 0.3,
+        rootMargin: '-20% 0px -20% 0px', // Triggers when element is near the center of the scroll pane
       },
     )
 
     if (cardRef.current) observer.observe(cardRef.current)
     return () => observer.disconnect()
-  }, [])
+  }, [service.id, onInView])
 
   return (
     <div
+      id={`service-${service.id}`}
       ref={cardRef}
-      className="flex flex-col md:flex-row bg-white dark:bg-[#050505] group overflow-hidden border-b border-transparent last:border-none even:md:flex-row-reverse"
+      className="flex flex-col md:flex-row group overflow-hidden border-b border-zinc-100 dark:border-zinc-900 last:border-none even:md:flex-row-reverse"
     >
       {/* IMAGE CONTAINER */}
-      <div className="relative w-full md:w-[45%] shrink-0 overflow-hidden h-[550px] md:h-auto md:min-h-[750px] bg-zinc-50 dark:bg-black">
+      <div className="relative w-full md:w-1/2 shrink-0 overflow-hidden h-[550px] md:h-auto md:min-h-[750px] bg-zinc-50 dark:bg-black">
         {/* 1. THE CURTAIN REVEAL */}
         <div
-          className={`absolute inset-0 z-20 bg-white dark:bg-[#050505] origin-right transition-transform duration-[2000ms] ${atelierEase} ${
+          className={`absolute inset-0 z-20 bg-zinc-50 dark:bg-[#080808] origin-right transition-transform duration-[2000ms] ${atelierEase} ${
             isVisible ? 'scale-x-0 delay-[100ms]' : 'scale-x-100 delay-0'
           }`}
         />
 
-        {/* 2. IMAGE FOCUS */}
+        {/* 2. IMAGE FOCUS (Absolute inset-0 prevents layout expansion jumps) */}
         <div
-          className={`h-full w-full transition-all duration-[2500ms] ${atelierEase} origin-center ${
+          className={`absolute inset-0 transition-all duration-[2500ms] ${atelierEase} origin-center ${
             isVisible
               ? 'opacity-100 scale-100 blur-0 delay-[200ms]'
               : 'opacity-0 scale-[1.1] blur-[15px] delay-0'
@@ -99,10 +105,10 @@ const ServiceCard = ({
       </div>
 
       {/* TEXT CONTENT */}
-      <div className="flex flex-col flex-1 p-8 md:p-20 lg:p-28 justify-center relative">
+      <div className="flex flex-col flex-1 p-8 md:p-12 lg:p-16 justify-center relative bg-white dark:bg-[#050505]">
         <div className="max-w-md w-full mx-auto">
           <div className="space-y-8">
-            {/* 3. TYPOGRAPHY COLLAPSE: Fixed wrap issue by using static tracking and animating blur instead */}
+            {/* 3. TYPOGRAPHY COLLAPSE */}
             <h3
               className={`text-[18px] md:text-[22px] font-normal font-serif text-[#251101] dark:text-zinc-100 leading-tight tracking-tight transition-all duration-[2000ms] ${atelierEase} ${
                 isVisible
@@ -265,7 +271,7 @@ const ServiceSlider = ({ images, priority }: { images: ServiceImage[]; priority?
   }, [emblaApi, onSelect])
 
   return (
-    <div className="absolute inset-0 w-full h-full overflow-hidden cursor-grab active:cursor-grabbing group/slider bg-white dark:bg-black">
+    <div className="absolute inset-0 overflow-hidden cursor-grab active:cursor-grabbing group/slider bg-white dark:bg-black">
       <div className="h-full w-full" ref={emblaRef}>
         <div className="flex h-full">
           {images.map((item, index) => (
@@ -325,18 +331,12 @@ export default function Services() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [detailsOpenId, setDetailsOpenId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const pathname = usePathname()
+  const [activeServiceId, setActiveServiceId] = useState<string | null>(null)
 
-  const [isHeaderVisible, setIsHeaderVisible] = useState(false)
-  const headerRef = useRef<HTMLDivElement>(null)
+  const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsHeaderVisible(entry.isIntersecting),
-      { threshold: 0.1, rootMargin: '0px 0px -10% 0px' },
-    )
-    if (headerRef.current) observer.observe(headerRef.current)
-    return () => observer.disconnect()
+    setIsMounted(true)
   }, [])
 
   useEffect(() => {
@@ -345,6 +345,9 @@ export default function Services() {
         const response = await fetch('/api/services?limit=100')
         const data = await response.json()
         setServices(data.docs || [])
+        if (data.docs && data.docs.length > 0) {
+          setActiveServiceId(data.docs[0].id)
+        }
       } catch (error) {
         console.error(error)
       } finally {
@@ -354,71 +357,94 @@ export default function Services() {
     fetchServices()
   }, [])
 
-  return (
-    <section
-      id="services"
-      className="relative z-10 bg-white dark:bg-[#050505] shadow-[0_-20px_40px_rgba(0,0,0,0.05)] dark:shadow-[0_-20px_50px_rgba(0,0,0,0.5)] selection:bg-zinc-100 min-h-screen flex flex-col"
-    >
-      {/* HEADER */}
-      {pathname === '/services' && (
-        <div
-          ref={headerRef}
-          className="max-w-[1440px] w-full mx-auto pt-32 pb-16 px-8 border-x border-zinc-100 dark:border-zinc-900 overflow-hidden"
-        >
-          <div className="space-y-5">
-            {/* Removed tracking animation here as well to prevent wrap issues */}
-            <span
-              className={`text-[8px] uppercase tracking-[0.8em] text-[#595f72] font-serif block transition-all duration-[2000ms] ${atelierEase} ${
-                isHeaderVisible
-                  ? 'opacity-50 translate-y-0 blur-0 delay-0'
-                  : 'opacity-0 translate-y-6 blur-[2px] delay-0'
-              }`}
-            >
-              Treatment Registry
-            </span>
-            <h2
-              className={`text-[24px] md:text-[32px] font-normal font-serif tracking-tight text-[#251101] dark:text-zinc-100 leading-none transition-all duration-[2000ms] ${atelierEase} ${
-                isHeaderVisible
-                  ? 'opacity-100 translate-y-0 blur-0 delay-[200ms]'
-                  : 'opacity-0 translate-y-8 blur-[4px] delay-0'
-              }`}
-            >
-              The Collection
-            </h2>
-            <div
-              className={`h-[0.5px] bg-[#251101] dark:bg-white transition-all duration-[2500ms] ${atelierEase} ${
-                isHeaderVisible ? 'w-12 opacity-20 delay-[400ms]' : 'w-0 opacity-0 delay-0'
-              }`}
-            />
-          </div>
-        </div>
-      )}
+  const handleScrollTo = (id: string) => {
+    const element = document.getElementById(`service-${id}`)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
 
-      {/* DYNAMIC CONTENT AREA */}
-      {loading ? (
-        <div className="flex-1 max-w-[1440px] w-full mx-auto border-x border-t border-zinc-100 dark:border-zinc-900 flex flex-col items-center justify-center py-40">
-          <div className="w-8 h-8 border-[0.5px] border-[#251101] dark:border-white rounded-full animate-ping opacity-20 mb-4" />
-          <span className="text-zinc-400 uppercase tracking-[0.8em] text-[7px] font-serif animate-pulse">
-            Registry
-          </span>
-        </div>
-      ) : (
-        <div className="flex-1 max-w-[1440px] w-full mx-auto border-x border-zinc-100 dark:border-zinc-900 relative">
-          <div className="flex flex-col border-t border-zinc-100 dark:border-zinc-900">
-            {services.map((service, index) => (
-              <ServiceCard
-                key={service.id}
-                service={service}
-                expandedId={expandedId}
-                setExpandedId={setExpandedId}
-                detailsOpenId={detailsOpenId}
-                setDetailsOpenId={setDetailsOpenId}
-                index={index}
-              />
-            ))}
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: `html { scroll-behavior: smooth; }` }} />
+      <section
+        id="services"
+        className="relative z-10 min-h-screen flex flex-col justify-center bg-zinc-50 dark:bg-[#080808]"
+      >
+        {/* APP-LIKE BOUNDED CONTAINER (Mirrors Booking Form perfectly) */}
+        <div className="relative w-full max-w-[1440px] mx-auto h-[calc(100dvh-5rem)] md:h-[80vh] min-h-[600px] flex flex-col md:flex-row border-x border-zinc-100 dark:border-zinc-900 mt-20 md:mt-32 border-t md:border-t-0 bg-white dark:bg-[#050505] overflow-hidden shadow-2xl">
+          {/* LEFT COLUMN: Sticky Collection Index */}
+          <div className="w-full md:w-1/3 p-6 md:p-12 border-b md:border-b-0 md:border-r border-zinc-100 dark:border-zinc-900 flex flex-col justify-between shrink-0 z-20">
+            <div
+              className={`space-y-6 md:space-y-12 transition-all duration-[2000ms] ${atelierEase} ${isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+            >
+              <header className="space-y-3">
+                <span className="text-[8px] uppercase tracking-[0.8em] text-[#595f72] font-serif block">
+                  Treatment Registry
+                </span>
+                <h1 className="text-[24px] md:text-[32px] font-normal font-serif tracking-tight text-[#251101] dark:text-zinc-100 leading-none">
+                  The Collection
+                </h1>
+              </header>
+
+              {/* Dynamic Tracking Stepper */}
+              <div className="flex flex-row md:flex-col items-center md:items-start justify-between md:justify-start w-full gap-4 md:gap-0 md:space-y-4 overflow-x-auto scrollbar-hide py-2 md:py-0 mask-fade-right md:mask-none">
+                {services.map((s, index) => {
+                  const isActive = activeServiceId === s.id
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => handleScrollTo(s.id)}
+                      className="flex items-center gap-3 md:gap-4 group shrink-0 outline-none text-left"
+                    >
+                      <span
+                        className={`text-[9px] font-serif tracking-[0.3em] transition-all duration-700 ${isActive ? 'text-[#251101] dark:text-white scale-110' : 'text-zinc-300 dark:text-zinc-700 group-hover:text-[#595f72]'}`}
+                      >
+                        0{index + 1}
+                      </span>
+                      <div
+                        className={`h-[1px] transition-all duration-1000 ${atelierEase} ${isActive ? 'w-8 md:w-12 bg-[#251101] dark:bg-white' : 'w-4 md:w-6 bg-zinc-300 dark:bg-zinc-700 group-hover:w-8 group-hover:bg-[#595f72]'}`}
+                      />
+                      <span
+                        className={`text-[8px] uppercase tracking-[0.4em] font-serif transition-all duration-700 ${isActive ? 'text-[#251101] dark:text-white opacity-100 block' : 'text-[#595f72] opacity-0 md:-translate-x-4 hidden md:block group-hover:opacity-100 group-hover:translate-x-0'}`}
+                      >
+                        {s.title}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: Scrolling Card Flow */}
+          <div className="w-full md:w-2/3 flex flex-col flex-1 min-h-0 relative overflow-y-auto scrollbar-hide bg-zinc-50 dark:bg-[#080808]">
+            {loading ? (
+              <div className="flex-1 w-full h-full flex flex-col items-center justify-center min-h-[500px]">
+                <div className="w-8 h-8 border-[0.5px] border-[#251101] dark:border-white rounded-full animate-ping opacity-20 mb-4" />
+                <span className="text-zinc-400 uppercase tracking-[0.8em] text-[7px] font-serif animate-pulse">
+                  Registry
+                </span>
+              </div>
+            ) : (
+              <div className="flex flex-col">
+                {services.map((service, index) => (
+                  <ServiceCard
+                    key={service.id}
+                    service={service}
+                    expandedId={expandedId}
+                    setExpandedId={setExpandedId}
+                    detailsOpenId={detailsOpenId}
+                    setDetailsOpenId={setDetailsOpenId}
+                    index={index}
+                    onInView={setActiveServiceId}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      )}
-    </section>
+      </section>
+    </>
   )
 }
