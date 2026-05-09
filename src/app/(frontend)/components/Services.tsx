@@ -95,11 +95,10 @@ const ServiceCard = ({
     <div
       id={`service-${service.id}`}
       ref={cardRef}
-      // Added md:items-start to stop the columns from stretching to match each other's height
       className="flex flex-col md:flex-row md:items-start group overflow-hidden border-b border-zinc-100 dark:border-zinc-900 last:border-none even:md:flex-row-reverse bg-white dark:bg-[#050505]"
     >
-      {/* IMAGE CONTAINER: Fixed height and Sticky so it follows the text if the accordion gets long */}
-      <div className="relative w-full md:w-1/2 shrink-0 overflow-hidden h-[500px] md:h-[750px] bg-zinc-50 dark:bg-[#030303] md:sticky top-0 grayscale-[0.2] group-hover:grayscale-0 transition-all duration-[1500ms]">
+      {/* IMAGE CONTAINER: Sticky alignment matched to stepper */}
+      <div className="relative w-full md:w-1/2 shrink-0 overflow-hidden h-[500px] md:h-[750px] bg-zinc-50 dark:bg-[#030303] md:sticky md:top-32 grayscale-[0.2] group-hover:grayscale-0 transition-all duration-[1500ms]">
         <div
           className={`absolute inset-0 transition-opacity duration-[2000ms] ${atelierEase} ${
             isVisible ? 'opacity-100' : 'opacity-0'
@@ -125,8 +124,8 @@ const ServiceCard = ({
         </span>
       </div>
 
-      {/* TEXT CONTENT: Allowed to expand naturally */}
-      <div className="flex flex-col w-full md:w-1/2 p-8 md:p-12 lg:p-20 justify-center relative bg-white dark:bg-[#050505] min-h-[750px]">
+      {/* TEXT CONTENT: Removed forced 750px height on mobile */}
+      <div className="flex flex-col w-full md:w-1/2 p-8 md:p-12 lg:p-20 justify-center relative bg-white dark:bg-[#050505] min-h-0 md:min-h-[750px]">
         <div className="max-w-md w-full mx-auto">
           <div className="space-y-8">
             <h3
@@ -274,13 +273,12 @@ const ServiceSlider = ({ images, priority }: { images: ServiceImage[]; priority?
               key={index}
               className="relative flex-[0_0_100%] min-w-0 h-full bg-zinc-50 dark:bg-[#030303]"
             >
-              {/* Using object-contain as required */}
               <Image
                 src={item.image?.url || item.url || ''}
                 alt=""
                 fill
                 priority={priority && index === 0}
-                className="object-fit transition-transform duration-[4000ms] group-hover/slider:scale-105"
+                className="object-cover transition-transform duration-[4000ms] group-hover/slider:scale-105"
                 sizes="(max-width: 768px) 100vw, 50vw"
               />
             </div>
@@ -329,7 +327,6 @@ export default function Services() {
   const [detailsOpenId, setDetailsOpenId] = useState<string | null>(null)
   const [activeServiceId, setActiveServiceId] = useState<string | null>(null)
 
-  // Re-added the loading states
   const [isLoading, setIsLoading] = useState(true)
   const [isMounted, setIsMounted] = useState(false)
 
@@ -343,7 +340,6 @@ export default function Services() {
   useEffect(() => {
     async function fetchServices() {
       try {
-        // The 2-second Promise Lock
         const [response] = await Promise.all([
           fetch('/api/services?limit=100'),
           new Promise((resolve) => setTimeout(resolve, 2000)),
