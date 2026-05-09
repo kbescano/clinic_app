@@ -1,12 +1,12 @@
 'use client'
 
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, Suspense } from 'react'
 import FadeIn from '../../components/FadeIn'
-import { ClockIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline' // Added ArrowDownTrayIcon
+import { ClockIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import BackToHome from '../../components/BackToHome'
 import { RegistrySkeleton } from '../../components/RegistrySkeleton'
 import dayjs from '@/lib/dayjs'
-import Link from 'next/link' // Added Link
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -196,7 +196,10 @@ export default function AdminAnalytics() {
 
               {loading && (
                 <div className="absolute -left-6 top-1/2 -translate-y-1/2 hidden sm:block">
-                  <RegistrySkeleton />
+                  {/* WRAPPED IN SUSPENSE TO PREVENT CSR BAILOUT */}
+                  <Suspense fallback={null}>
+                    <RegistrySkeleton />
+                  </Suspense>
                 </div>
               )}
               <div className="inline-flex items-center bg-zinc-50 dark:bg-zinc-900/50 p-1.5 rounded-full border border-zinc-100 dark:border-zinc-800/50 relative max-w-full overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden">

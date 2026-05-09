@@ -1,9 +1,10 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, Suspense } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
-export function RegistrySkeleton() {
+// 1. Move the actual logic into an inner component
+function SkeletonInner() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
 
@@ -82,5 +83,14 @@ export function RegistrySkeleton() {
         </svg>
       </div>
     </div>
+  )
+}
+
+// 2. Export the component wrapped in its own Suspense boundary
+export function RegistrySkeleton() {
+  return (
+    <Suspense fallback={null}>
+      <SkeletonInner />
+    </Suspense>
   )
 }
