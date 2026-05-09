@@ -53,21 +53,41 @@ const ServiceCard = ({
   const cardRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
+    if (!cardRef.current) return
+
+    // 1. REVEAL OBSERVER: Triggers the animation when the card enters the bottom of the screen
+    const revealObserver = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true)
+        }
+      },
+      {
+        threshold: 0.15,
+        rootMargin: '0px 0px -50px 0px',
+      },
+    )
+
+    // 2. STEPPER OBSERVER: Updates the left index when the card hits the top reading zone
+    const stepperObserver = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
           onInView(service.id)
         }
       },
       {
         threshold: 0,
-        rootMargin: '-15% 0px -75% 0px',
+        rootMargin: '-20% 0px -75% 0px', // 5% detection band near the top
       },
     )
 
-    if (cardRef.current) observer.observe(cardRef.current)
-    return () => observer.disconnect()
+    revealObserver.observe(cardRef.current)
+    stepperObserver.observe(cardRef.current)
+
+    return () => {
+      revealObserver.disconnect()
+      stepperObserver.disconnect()
+    }
   }, [service.id, onInView])
 
   const formattedIndex = (index + 1).toString().padStart(2, '0')
@@ -316,7 +336,6 @@ export default function Services() {
   const [services, setServices] = useState<Service[]>([])
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [detailsOpenId, setDetailsOpenId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
   const [activeServiceId, setActiveServiceId] = useState<string | null>(null)
   const [isMounted, setIsMounted] = useState(false)
 
@@ -336,8 +355,6 @@ export default function Services() {
         if (data.docs && data.docs.length > 0) setActiveServiceId(data.docs[0].id)
       } catch (error) {
         console.error(error)
-      } finally {
-        setLoading(false)
       }
     }
     fetchServices()
@@ -432,29 +449,20 @@ export default function Services() {
 
           {/* RIGHT COLUMN: GRID REGISTRY */}
           <div className="w-full md:w-2/3 flex flex-col flex-1 bg-zinc-50 dark:bg-[#080808]">
-            {loading ? (
-              <div className="flex-1 w-full flex flex-col items-center justify-center py-40">
-                <div className="w-8 h-8 border-[0.5px] border-[#251101] dark:border-white rounded-full animate-ping opacity-20 mb-4" />
-                <span className="text-zinc-400 uppercase tracking-[0.8em] text-[7px] font-serif animate-pulse">
-                  Registry
-                </span>
-              </div>
-            ) : (
-              <div className="flex flex-col border-t md:border-t-0 border-zinc-100 dark:border-zinc-900">
-                {services.map((service, index) => (
-                  <ServiceCard
-                    key={service.id}
-                    service={service}
-                    expandedId={expandedId}
-                    setExpandedId={setExpandedId}
-                    detailsOpenId={detailsOpenId}
-                    setDetailsOpenId={setDetailsOpenId}
-                    index={index}
-                    onInView={setActiveServiceId}
-                  />
-                ))}
-              </div>
-            )}
+            <div className="flex flex-col border-t md:border-t-0 border-zinc-100 dark:border-zinc-900">
+              {services.map((service, index) => (
+                <ServiceCard
+                  key={service.id}
+                  service={service}
+                  expandedId={expandedId}
+                  setExpandedId={setExpandedId}
+                  detailsOpenId={detailsOpenId}
+                  setDetailsOpenId={setDetailsOpenId}
+                  index={index}
+                  onInView={setActiveServiceId}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>
