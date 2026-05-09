@@ -5,6 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import useEmblaCarousel from 'embla-carousel-react'
 import { ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { RegistrySkeleton } from '../components/RegistrySkeleton'
 
 // --- TYPES & INTERFACES ---
 
@@ -55,7 +56,6 @@ const ServiceCard = ({
   useEffect(() => {
     if (!cardRef.current) return
 
-    // 1. REVEAL OBSERVER: Triggers the animation when the card enters the bottom of the screen
     const revealObserver = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -68,7 +68,6 @@ const ServiceCard = ({
       },
     )
 
-    // 2. STEPPER OBSERVER: Updates the left index when the card hits the top reading zone
     const stepperObserver = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -77,7 +76,7 @@ const ServiceCard = ({
       },
       {
         threshold: 0,
-        rootMargin: '-20% 0px -75% 0px', // 5% detection band near the top
+        rootMargin: '-20% 0px -75% 0px',
       },
     )
 
@@ -96,21 +95,14 @@ const ServiceCard = ({
     <div
       id={`service-${service.id}`}
       ref={cardRef}
-      className="flex flex-col md:flex-row group overflow-hidden border-b border-zinc-100 dark:border-zinc-900 last:border-none even:md:flex-row-reverse bg-white dark:bg-[#050505]"
+      // Added md:items-start to stop the columns from stretching to match each other's height
+      className="flex flex-col md:flex-row md:items-start group overflow-hidden border-b border-zinc-100 dark:border-zinc-900 last:border-none even:md:flex-row-reverse bg-white dark:bg-[#050505]"
     >
-      {/* IMAGE CONTAINER: Specialist-style Reveal */}
-      <div className="relative w-full md:w-1/2 shrink-0 overflow-hidden h-[500px] md:h-auto md:min-h-[750px] bg-zinc-50 dark:bg-black grayscale-[0.2] group-hover:grayscale-0 transition-all duration-[1500ms]">
-        {/* 1. THE CURTAIN REVEAL (Solid block sliding right) */}
+      {/* IMAGE CONTAINER: Fixed height and Sticky so it follows the text if the accordion gets long */}
+      <div className="relative w-full md:w-1/2 shrink-0 overflow-hidden h-[500px] md:h-[750px] bg-zinc-50 dark:bg-[#030303] md:sticky top-0 grayscale-[0.2] group-hover:grayscale-0 transition-all duration-[1500ms]">
         <div
-          className={`absolute inset-0 z-20 bg-white dark:bg-[#050505] origin-right transition-transform duration-[2000ms] ${atelierEase} ${
-            isVisible ? 'scale-x-0' : 'scale-x-100'
-          }`}
-        />
-
-        {/* 2. IMAGE SLIDER (Scales down & un-blurs) */}
-        <div
-          className={`absolute inset-0 transition-all duration-[2500ms] delay-200 ${atelierEase} origin-center ${
-            isVisible ? 'opacity-100 scale-100 blur-0' : 'opacity-0 scale-[1.1] blur-xl'
+          className={`absolute inset-0 transition-opacity duration-[2000ms] ${atelierEase} ${
+            isVisible ? 'opacity-100' : 'opacity-0'
           }`}
         >
           {service.images && service.images.length > 0 ? (
@@ -122,9 +114,8 @@ const ServiceCard = ({
           )}
         </div>
 
-        {/* 3. EDITORIAL INDEX (Floats in like Specialist) */}
         <span
-          className={`absolute top-8 left-8 z-30 text-[9px] font-serif text-white/40 mix-blend-difference transition-all duration-[2000ms] delay-[800ms] ${atelierEase} ${
+          className={`absolute top-8 left-8 z-30 text-[9px] font-serif text-white/40 mix-blend-difference transition-all duration-[2000ms] delay-[400ms] ${atelierEase} ${
             isVisible
               ? 'opacity-100 translate-y-0 tracking-[0.4em]'
               : 'opacity-0 -translate-y-4 tracking-[1em]'
@@ -134,13 +125,12 @@ const ServiceCard = ({
         </span>
       </div>
 
-      {/* TEXT CONTENT */}
-      <div className="flex flex-col flex-1 p-8 md:p-12 lg:p-20 justify-center relative bg-white dark:bg-[#050505]">
+      {/* TEXT CONTENT: Allowed to expand naturally */}
+      <div className="flex flex-col w-full md:w-1/2 p-8 md:p-12 lg:p-20 justify-center relative bg-white dark:bg-[#050505] min-h-[750px]">
         <div className="max-w-md w-full mx-auto">
           <div className="space-y-8">
-            {/* TYPOGRAPHY REVEAL */}
             <h3
-              className={`text-[20px] md:text-[24px] font-normal font-serif text-[#251101] dark:text-zinc-100 leading-tight tracking-tight transition-all duration-[1500ms] delay-[400ms] ${atelierEase} ${
+              className={`text-[20px] md:text-[24px] font-normal font-serif text-[#251101] dark:text-zinc-100 leading-tight tracking-tight transition-all duration-[1500ms] delay-[200ms] ${atelierEase} ${
                 isVisible ? 'opacity-100 translate-y-0 blur-0' : 'opacity-0 translate-y-8 blur-md'
               }`}
             >
@@ -148,7 +138,7 @@ const ServiceCard = ({
             </h3>
 
             <div
-              className={`space-y-6 transition-all duration-[1200ms] delay-[600ms] ${atelierEase} ${
+              className={`space-y-6 transition-all duration-[1200ms] delay-[400ms] ${atelierEase} ${
                 isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
               }`}
             >
@@ -170,11 +160,10 @@ const ServiceCard = ({
               </div>
             </div>
 
-            {/* DETAILS ACCORDION: Signature Draw-in lines */}
             {service.details && service.details.length > 0 && (
               <div className="relative pt-4 mt-8">
                 <div
-                  className={`absolute top-0 left-0 h-[0.5px] bg-zinc-200 dark:bg-zinc-800 transition-all duration-[2000ms] delay-[800ms] ${atelierEase} ${isVisible ? 'w-full' : 'w-0'}`}
+                  className={`absolute top-0 left-0 h-[0.5px] bg-zinc-200 dark:bg-zinc-800 transition-all duration-[2000ms] delay-[600ms] ${atelierEase} ${isVisible ? 'w-full' : 'w-0'}`}
                 />
 
                 {service.details.map((item, idx) => {
@@ -185,7 +174,7 @@ const ServiceCard = ({
                       key={idx}
                       className={`relative border-b border-transparent transition-all duration-[1000ms] ${atelierEase}`}
                       style={{
-                        transitionDelay: isVisible ? `${900 + idx * 100}ms` : '0ms',
+                        transitionDelay: isVisible ? `${700 + idx * 100}ms` : '0ms',
                         opacity: isVisible ? 1 : 0,
                         transform: isVisible ? 'translateY(0)' : 'translateY(15px)',
                       }}
@@ -194,7 +183,7 @@ const ServiceCard = ({
                         className={`absolute bottom-0 left-0 h-[0.5px] bg-zinc-100 dark:bg-zinc-900 transition-all duration-[1500ms] ${atelierEase}`}
                         style={{
                           width: isVisible ? '100%' : '0%',
-                          transitionDelay: isVisible ? `${1000 + idx * 100}ms` : '0ms',
+                          transitionDelay: isVisible ? `${800 + idx * 100}ms` : '0ms',
                         }}
                       />
 
@@ -229,10 +218,10 @@ const ServiceCard = ({
 
           <footer className="relative flex items-end justify-between pt-12 mt-12">
             <div
-              className={`absolute top-0 left-0 h-[0.5px] bg-zinc-200 dark:bg-zinc-800 transition-all duration-[2000ms] delay-[1200ms] ${atelierEase} ${isVisible ? 'w-full' : 'w-0'}`}
+              className={`absolute top-0 left-0 h-[0.5px] bg-zinc-200 dark:bg-zinc-800 transition-all duration-[2000ms] delay-[1000ms] ${atelierEase} ${isVisible ? 'w-full' : 'w-0'}`}
             />
             <div
-              className={`space-y-1 transition-all duration-[1500ms] delay-[1400ms] ${atelierEase} ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+              className={`space-y-1 transition-all duration-[1500ms] delay-[1200ms] ${atelierEase} ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
             >
               <span className="block text-[7px] uppercase tracking-[0.6em] text-[#595f72] font-serif opacity-50">
                 Reservation starting from
@@ -243,7 +232,7 @@ const ServiceCard = ({
             </div>
             <Link
               href={`/booking?serviceId=${service.id}`}
-              className={`group/book flex items-center gap-4 text-[9px] font-bold uppercase tracking-[0.4em] font-serif outline-none transition-all duration-[1500ms] delay-[1500ms] ${atelierEase} ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
+              className={`group/book flex items-center gap-4 text-[9px] font-bold uppercase tracking-[0.4em] font-serif outline-none transition-all duration-[1500ms] delay-[1300ms] ${atelierEase} ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'}`}
             >
               <span className="relative pb-1">
                 Book now
@@ -281,13 +270,17 @@ const ServiceSlider = ({ images, priority }: { images: ServiceImage[]; priority?
       <div className="h-full w-full" ref={emblaRef}>
         <div className="flex h-full">
           {images.map((item, index) => (
-            <div key={index} className="relative flex-[0_0_100%] min-w-0 h-full">
+            <div
+              key={index}
+              className="relative flex-[0_0_100%] min-w-0 h-full bg-zinc-50 dark:bg-[#030303]"
+            >
+              {/* Using object-contain as required */}
               <Image
                 src={item.image?.url || item.url || ''}
                 alt=""
                 fill
                 priority={priority && index === 0}
-                className="object-cover transition-transform duration-[4000ms] group-hover/slider:scale-110"
+                className="object-fit transition-transform duration-[4000ms] group-hover/slider:scale-105"
                 sizes="(max-width: 768px) 100vw, 50vw"
               />
             </div>
@@ -295,7 +288,6 @@ const ServiceSlider = ({ images, priority }: { images: ServiceImage[]; priority?
         </div>
       </div>
 
-      {/* Manual Navigation Arrows Restored */}
       {images.length > 1 && (
         <>
           <button
@@ -315,7 +307,6 @@ const ServiceSlider = ({ images, priority }: { images: ServiceImage[]; priority?
         </>
       )}
 
-      {/* Progress Indicators */}
       {images.length > 1 && (
         <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-2 z-20">
           {images.map((_, i) => (
@@ -337,6 +328,9 @@ export default function Services() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [detailsOpenId, setDetailsOpenId] = useState<string | null>(null)
   const [activeServiceId, setActiveServiceId] = useState<string | null>(null)
+
+  // Re-added the loading states
+  const [isLoading, setIsLoading] = useState(true)
   const [isMounted, setIsMounted] = useState(false)
 
   const stepperRef = useRef<HTMLDivElement>(null)
@@ -349,26 +343,32 @@ export default function Services() {
   useEffect(() => {
     async function fetchServices() {
       try {
-        const response = await fetch('/api/services?limit=100')
+        // The 2-second Promise Lock
+        const [response] = await Promise.all([
+          fetch('/api/services?limit=100'),
+          new Promise((resolve) => setTimeout(resolve, 2000)),
+        ])
         const data = await response.json()
         setServices(data.docs || [])
         if (data.docs && data.docs.length > 0) setActiveServiceId(data.docs[0].id)
       } catch (error) {
         console.error(error)
+      } finally {
+        setIsLoading(false)
       }
     }
     fetchServices()
   }, [])
 
   useEffect(() => {
-    if (activeTabRef.current && stepperRef.current) {
+    if (activeTabRef.current && stepperRef.current && !isLoading) {
       activeTabRef.current.scrollIntoView({
         behavior: 'smooth',
         block: 'nearest',
         inline: 'center',
       })
     }
-  }, [activeServiceId])
+  }, [activeServiceId, isLoading])
 
   const handleScrollTo = (id: string) => {
     const el = document.getElementById(`service-${id}`)
@@ -382,6 +382,8 @@ export default function Services() {
 
   return (
     <>
+      <RegistrySkeleton />
+
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -394,13 +396,14 @@ export default function Services() {
 
       <section
         id="services"
-        className="relative z-10 min-h-screen bg-white dark:bg-[#050505] transition-colors duration-1000"
+        className={`relative z-10 min-h-screen bg-white dark:bg-[#050505] transition-opacity duration-1000 ${
+          isLoading ? 'opacity-0 h-screen overflow-hidden' : 'opacity-100'
+        }`}
       >
         <div className="relative w-full max-w-[1440px] mx-auto flex flex-col md:flex-row border-x border-zinc-100 dark:border-zinc-900 mt-20 md:mt-32">
-          {/* LEFT COLUMN: STICKY STEPPER */}
           <div className="w-full md:w-1/3 p-6 md:p-12 border-b md:border-b-0 md:border-r border-zinc-100 dark:border-zinc-900 z-30 bg-white dark:bg-[#050505] sticky top-0 md:top-32 self-start h-fit overflow-hidden">
             <div
-              className={`space-y-6 md:space-y-12 transition-all duration-[2000ms] ${atelierEase} ${isMounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
+              className={`space-y-6 md:space-y-12 transition-all duration-[2000ms] ${atelierEase} ${isMounted && !isLoading ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}
             >
               <header className="space-y-3">
                 <span className="text-[8px] uppercase tracking-[0.8em] text-[#595f72] font-serif block">
@@ -410,7 +413,7 @@ export default function Services() {
                   The Collection
                 </h1>
                 <div
-                  className={`h-[0.5px] bg-[#251101] dark:bg-white transition-all duration-[2500ms] delay-[400ms] ${atelierEase} ${isMounted ? 'w-12 opacity-20' : 'w-0 opacity-0'}`}
+                  className={`h-[0.5px] bg-[#251101] dark:bg-white transition-all duration-[2500ms] delay-[400ms] ${atelierEase} ${isMounted && !isLoading ? 'w-12 opacity-20' : 'w-0 opacity-0'}`}
                 />
               </header>
 
@@ -447,7 +450,6 @@ export default function Services() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: GRID REGISTRY */}
           <div className="w-full md:w-2/3 flex flex-col flex-1 bg-zinc-50 dark:bg-[#080808]">
             <div className="flex flex-col border-t md:border-t-0 border-zinc-100 dark:border-zinc-900">
               {services.map((service, index) => (
