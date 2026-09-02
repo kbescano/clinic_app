@@ -30,6 +30,7 @@ const nextConfig = {
       },
     ],
   },
+  unoptimized: true,
 }
 
 export default withPayload(nextConfig, { devBundleServerPackages: false })
