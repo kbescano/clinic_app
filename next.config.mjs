@@ -29,8 +29,8 @@ const nextConfig = {
         hostname: 'clinic-app-sp.vercel.app',
       },
     ],
+    unoptimized: true,
   },
-  unoptimized: true,
 }
 
 export default withPayload(nextConfig, { devBundleServerPackages: false })
