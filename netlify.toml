@@ -1,0 +1,15 @@
+# Netlify's secrets scanner fails the build when the *value* of any env var shows up in the repo or
+# build output. These five hold public, non-secret values that legitimately appear in code and
+# output, so they trigger false positives:
+#
+#   FROM_EMAIL              onboarding@resend.dev (Resend's public sandbox sender; also the fallback
+#                           literal in src/payload.config.ts and src/hooks/sendConfirmation.ts)
+#   SMTP_HOST               smtp.resend.com (public hostname; nodemailer bundles it in its service list)
+#   SMTP_USER               "resend" (Resend's fixed SMTP username, a common word)
+#   CLOUDINARY_CLOUD_NAME   public: it is part of every image URL on the site
+#   NEXT_PUBLIC_SERVER_URL  the public site URL
+#
+# Real credentials (SMTP_PASS, DATABASE_URI, PAYLOAD_SECRET, CLOUDINARY_API_SECRET, ...) are NOT
+# listed here, so they stay protected by the scan. Keep scanning enabled.
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "FROM_EMAIL,SMTP_HOST,SMTP_USER,CLOUDINARY_CLOUD_NAME,NEXT_PUBLIC_SERVER_URL"
