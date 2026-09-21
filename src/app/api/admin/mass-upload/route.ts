@@ -1,5 +1,6 @@
 import { getPayload } from 'payload'
 import config from '@/payload.config'
+import { getStaffUser } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -22,6 +23,10 @@ interface ServiceDoc {
 }
 
 export async function POST(req: Request) {
+  if (!(await getStaffUser())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const payload = await getPayload({ config })
 
   // Cast the incoming JSON array

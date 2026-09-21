@@ -1,8 +1,22 @@
 import type { CollectionConfig } from 'payload'
+import { getPasswordResetHtml, getPasswordResetSubject } from '@/lib/passwordResetEmail'
 
 export const Users: CollectionConfig = {
   slug: 'users',
-  auth: true,
+  auth: {
+    forgotPassword: {
+      generateEmailSubject: () => getPasswordResetSubject(),
+      generateEmailHTML: (args) =>
+        getPasswordResetHtml({ req: args?.req, token: args?.token, name: args?.user?.name }),
+    },
+  },
+  hooks: {
+    // The REST endpoint forwards a client-supplied `expiration`, which would let anyone request a
+    // long-lived reset link. Always use the default (1 hour).
+    beforeOperation: [
+      ({ args, operation }) => (operation === 'forgotPassword' ? { ...args, expiration: undefined } : args),
+    ],
+  },
   admin: {
     useAsTitle: 'name',
     // This hides the Users collection from the sidebar for non-admins

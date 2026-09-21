@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
+import { getStaffUser } from '@/lib/auth'
 import dayjs from '@/lib/dayjs'
 
 export const dynamic = 'force-dynamic'
@@ -25,6 +26,10 @@ interface AppointmentDoc {
 }
 
 export async function GET(request: Request) {
+  if (!(await getStaffUser())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(request.url)
   const range = searchParams.get('range') || 'today'
 
@@ -63,31 +68,35 @@ export async function GET(request: Request) {
   const payload = await getPayload({ config })
 
   // --- 2. FETCH DATA WITH TYPES ---
-  const currentData = await payload.find({
-    collection: 'appointments',
-    where: {
-      and: [
-        { appointmentDate: { greater_than_equal: dbStart.toISOString() } },
-        { appointmentDate: { less_than_equal: dbEnd.toISOString() } },
-        { status: { not_equals: 'cancelled' } },
-      ],
-    },
-    limit: 1000,
-    sort: '-appointmentDate',
-    depth: 1, // Ensure we can see service.title and service.price
-  })
-
-  const previousData = await payload.find({
-    collection: 'appointments',
-    where: {
-      and: [
-        { appointmentDate: { greater_than_equal: prevStart.toISOString() } },
-        { appointmentDate: { less_than_equal: prevEnd.toISOString() } },
-        { status: { not_equals: 'cancelled' } },
-      ],
-    },
-    limit: 1000,
-  })
+  // pagination: false so a busy range is never silently truncated at a page limit.
+  // The two ranges are independent, so query them concurrently.
+  const [currentData, previousData] = await Promise.all([
+    payload.find({
+      collection: 'appointments',
+      where: {
+        and: [
+          { appointmentDate: { greater_than_equal: dbStart.toISOString() } },
+          { appointmentDate: { less_than_equal: dbEnd.toISOString() } },
+          { status: { not_equals: 'cancelled' } },
+        ],
+      },
+      pagination: false,
+      sort: '-appointmentDate',
+      depth: 1, // Ensure we can see service.title and service.price
+    }),
+    payload.find({
+      collection: 'appointments',
+      where: {
+        and: [
+          { appointmentDate: { greater_than_equal: prevStart.toISOString() } },
+          { appointmentDate: { less_than_equal: prevEnd.toISOString() } },
+          { status: { not_equals: 'cancelled' } },
+        ],
+      },
+      pagination: false,
+      depth: 1,
+    }),
+  ])
 
   const currentDocs = currentData.docs as unknown as AppointmentDoc[]
   const previousDocs = previousData.docs as unknown as AppointmentDoc[]

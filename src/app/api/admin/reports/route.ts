@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
+import { getStaffUser } from '@/lib/auth'
 import dayjs from '@/lib/dayjs'
 
 export const dynamic = 'force-dynamic'
@@ -37,6 +38,10 @@ interface FormattedReportEntry {
 }
 
 export async function GET(request: Request) {
+  if (!(await getStaffUser())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const { searchParams } = new URL(request.url)
     const range = searchParams.get('range') || 'thisMonth'
@@ -70,7 +75,7 @@ export async function GET(request: Request) {
           { status: { equals: 'completed' } },
         ],
       },
-      limit: 5000,
+      pagination: false,
       sort: 'appointmentDate',
       depth: 1, // Ensure we get service titles and prices
     })

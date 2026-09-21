@@ -1,9 +1,13 @@
 import { GlobalConfig } from 'payload'
+import { revalidateGlobal } from '@/hooks/revalidationPage'
 
 export const ColorConfig: GlobalConfig = {
   slug: 'color-config',
   access: {
     read: () => true,
+  },
+  hooks: {
+    afterChange: [revalidateGlobal],
   },
   fields: [
     {

@@ -21,11 +21,13 @@ You are an expert Payload CMS developer. When working with Payload projects, fol
 ```
 src/
 ├── app/
-│   ├── (frontend)/          # Frontend routes
+│   ├── (website)/           # Public patient-facing site (own root layout)
+│   ├── (portal)/            # Staff portal (own root layout); (secure)/ is auth-gated, login is not
 │   └── (payload)/           # Payload admin routes
 ├── collections/             # Collection configs
 ├── globals/                 # Global configs
-├── components/              # Custom React components
+├── components/shared/       # Components used by both the website and the portal
+├── lib/auth.ts              # Staff session helpers (getStaffUser / requireStaff / assertStaff)
 ├── hooks/                   # Hook functions
 ├── access/                  # Access control functions
 └── payload.config.ts        # Main config

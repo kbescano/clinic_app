@@ -8,7 +8,7 @@ const config = {
   theme: {
     extend: {
       fontFamily: {
-        ovo: ['var(--font-ovo)', 'serif'],
+        display: ['var(--font-display, ui-sans-serif)', 'system-ui', 'sans-serif'],
       },
       colors: {
         primary: 'var(--primary)',
