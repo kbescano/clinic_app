@@ -37,7 +37,7 @@ function makeMaterials() {
       clearcoatRoughness: 0.5,
       envMapIntensity: 0.55,
     }),
-    faceDark: new THREE.MeshPhysicalMaterial({ color: 0x2b2f36, roughness: 0.45, clearcoat: 0.3 }),
+    faceDark: new THREE.MeshPhysicalMaterial({ color: 0x23262c, roughness: 0.6, clearcoat: 0, envMapIntensity: 0.35 }),
     white: new THREE.MeshPhysicalMaterial({ color: 0xf3f4f6, roughness: 0.24, clearcoat: 1, clearcoatRoughness: 0.1 }),
     teal: new THREE.MeshPhysicalMaterial({ color: 0x14b8a6, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.1 }),
     graphite: new THREE.MeshPhysicalMaterial({ color: 0x3a3f48, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.12 }),
