@@ -26,6 +26,19 @@ html {
   display: none;
 }
 
+/* Page fade-in on navigation. Pure CSS so the page is visible even before JavaScript has loaded. */
+@keyframes page-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.page-in {
+  animation: page-in 0.45s ease-out both;
+}
+
 /* Visitors who ask for reduced motion get stillness: no transitions, spinners or marquees. */
 @media (prefers-reduced-motion: reduce) {
   *,

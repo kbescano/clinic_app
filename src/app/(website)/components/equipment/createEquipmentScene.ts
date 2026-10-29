@@ -312,13 +312,18 @@ export function createEquipmentScene(host: HTMLElement, options: EquipmentOption
     piece(buildPill(m.teal, m.teal), V(-19, -21, 8), V(-55, -44, 5), { depth: 12, scale: 0.75, tilt: new THREE.Euler(0.5, 0.1, 0.3), spin: V(0.3, 0.6, 0.5) }),
   ]
 
-  // --- sizing: keep the whole arrangement in frame on tall phones as well as wide screens
+  // --- sizing: on tall phones, pull the pieces in towards the middle and stack them up the screen
+  // so the arrangement fills the height instead of floating small in the centre.
+  const spread = { x: 1, y: 1 }
   const resize = () => {
     const w = Math.max(1, host.clientWidth)
     const h = Math.max(1, host.clientHeight)
     renderer.setSize(w, h, false)
     camera.aspect = w / h
-    const needWidth = 82
+    const portrait = camera.aspect < 0.9
+    spread.x = portrait ? 0.6 : 1
+    spread.y = portrait ? 1.5 : 1
+    const needWidth = portrait ? 58 : 82
     const dist = Math.max(120, needWidth / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect))
     camera.position.set(0, 4, dist)
     camera.lookAt(0, 1, 0)
@@ -352,6 +357,8 @@ export function createEquipmentScene(host: HTMLElement, options: EquipmentOption
     for (const item of pieces) {
       const { pivot, model } = item
       pivot.position.lerpVectors(item.away, item.home, reveal)
+      pivot.position.x *= spread.x
+      pivot.position.y *= spread.y
       // Differential travel: nearer pieces slide further with scroll, which is what reads as depth.
       pivot.position.y += (0.5 - p) * item.depth * 1.6
       pivot.scale.setScalar(item.scale * lerp(0.5, 1, reveal))

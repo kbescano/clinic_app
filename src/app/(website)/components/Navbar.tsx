@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, useScroll, useSpring } from 'motion/react'
-import FadeIn from '@/components/shared/FadeIn'
 import { useSmoothScroll } from '@/components/shared/SmoothScroll'
 
 interface HeaderData {
@@ -59,58 +58,56 @@ export default function Navbar({ headerData }: NavbarProps) {
           : 'bg-white/90 dark:bg-black/90 backdrop-blur-md border-b border-zinc-950 dark:border-white/20 text-zinc-950 dark:text-white'
       }`}
     >
-      <FadeIn>
-        <div className="max-w-[1800px] mx-auto px-6 md:px-14 h-20 md:h-24 flex items-center justify-between gap-6">
-          {/* WORDMARK */}
-          <Link href="/" className="flex flex-col leading-none">
-            {isTransparent && headerData?.topLabel && (
-              <span className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-70 mb-1.5">
-                {headerData.topLabel}
-              </span>
-            )}
-            <span className="text-sm md:text-lg font-extrabold uppercase tracking-[0.14em] md:tracking-[0.18em] whitespace-nowrap">
-              {headerData?.clinicName || 'Atelier'}
+      <div className="max-w-[1800px] mx-auto px-6 md:px-14 h-20 md:h-24 flex items-center justify-between gap-6">
+        {/* WORDMARK */}
+        <Link href="/" className="flex flex-col leading-none">
+          {isTransparent && headerData?.topLabel && (
+            <span className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-70 mb-1.5">
+              {headerData.topLabel}
             </span>
-          </Link>
+          )}
+          <span className="text-sm md:text-lg font-extrabold uppercase tracking-[0.14em] md:tracking-[0.18em] whitespace-nowrap">
+            {headerData?.clinicName || 'Atelier'}
+          </span>
+        </Link>
 
-          <div className="flex items-center gap-8 md:gap-10">
-            <div className="hidden md:flex items-center gap-8">
-              {LINKS.map((link) => {
-                const isActive = pathname === link.href
-                return (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    onClick={(e) => {
-                      // On the home page an in-page link glides there instead of jumping.
-                      if (pathname === '/' && link.href.startsWith('/#')) {
-                        e.preventDefault()
-                        scrollTo(link.href.slice(1), { offset: -80 })
-                      }
-                    }}
-                    className={`text-xs font-bold uppercase tracking-[0.18em] underline-offset-[10px] decoration-2 transition-opacity hover:opacity-60 ${
-                      isActive ? 'underline' : ''
-                    }`}
-                  >
-                    {link.name}
-                  </Link>
-                )
-              })}
-            </div>
-
-            <Link
-              href="/booking"
-              className={`px-4 md:px-7 py-3 md:py-3.5 text-xs font-bold uppercase tracking-[0.18em] whitespace-nowrap transition-colors duration-300 ${
-                isTransparent
-                  ? 'bg-white text-zinc-950 hover:bg-zinc-200'
-                  : 'bg-zinc-950 text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200'
-              }`}
-            >
-              Book now
-            </Link>
+        <div className="flex items-center gap-8 md:gap-10">
+          <div className="hidden md:flex items-center gap-8">
+            {LINKS.map((link) => {
+              const isActive = pathname === link.href
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={(e) => {
+                    // On the home page an in-page link glides there instead of jumping.
+                    if (pathname === '/' && link.href.startsWith('/#')) {
+                      e.preventDefault()
+                      scrollTo(link.href.slice(1), { offset: -80 })
+                    }
+                  }}
+                  className={`text-xs font-bold uppercase tracking-[0.18em] underline-offset-[10px] decoration-2 transition-opacity hover:opacity-60 ${
+                    isActive ? 'underline' : ''
+                  }`}
+                >
+                  {link.name}
+                </Link>
+              )
+            })}
           </div>
+
+          <Link
+            href="/booking"
+            className={`px-4 md:px-7 py-3 md:py-3.5 text-xs font-bold uppercase tracking-[0.18em] whitespace-nowrap transition-colors duration-300 ${
+              isTransparent
+                ? 'bg-white text-zinc-950 hover:bg-zinc-200'
+                : 'bg-zinc-950 text-white hover:bg-zinc-700 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200'
+            }`}
+          >
+            Book now
+          </Link>
         </div>
-      </FadeIn>
+      </div>
       <motion.div
         aria-hidden
         style={{ scaleX: progress, originX: 0 }}

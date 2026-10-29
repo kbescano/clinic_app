@@ -1,7 +1,7 @@
 'use client'
 
-import { useRef, type ElementType, type ReactNode } from 'react'
-import { MotionConfig, motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
+import { useEffect, useRef, useState, type ElementType, type ReactNode } from 'react'
+import { MotionConfig, motion, useScroll, useTransform } from 'motion/react'
 
 /** The house easing: fast out, long settle. */
 export const EASE = [0.16, 1, 0.3, 1] as const
@@ -18,6 +18,23 @@ function motionTag(tag: ElementType) {
     motionTags.set(tag, component)
   }
   return component
+}
+
+/**
+ * Whether the visitor asked their OS to reduce motion. Starts false and is read after mount: the page
+ * is rendered on the server, where the setting is unknown, so reading it during the first render
+ * would produce markup that differs from the server's and React would keep the server's version.
+ */
+export function usePrefersReducedMotion() {
+  const [reduce, setReduce] = useState(false)
+  useEffect(() => {
+    const query = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const sync = () => setReduce(query.matches)
+    sync()
+    query.addEventListener('change', sync)
+    return () => query.removeEventListener('change', sync)
+  }, [])
+  return reduce
 }
 
 /** Honours the visitor's OS "reduce motion" setting for every motion component below it. */
@@ -115,7 +132,7 @@ export function ClipReveal({
   className?: string
   delay?: number
 }) {
-  const reduce = useReducedMotion()
+  const reduce = usePrefersReducedMotion()
   return (
     <motion.div
       className={className}
@@ -144,14 +161,14 @@ export function Parallax({
   amount?: number
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  const reduce = useReducedMotion()
+  const reduce = usePrefersReducedMotion()
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start end', 'end start'] })
   const y = useTransform(scrollYProgress, [0, 1], [`${-amount}%`, `${amount}%`])
 
   return (
     <div ref={ref} className={`overflow-hidden ${className}`}>
       <motion.div
-        style={reduce ? undefined : { y, scale: 1 + (amount / 100) * 2.4 }}
+        style={{ y: reduce ? 0 : y, scale: reduce ? 1 : 1 + (amount / 100) * 2.4 }}
         className="relative h-full w-full will-change-transform"
       >
         {children}

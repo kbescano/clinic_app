@@ -350,38 +350,56 @@ function BookingFlowContent({
       )}
 
       {/* APP-LIKE BOUNDED CONTAINER */}
-      <div className="relative w-full max-w-[1440px] mx-auto h-[calc(100dvh-5rem)] md:h-[80vh] min-h-[600px] flex flex-col md:flex-row border-x border-zinc-100 dark:border-zinc-900 mt-20 md:mt-32 border-t md:border-t-0 bg-white dark:bg-[#050505] overflow-hidden">
+      <div className="relative w-full max-w-[1440px] mx-auto h-[calc(100dvh-5rem)] md:h-[80vh] min-h-[600px] flex flex-col md:flex-row border-x border-zinc-300 dark:border-zinc-800 mt-20 md:mt-32 border-t md:border-t-0 bg-white dark:bg-[#050505] overflow-hidden">
         {/* LEFT COLUMN: Sticky Progress */}
-        <div className="w-full md:w-1/3 p-6 md:p-12 border-b md:border-b-0 md:border-r border-zinc-100 dark:border-zinc-900 flex flex-col justify-between shrink-0 z-20">
+        <div className="w-full md:w-1/3 p-6 md:p-12 border-b md:border-b-0 md:border-r border-zinc-300 dark:border-zinc-800 flex flex-col justify-between shrink-0 z-20">
           <div className="space-y-6 md:space-y-12">
             <header className="space-y-3">
-              <span className="text-[8px] uppercase tracking-[0.8em] text-[#595f72] font-serif block">
+              <span className="text-xs uppercase tracking-[0.2em] text-zinc-500 block">
                 {isReschedule ? 'Reschedule' : 'Reservation'}
               </span>
-              <h1 className="text-[24px] md:text-[32px] font-normal font-serif tracking-tight text-[#251101] dark:text-zinc-100 leading-none">
+              <h1 className="text-3xl md:text-5xl font-extrabold tracking-tighter text-zinc-950 dark:text-zinc-100 leading-none">
                 Secure your <br /> appointment.
               </h1>
             </header>
 
             {/* Subtly dim the stepper if the auth slide is active */}
             <div
-              className={`flex flex-row md:flex-col items-center md:items-start justify-between md:justify-start w-full gap-2 md:gap-0 md:space-y-4 transition-all duration-[1200ms] ${atelierEase} ${showModal && !isRecognized ? 'opacity-20 pointer-events-none md:-translate-x-4' : 'opacity-100 translate-x-0'}`}
+              className={`flex flex-row md:flex-col items-center md:items-start justify-between md:justify-start w-full gap-2 md:gap-0 md:space-y-4 transition-all duration-700 ${atelierEase} ${showModal && !isRecognized ? 'opacity-20 pointer-events-none md:-translate-x-4' : 'opacity-100 translate-x-0'}`}
             >
               {STEPS.map((step, index) => {
                 const isActive = index === currentStep
                 const isPast = index < currentStep
                 return (
-                  <div key={step} className="flex items-center gap-3 md:gap-4 group shrink-0">
+                  <div
+                    key={step}
+                    aria-current={isActive ? 'step' : undefined}
+                    className="flex items-center gap-3 md:gap-4 group shrink-0"
+                  >
                     <span
-                      className={`text-[9px] font-serif tracking-[0.3em] transition-all duration-700 ${isActive ? 'text-[#251101] dark:text-white scale-110' : 'text-zinc-300 dark:text-zinc-700'}`}
+                      className={`text-xs font-bold tabular-nums tracking-widest transition-colors duration-500 ${
+                        isActive || isPast
+                          ? 'text-zinc-950 dark:text-white'
+                          : 'text-zinc-400 dark:text-zinc-600'
+                      }`}
                     >
                       0{index + 1}
                     </span>
                     <div
-                      className={`h-[1px] transition-all duration-1000 ${atelierEase} ${isActive ? 'w-8 md:w-12 bg-[#251101] dark:bg-white' : isPast ? 'w-4 bg-zinc-300 dark:bg-zinc-700' : 'w-0 md:w-0 w-2 bg-transparent'}`}
+                      className={`h-[2px] transition-all duration-700 ${atelierEase} ${
+                        isActive
+                          ? 'w-8 md:w-12 bg-zinc-950 dark:bg-white'
+                          : isPast
+                            ? 'w-4 md:w-6 bg-zinc-950 dark:bg-white'
+                            : 'w-3 md:w-4 bg-zinc-300 dark:bg-zinc-700'
+                      }`}
                     />
                     <span
-                      className={`text-[8px] uppercase tracking-[0.4em] font-serif transition-all duration-700 ${isActive ? 'text-[#251101] dark:text-white opacity-100 block' : 'text-[#595f72] opacity-0 md:-translate-x-4 hidden md:block'}`}
+                      className={`text-xs font-bold uppercase tracking-[0.15em] transition-colors duration-500 ${
+                        isActive
+                          ? 'block text-zinc-950 dark:text-white'
+                          : `hidden md:block ${isPast ? 'text-zinc-600 dark:text-zinc-400' : 'text-zinc-400 dark:text-zinc-600'}`
+                      }`}
                     >
                       {step}
                     </span>
@@ -399,12 +417,12 @@ function BookingFlowContent({
             <div className="absolute inset-0 z-50 flex flex-col justify-center p-6 md:p-12 overflow-y-auto w-full h-full bg-zinc-50 dark:bg-[#080808]">
               <div className="max-w-md w-full mx-auto">
                 {isExisting === null ? (
-                  <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
+                  <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]">
                     <header className="space-y-4">
-                      <h2 className="text-[24px] md:text-[32px] font-serif font-light tracking-tight text-[#251101] dark:text-white leading-tight">
+                      <h2 className="text-3xl md:text-5xl font-extrabold tracking-tighter text-zinc-950 dark:text-white leading-tight">
                         Welcome back!
                       </h2>
-                      <p className="text-[12px] font-light text-[#595f72] font-serif">
+                      <p className="text-sm font-normal text-zinc-500">
                         To personalize your reservation, please let us know if you have visited us
                         before.
                       </p>
@@ -412,49 +430,49 @@ function BookingFlowContent({
                     <div className="space-y-4">
                       <button
                         onClick={() => setIsExisting(true)}
-                        className="w-full text-left p-6 md:p-8 border border-zinc-200 dark:border-zinc-800 hover:border-[#251101] dark:hover:border-white transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group outline-none bg-white dark:bg-[#050505]"
+                        className="w-full text-left p-6 md:p-8 border-2 border-zinc-950 dark:border-zinc-600 bg-white text-zinc-950 transition-colors duration-300 group outline-none hover:bg-zinc-950 hover:text-white focus-visible:bg-zinc-950 focus-visible:text-white dark:bg-[#050505] dark:text-white dark:hover:bg-white dark:hover:text-zinc-950"
                       >
-                        <h3 className="font-serif text-[14px] md:text-[16px] text-[#251101] dark:text-white mb-2 transition-colors">
+                        <h3 className="mb-2 text-xl font-extrabold tracking-tight md:text-2xl">
                           Existing Client
                         </h3>
-                        <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-400 font-serif">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 transition-colors group-hover:text-zinc-300 dark:group-hover:text-zinc-600">
                           Access your account
                         </p>
                       </button>
                       <button
                         onClick={() => setShowModal(false)}
-                        className="w-full text-left p-6 md:p-8 border border-zinc-200 dark:border-zinc-800 hover:border-[#251101] dark:hover:border-white transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group outline-none bg-white dark:bg-[#050505]"
+                        className="w-full text-left p-6 md:p-8 border-2 border-zinc-950 dark:border-zinc-600 bg-white text-zinc-950 transition-colors duration-300 group outline-none hover:bg-zinc-950 hover:text-white focus-visible:bg-zinc-950 focus-visible:text-white dark:bg-[#050505] dark:text-white dark:hover:bg-white dark:hover:text-zinc-950"
                       >
-                        <h3 className="font-serif text-[14px] md:text-[16px] text-[#251101] dark:text-white mb-2 transition-colors">
+                        <h3 className="mb-2 text-xl font-extrabold tracking-tight md:text-2xl">
                           New Client
                         </h3>
-                        <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-400 font-serif">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 transition-colors group-hover:text-zinc-300 dark:group-hover:text-zinc-600">
                           Create a new reservation
                         </p>
                       </button>
                     </div>
                   </div>
                 ) : (
-                  <div className="space-y-12 animate-in fade-in slide-in-from-right-8 duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)]">
+                  <div className="space-y-12 animate-in fade-in slide-in-from-right-8 duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]">
                     <header className="space-y-6">
                       <button
                         onClick={() => setIsExisting(null)}
-                        className="flex items-center gap-3 text-[9px] uppercase tracking-[0.4em] text-[#595f72] hover:text-[#251101] dark:hover:text-white font-serif transition-colors outline-none group"
+                        className="flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-zinc-500 hover:text-zinc-950 dark:hover:text-white transition-colors outline-none group"
                       >
                         <ArrowLeftIcon className="w-3 h-3 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-x-1" />{' '}
                         Return
                       </button>
                       <div>
-                        <h2 className="text-[24px] md:text-[32px] font-serif font-light tracking-tight text-[#251101] dark:text-white leading-tight mb-4">
+                        <h2 className="text-3xl md:text-5xl font-extrabold tracking-tighter text-zinc-950 dark:text-white leading-tight mb-4">
                           Confirm Your Email
                         </h2>
                         <div className="h-4">
                           {modalError ? (
-                            <span className="text-[9px] uppercase tracking-[0.2em] text-red-500 font-serif animate-in fade-in">
+                            <span className="text-xs uppercase tracking-[0.2em] text-red-500 animate-in fade-in">
                               {modalError}
                             </span>
                           ) : (
-                            <span className="text-[12px] font-light text-[#595f72] font-serif">
+                            <span className="text-sm font-normal text-zinc-500">
                               Enter your email address to access records.
                             </span>
                           )}
@@ -503,9 +521,9 @@ function BookingFlowContent({
                             })
                         }}
                         disabled={isVerifying || !EMAIL_REGEX.test(existingEmail.trim())}
-                        className="flex items-center justify-between w-full p-6 border border-[#251101] dark:border-white bg-[#251101] dark:bg-white text-white dark:text-[#251101] transition-opacity hover:opacity-90 disabled:opacity-30 outline-none group"
+                        className="flex items-center justify-between w-full p-6 border border-zinc-950 dark:border-white bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 transition-opacity hover:opacity-90 disabled:opacity-30 outline-none group"
                       >
-                        <span className="text-[9px] uppercase tracking-[0.4em] font-serif font-bold">
+                        <span className="text-xs uppercase tracking-[0.2em] font-bold">
                           {isVerifying ? 'Searching...' : 'Access Records'}
                         </span>
                         <ArrowRightIcon className="w-4 h-4 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:translate-x-1" />
@@ -519,16 +537,16 @@ function BookingFlowContent({
             <>
               {/* PERSISTENT PATIENT TABS */}
               {currentStep < 3 && (
-                <div className="w-full bg-zinc-50 dark:bg-[#080808] border-b border-zinc-200 dark:border-zinc-900 px-6 md:px-12 pt-6 flex gap-6 overflow-x-auto scrollbar-hide shrink-0 z-20 relative">
+                <div className="w-full bg-zinc-50 dark:bg-[#080808] border-b border-zinc-300 dark:border-zinc-800 px-6 md:px-12 pt-6 flex gap-6 overflow-x-auto scrollbar-hide shrink-0 z-20 relative">
                   {bookings.map((b, i) => (
                     <div
                       key={i}
-                      className={`flex items-center gap-2 pb-3 border-b-2 transition-colors whitespace-nowrap ${activeTabIndex === i ? 'border-[#251101] dark:border-white text-[#251101] dark:text-white' : 'border-transparent text-[#595f72] hover:text-[#251101] dark:hover:text-white'}`}
+                      className={`flex items-center gap-2 pb-3 border-b-2 transition-colors whitespace-nowrap ${activeTabIndex === i ? 'border-zinc-950 dark:border-white text-zinc-950 dark:text-white' : 'border-transparent text-zinc-500 hover:text-zinc-950 dark:hover:text-white'}`}
                     >
                       <button
                         type="button"
                         onClick={() => setActiveTabIndex(i)}
-                        className="text-[9px] uppercase tracking-[0.3em] font-serif outline-none flex items-center gap-2"
+                        className="text-xs uppercase tracking-[0.2em] outline-none flex items-center gap-2"
                       >
                         {i === 0 ? 'Main Patient' : `Guest ${i}`}
                         {activeTabIndex !== i &&
@@ -553,7 +571,7 @@ function BookingFlowContent({
                     <button
                       type="button"
                       onClick={handleAddGuest}
-                      className="text-[9px] uppercase tracking-[0.3em] text-zinc-400 hover:text-[#251101] dark:hover:text-white font-serif outline-none pb-3 whitespace-nowrap"
+                      className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 hover:text-zinc-950 dark:hover:text-white outline-none pb-3 whitespace-nowrap"
                     >
                       + Add Guest
                     </button>
@@ -566,7 +584,7 @@ function BookingFlowContent({
                 {/* STEP 1: TREATMENT */}
                 <FormSlide isActive={currentStep === 0}>
                   <div className="p-6 md:p-12 pb-8">
-                    <h2 className="text-[14px] font-serif uppercase tracking-[0.3em] text-[#251101] dark:text-white mb-6">
+                    <h2 className="mb-6 text-2xl font-extrabold tracking-tighter text-zinc-950 dark:text-white md:text-3xl">
                       {isPrimaryDraft
                         ? 'Select Treatment'
                         : `Select Treatment for Guest ${activeTabIndex}`}
@@ -586,33 +604,29 @@ function BookingFlowContent({
                               else if (!activeBooking.extraServiceId)
                                 updateActiveBooking('extraServiceId', tId)
                             }}
-                            className={`w-full text-left p-5 md:p-6 border transition-all duration-500 flex justify-between items-center group outline-none ${
+                            className={`group flex w-full items-center justify-between gap-4 border-2 p-5 text-left outline-none transition-colors duration-300 md:p-6 ${
                               isSelected
-                                ? 'border-[#251101] dark:border-white bg-white dark:bg-[#050505]'
-                                : 'border-zinc-200 dark:border-zinc-800 hover:border-zinc-400 dark:hover:border-zinc-600 bg-transparent'
+                                ? 'border-zinc-950 bg-zinc-950 text-white dark:border-white dark:bg-white dark:text-zinc-950'
+                                : 'border-zinc-300 bg-white text-zinc-950 hover:border-zinc-950 dark:border-zinc-700 dark:bg-transparent dark:text-white dark:hover:border-white'
                             }`}
                           >
                             <div className="space-y-1">
-                              <h3
-                                className={`font-serif text-[13px] md:text-[15px] transition-colors ${isSelected ? 'text-[#251101] dark:text-white' : 'text-[#595f72] dark:text-zinc-400'}`}
-                              >
+                              <h3 className="text-lg font-extrabold leading-tight tracking-tight md:text-xl">
                                 {treatment.title}
                               </h3>
-                              <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-400 font-serif">
+                              <p
+                                className={`text-xs font-semibold uppercase tracking-[0.2em] ${isSelected ? 'text-zinc-400 dark:text-zinc-500' : 'text-zinc-500'}`}
+                              >
                                 {treatment.duration} Min
                               </p>
                             </div>
                             <div className="flex items-center gap-4">
-                              <span
-                                className={`text-[12px] font-serif transition-colors ${isSelected ? 'text-[#251101] dark:text-white' : 'text-zinc-400'}`}
-                              >
+                              <span className="whitespace-nowrap text-base font-bold tabular-nums md:text-lg">
                                 PHP {treatment.price}
                               </span>
-                              <div
-                                className={`w-4 h-4 border rounded-full flex items-center justify-center transition-all ${isSelected ? 'border-[#251101] dark:border-white' : 'border-zinc-300 dark:border-zinc-700'}`}
-                              >
+                              <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-current">
                                 <div
-                                  className={`w-2 h-2 rounded-full transition-all ${isSelected ? 'bg-[#251101] dark:bg-white scale-100' : 'bg-transparent scale-0'}`}
+                                  className={`h-2 w-2 rounded-full bg-current transition-transform ${isSelected ? 'scale-100' : 'scale-0'}`}
                                 />
                               </div>
                             </div>
@@ -626,7 +640,7 @@ function BookingFlowContent({
                           updateActiveBooking('serviceId', '')
                           updateActiveBooking('extraServiceId', '')
                         }}
-                        className="text-[7px] uppercase tracking-[0.3em] text-red-500 font-serif hover:underline outline-none mt-6 block"
+                        className="text-xs uppercase tracking-[0.2em] text-red-500 hover:underline outline-none mt-6 block"
                       >
                         [ Clear Selections ]
                       </button>
@@ -637,26 +651,26 @@ function BookingFlowContent({
                 {/* STEP 2: SCHEDULE */}
                 <FormSlide isActive={currentStep === 1}>
                   <div className="p-6 md:p-12 space-y-8 pb-8">
-                    <h2 className="text-[14px] font-serif uppercase tracking-[0.3em] text-[#251101] dark:text-white mb-6">
+                    <h2 className="mb-6 text-2xl font-extrabold tracking-tighter text-zinc-950 dark:text-white md:text-3xl">
                       {isPrimaryDraft
                         ? 'Select Date & Time'
                         : `Select Time for Guest ${activeTabIndex}`}
                     </h2>
                     {isPrimaryDraft ? (
                       <div className="space-y-4">
-                        <div className="flex justify-between items-center border-b border-zinc-200 dark:border-zinc-800 pb-3">
+                        <div className="flex justify-between items-center border-b border-zinc-300 dark:border-zinc-800 pb-3">
                           <button
                             onClick={handlePrevMonth}
-                            className="p-2 outline-none hover:text-[#595f72] transition-colors"
+                            className="p-2 outline-none hover:text-zinc-500 transition-colors"
                           >
                             <ChevronLeftIcon className="w-4 h-4" />
                           </button>
-                          <h3 className="text-[13px] font-serif font-light text-[#251101] dark:text-white uppercase tracking-[0.2em]">
+                          <h3 className="text-sm font-normal text-zinc-950 dark:text-white uppercase tracking-[0.2em]">
                             {viewDate.format('MMMM YYYY')}
                           </h3>
                           <button
                             onClick={handleNextMonth}
-                            className="p-2 outline-none hover:text-[#595f72] transition-colors"
+                            className="p-2 outline-none hover:text-zinc-500 transition-colors"
                           >
                             <ChevronRightIcon className="w-4 h-4" />
                           </button>
@@ -665,13 +679,13 @@ function BookingFlowContent({
                           {WEEKDAYS.map((day) => (
                             <div
                               key={day}
-                              className="text-center text-[8px] uppercase tracking-[0.2em] text-[#595f72] font-serif"
+                              className="text-center text-xs uppercase tracking-[0.2em] text-zinc-500"
                             >
                               {day}
                             </div>
                           ))}
                         </div>
-                        <div className="grid grid-cols-7 gap-px bg-zinc-200 dark:bg-zinc-800 rounded-none border border-zinc-200 dark:border-zinc-800">
+                        <div className="grid grid-cols-7 gap-px bg-zinc-200 dark:bg-zinc-800 rounded-none border border-zinc-300 dark:border-zinc-800">
                           {calendarGrid.map((date, i) => {
                             const dateStr = date.format('YYYY-MM-DD')
                             const isSelected = activeBooking.date === dateStr
@@ -687,7 +701,13 @@ function BookingFlowContent({
                                   updateActiveBooking('date', dateStr)
                                   updateActiveBooking('time', '')
                                 }}
-                                className={`h-10 md:h-12 flex items-center justify-center font-serif text-[12px] md:text-[13px] transition-colors outline-none ${isSelected ? 'bg-[#251101] dark:bg-white text-white dark:text-[#251101]' : 'bg-zinc-50 dark:bg-[#080808] hover:bg-white dark:hover:bg-[#121212] text-[#251101] dark:text-zinc-100'} ${isDisabled ? 'opacity-0 cursor-not-allowed pointer-events-none' : ''}`}
+                                className={`flex h-10 items-center justify-center text-sm font-semibold tabular-nums outline-none transition-colors md:h-12 ${
+                                  isSelected
+                                    ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950'
+                                    : isDisabled
+                                      ? `pointer-events-none cursor-not-allowed bg-zinc-50 dark:bg-[#080808] ${isCurrentMonth ? 'text-zinc-300 dark:text-zinc-700' : 'text-transparent'}`
+                                      : 'bg-zinc-50 text-zinc-950 hover:bg-zinc-950 hover:text-white dark:bg-[#080808] dark:text-zinc-100 dark:hover:bg-white dark:hover:text-zinc-950'
+                                }`}
                               >
                                 {date.date()}
                               </button>
@@ -696,11 +716,11 @@ function BookingFlowContent({
                         </div>
                       </div>
                     ) : (
-                      <div className="p-5 border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#050505]">
-                        <span className="text-[8px] uppercase tracking-[0.4em] text-zinc-400 font-serif block mb-2">
+                      <div className="p-5 border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-[#050505]">
+                        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 block mb-2">
                           Locked Date
                         </span>
-                        <p className="text-[15px] font-serif text-[#251101] dark:text-white">
+                        <p className="text-base text-zinc-950 dark:text-white">
                           {dayjs(bookings[0].date).format('dddd, MMMM D, YYYY')}
                         </p>
                       </div>
@@ -708,10 +728,10 @@ function BookingFlowContent({
                     <div
                       className={`transition-all duration-700 ${atelierEase} ${activeBooking.date ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8 pointer-events-none'}`}
                     >
-                      <p className="text-[9px] uppercase tracking-[0.4em] text-[#595f72] font-serif mb-3 block">
+                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500 mb-3 block">
                         Available Slots
                       </p>
-                      <div className="grid grid-cols-3 gap-px bg-zinc-200 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800">
+                      <div className="grid grid-cols-3 gap-px bg-zinc-200 dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-800">
                         {timeSlots.map((slot) => {
                           const isFull =
                             (activeBooking.date === todayStr && slot <= manilaTimeNow) ||
@@ -724,7 +744,7 @@ function BookingFlowContent({
                               type="button"
                               disabled={isFull}
                               onClick={() => updateActiveBooking('time', slot)}
-                              className={`py-4 text-[12px] md:text-[13px] font-serif transition-colors outline-none ${isSelected ? 'bg-[#251101] dark:bg-white text-white dark:text-[#251101]' : 'bg-zinc-50 dark:bg-[#080808] hover:bg-white dark:hover:bg-[#121212] text-[#251101] dark:text-zinc-100'} ${isFull ? ' opacity-20 cursor-not-allowed' : ''}`}
+                              className={`py-4 text-sm md:text-sm transition-colors outline-none ${isSelected ? 'bg-zinc-950 dark:bg-white text-white dark:text-zinc-950' : 'bg-zinc-50 dark:bg-[#080808] hover:bg-white dark:hover:bg-[#121212] text-zinc-950 dark:text-zinc-100'} ${isFull ? ' opacity-20 cursor-not-allowed' : ''}`}
                             >
                               {slot}
                             </button>
@@ -738,7 +758,7 @@ function BookingFlowContent({
                 {/* STEP 3: DOSSIER (Progressive Disclosure) */}
                 <FormSlide isActive={currentStep === 2}>
                   <div className="p-6 md:p-12 pb-8">
-                    <h2 className="text-[14px] font-serif uppercase tracking-[0.3em] text-[#251101] dark:text-white mb-10">
+                    <h2 className="mb-10 text-2xl font-extrabold tracking-tighter text-zinc-950 dark:text-white md:text-3xl">
                       {isPrimaryDraft ? 'Main Client' : `Guest ${activeTabIndex}`}
                     </h2>
 
@@ -783,15 +803,15 @@ function BookingFlowContent({
                 <FormSlide isActive={currentStep === 3}>
                   <div className="p-6 md:p-12 space-y-8 pb-8">
                     <header>
-                      <h2 className="text-[14px] font-serif uppercase tracking-[0.3em] text-[#251101] dark:text-white mb-3">
+                      <h2 className="mb-3 text-2xl font-extrabold tracking-tighter text-zinc-950 dark:text-white md:text-3xl">
                         Final Review
                       </h2>
-                      <p className="text-[12px] font-light text-[#595f72] font-serif">
+                      <p className="text-sm font-normal text-zinc-500">
                         Please verify your details before securing the reservation.
                       </p>
                     </header>
 
-                    <div className="border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#050505] p-6 md:p-10 space-y-10">
+                    <div className="border border-zinc-300 dark:border-zinc-800 bg-white dark:bg-[#050505] p-6 md:p-10 space-y-10">
                       {bookings.map((b, i) => {
                         const missingService = !b.serviceId
                         const missingTime = !b.date || !b.time
@@ -807,10 +827,10 @@ function BookingFlowContent({
                           return (
                             <div
                               key={i}
-                              className="pb-8 border-b border-zinc-100 dark:border-zinc-900 last:border-0 last:pb-0"
+                              className="pb-8 border-b border-zinc-300 dark:border-zinc-800 last:border-0 last:pb-0"
                             >
                               <div className="flex items-center gap-4 mb-5">
-                                <span className="text-[8px] uppercase tracking-[0.4em] text-red-500 font-serif">
+                                <span className="text-xs uppercase tracking-[0.2em] text-red-500">
                                   {i === 0 ? 'Main Patient' : `Guest ${i}`} — Incomplete
                                 </span>
                                 <div className="flex-1 h-[1px] bg-red-500/20" />
@@ -819,7 +839,7 @@ function BookingFlowContent({
                                 {missingService && (
                                   <button
                                     onClick={() => jumpToStep(i, 0)}
-                                    className="text-[12px] uppercase tracking-[0.2em] font-serif text-[#251101] dark:text-white hover:opacity-50 transition-opacity outline-none text-left"
+                                    className="text-sm uppercase tracking-[0.2em] text-zinc-950 dark:text-white hover:opacity-50 transition-opacity outline-none text-left"
                                   >
                                     Select Treatment →
                                   </button>
@@ -827,7 +847,7 @@ function BookingFlowContent({
                                 {!missingService && missingTime && (
                                   <button
                                     onClick={() => jumpToStep(i, 1)}
-                                    className="text-[12px] uppercase tracking-[0.2em] font-serif text-[#251101] dark:text-white hover:opacity-50 transition-opacity outline-none text-left"
+                                    className="text-sm uppercase tracking-[0.2em] text-zinc-950 dark:text-white hover:opacity-50 transition-opacity outline-none text-left"
                                   >
                                     Select Schedule →
                                   </button>
@@ -835,7 +855,7 @@ function BookingFlowContent({
                                 {!missingService && !missingTime && missingIdentity && (
                                   <button
                                     onClick={() => jumpToStep(i, 2)}
-                                    className="text-[12px] uppercase tracking-[0.2em] font-serif text-[#251101] dark:text-white hover:opacity-50 transition-opacity outline-none text-left"
+                                    className="text-sm uppercase tracking-[0.2em] text-zinc-950 dark:text-white hover:opacity-50 transition-opacity outline-none text-left"
                                   >
                                     Complete Details →
                                   </button>
@@ -848,45 +868,45 @@ function BookingFlowContent({
                         return (
                           <div
                             key={i}
-                            className="pb-8 border-b border-zinc-100 dark:border-zinc-900 last:border-0 last:pb-0 space-y-6"
+                            className="pb-8 border-b border-zinc-300 dark:border-zinc-800 last:border-0 last:pb-0 space-y-6"
                           >
                             <div className="flex items-center gap-4">
-                              <span className="text-[8px] uppercase tracking-[0.4em] text-zinc-400 font-serif">
+                              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
                                 {i === 0 ? 'Main Patient' : `Guest ${i}`}
                               </span>
-                              <div className="flex-1 h-[1px] bg-zinc-100 dark:bg-zinc-900" />
+                              <div className="flex-1 h-[2px] bg-zinc-950 dark:bg-zinc-700" />
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                               <div className="space-y-1">
-                                <span className="text-[7px] uppercase tracking-[0.4em] text-zinc-400 font-serif block">
+                                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 block">
                                   Name
                                 </span>
-                                <p className="text-[13px] font-serif text-[#251101] dark:text-white">
+                                <p className="text-lg font-bold tracking-tight text-zinc-950 dark:text-white">
                                   {b.firstName} {b.surname}
                                 </p>
                               </div>
                               <div className="space-y-1">
-                                <span className="text-[7px] uppercase tracking-[0.4em] text-zinc-400 font-serif block">
+                                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 block">
                                   Treatment(s)
                                 </span>
-                                <p className="text-[13px] font-serif text-[#251101] dark:text-white">
+                                <p className="text-lg font-bold tracking-tight text-zinc-950 dark:text-white">
                                   {getServiceTitle(b.serviceId)}{' '}
                                   {b.extraServiceId && `+ ${getServiceTitle(b.extraServiceId)}`}
                                 </p>
                               </div>
                               <div className="space-y-1">
-                                <span className="text-[7px] uppercase tracking-[0.4em] text-zinc-400 font-serif block">
+                                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 block">
                                   Date
                                 </span>
-                                <p className="text-[13px] font-serif text-[#251101] dark:text-white">
+                                <p className="text-lg font-bold tracking-tight text-zinc-950 dark:text-white">
                                   {dayjs(b.date).format('MMM D, YYYY')}
                                 </p>
                               </div>
                               <div className="space-y-1">
-                                <span className="text-[7px] uppercase tracking-[0.4em] text-zinc-400 font-serif block">
+                                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 block">
                                   Time
                                 </span>
-                                <p className="text-[13px] font-serif text-[#251101] dark:text-white">
+                                <p className="text-lg font-bold tracking-tight text-zinc-950 dark:text-white">
                                   {b.time}
                                 </p>
                               </div>
@@ -900,22 +920,22 @@ function BookingFlowContent({
               </div>
 
               {/* BOTTOM NAVIGATION ACTION BAR (Pinned) */}
-              <div className="p-5 md:p-8 border-t border-zinc-200 dark:border-zinc-900 flex justify-between items-center bg-zinc-50 dark:bg-[#080808] shrink-0 relative z-20">
+              <div className="p-5 md:p-8 border-t border-zinc-300 dark:border-zinc-800 flex justify-between items-center bg-zinc-50 dark:bg-[#080808] shrink-0 relative z-20">
                 <button
                   onClick={prevStep}
                   disabled={currentStep === 0 || isPendingTransition}
-                  className={`flex items-center gap-3 md:gap-4 text-[9px] font-bold uppercase tracking-[0.4em] font-serif outline-none transition-all duration-700 group ${currentStep === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100 hover:text-[#595f72]'}`}
+                  className={`group flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em] outline-none transition-opacity duration-300 md:gap-4 ${currentStep === 0 ? 'pointer-events-none opacity-0' : 'opacity-100 hover:opacity-60'}`}
                 >
                   <ArrowLeftIcon className="w-3 h-3 md:w-3.5 md:h-3.5 transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-x-1" />
                   <span className="relative pb-1">
                     Return
-                    <span className="absolute bottom-0 left-0 w-0 h-[0.5px] bg-[#251101] dark:bg-white transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:w-full" />
+                    <span className="absolute bottom-0 left-0 w-0 h-[0.5px] bg-zinc-950 dark:bg-white transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:w-full" />
                   </span>
                 </button>
 
                 <div className="flex items-center gap-6">
                   {!isStepValid() && isActiveTabValid() && currentStep < 3 && (
-                    <span className="text-[8px] uppercase tracking-[0.2em] text-red-500 font-serif animate-pulse hidden md:block">
+                    <span className="text-xs uppercase tracking-[0.2em] text-red-500 animate-pulse hidden md:block">
                       Action Required on Guest Tabs
                     </span>
                   )}
@@ -923,9 +943,9 @@ function BookingFlowContent({
                   <button
                     onClick={nextStep}
                     disabled={!isStepValid() && currentStep === 3}
-                    className={`flex items-center gap-3 md:gap-4 text-[9px] font-bold uppercase tracking-[0.4em] font-serif outline-none transition-all duration-700 group ${(!isStepValid() && currentStep === 3) || isPendingTransition ? 'opacity-30 cursor-not-allowed' : 'opacity-100 hover:text-[#595f72]'}`}
+                    className={`group flex items-center gap-3 bg-zinc-950 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-white outline-none transition-colors duration-300 dark:bg-white dark:text-zinc-950 md:gap-4 md:px-8 ${(!isStepValid() && currentStep === 3) || isPendingTransition ? 'cursor-not-allowed opacity-30' : 'hover:bg-zinc-700 dark:hover:bg-zinc-200'}`}
                   >
-                    <span className="relative pb-1">
+                    <span>
                       {isPendingTransition
                         ? 'Processing'
                         : currentStep === STEPS.length - 1
@@ -933,7 +953,6 @@ function BookingFlowContent({
                           : currentStep === 2
                             ? 'Review'
                             : 'Continue'}
-                      <span className="absolute bottom-0 right-0 w-0 h-[0.5px] bg-[#251101] dark:bg-white transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:w-full" />
                     </span>
                     {currentStep === STEPS.length - 1 ? (
                       <CheckIcon
@@ -956,7 +975,7 @@ function BookingFlowContent({
 function FormSlide({ children, isActive }: { children: React.ReactNode; isActive: boolean }) {
   return (
     <div
-      className={`absolute inset-0 w-full h-full transition-all duration-[1200ms] ${atelierEase} overflow-y-auto scrollbar-hide ${isActive ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 translate-x-12 pointer-events-none z-0'}`}
+      className={`absolute inset-0 w-full h-full transition-[opacity,transform] duration-500 ${atelierEase} overflow-y-auto scrollbar-hide ${isActive ? 'opacity-100 translate-x-0 pointer-events-auto z-10' : 'opacity-0 translate-x-12 pointer-events-none z-0'}`}
     >
       {children}
     </div>
@@ -966,7 +985,7 @@ function FormSlide({ children, isActive }: { children: React.ReactNode; isActive
 function ProgressiveReveal({ show, children }: { show: boolean; children: React.ReactNode }) {
   return (
     <div
-      className={`transition-all duration-[1200ms] ${atelierEase} overflow-hidden ${show ? 'max-h-[200px] opacity-100 translate-y-0 pt-6 md:pt-8' : 'max-h-0 opacity-0 -translate-y-4 pt-0'}`}
+      className={`transition-[opacity,transform,max-height,padding] duration-500 ${atelierEase} overflow-hidden ${show ? 'max-h-[200px] opacity-100 translate-y-0 pt-6 md:pt-8' : 'max-h-0 opacity-0 -translate-y-4 pt-0'}`}
     >
       {children}
     </div>
@@ -995,15 +1014,15 @@ function FloatingInput({
         onChange={onChange}
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        className="w-full bg-transparent border-b border-zinc-200 dark:border-zinc-800 focus:outline-none py-3 md:py-4 text-[16px] md:text-[14px] font-serif text-[#251101] dark:text-zinc-100 transition-colors z-10 relative rounded-none"
+        className="relative z-10 w-full rounded-none border-b-2 border-zinc-300 bg-transparent py-4 text-lg font-semibold text-zinc-950 transition-colors focus:outline-none dark:border-zinc-700 dark:text-zinc-100 md:text-xl"
       />
       <label
-        className={`absolute left-0 transition-all duration-500 ${atelierEase} font-serif pointer-events-none z-0 ${isFilled ? '-top-3 text-[7px] uppercase tracking-[0.3em] text-[#251101] dark:text-zinc-400' : 'top-1/2 -translate-y-1/2 text-[14px] md:text-[12px] text-[#595f72] tracking-wide'}`}
+        className={`absolute left-0 transition-all duration-500 ${atelierEase} pointer-events-none z-0 ${isFilled ? '-top-3 text-xs font-bold uppercase tracking-[0.2em] text-zinc-950 dark:text-zinc-300' : 'top-1/2 -translate-y-1/2 text-base text-zinc-500 md:text-lg'}`}
       >
         {label}
       </label>
       <div
-        className={`absolute bottom-0 left-0 h-[1px] bg-[#251101] dark:bg-white transition-all duration-700 ${atelierEase} ${isFocused ? 'w-full' : 'w-0'}`}
+        className={`absolute bottom-0 left-0 h-[2px] bg-zinc-950 transition-all duration-500 dark:bg-white ${atelierEase} ${isFocused ? 'w-full' : 'w-0'}`}
       />
     </div>
   )

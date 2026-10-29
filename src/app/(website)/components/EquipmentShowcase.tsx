@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { motion, useMotionValueEvent, useReducedMotion, useScroll, useSpring, useTransform } from 'motion/react'
+import { motion, useMotionValueEvent, useScroll, useSpring, useTransform } from 'motion/react'
+import { usePrefersReducedMotion } from '@/components/shared/motion'
 import type { EquipmentScene } from './equipment/createEquipmentScene'
 
 /**
@@ -11,7 +12,7 @@ import type { EquipmentScene } from './equipment/createEquipmentScene'
  * within a couple of screens of the viewport.
  */
 export default function EquipmentShowcase() {
-  const reduce = useReducedMotion() ?? false
+  const reduce = usePrefersReducedMotion()
   const runway = useRef<HTMLDivElement>(null)
   const host = useRef<HTMLDivElement>(null)
   const [unsupported, setUnsupported] = useState(false)
@@ -28,7 +29,10 @@ export default function EquipmentShowcase() {
   const pointer = useRef({ x: 0, y: 0 })
   useEffect(() => {
     const onMove = (e: PointerEvent) => {
-      pointer.current = { x: (e.clientX / window.innerWidth) * 2 - 1, y: (e.clientY / window.innerHeight) * 2 - 1 }
+      pointer.current = {
+        x: (e.clientX / window.innerWidth) * 2 - 1,
+        y: (e.clientY / window.innerHeight) * 2 - 1,
+      }
     }
     window.addEventListener('pointermove', onMove, { passive: true })
     return () => window.removeEventListener('pointermove', onMove)
@@ -43,6 +47,7 @@ export default function EquipmentShowcase() {
     let started = false
     let cancelled = false
     let visible = false
+    let idleHandle: number | undefined
 
     const start = async () => {
       try {
@@ -66,7 +71,9 @@ export default function EquipmentShowcase() {
         visible = entry.isIntersecting
         if (visible && !started) {
           started = true
-          void start()
+          // The section sits right under the hero, so it is "near" immediately. Hold off a moment
+          // before fetching ~150 KB of 3D code, so it never competes with the hero for bandwidth.
+          idleHandle = window.setTimeout(() => void start(), 1500)
         }
         scene?.setActive(visible)
       },
@@ -76,6 +83,7 @@ export default function EquipmentShowcase() {
 
     return () => {
       cancelled = true
+      window.clearTimeout(idleHandle)
       observer.disconnect()
       scene?.dispose()
     }
@@ -85,11 +93,11 @@ export default function EquipmentShowcase() {
     // The runway is the scroll distance the pinned scene lasts for.
     <div ref={runway} className={`relative ${reduce ? 'h-[100dvh]' : 'h-[270vh]'}`}>
       <div className="sticky top-0 h-[100dvh] overflow-hidden bg-zinc-950">
-        <motion.div style={reduce ? undefined : { opacity }} className="absolute inset-0">
+        <motion.div style={{ opacity: reduce ? 1 : opacity }} className="absolute inset-0">
           {/* Large word behind the scene; it drifts sideways against the scroll for parallax */}
           <motion.p
             aria-hidden
-            style={reduce ? undefined : { x: wordX }}
+            style={{ x: reduce ? 0 : wordX }}
             className="absolute inset-0 flex select-none items-center justify-center whitespace-nowrap font-display text-[clamp(4rem,16.5vw,24rem)] font-extrabold uppercase leading-none tracking-tighter text-white/[0.07]"
           >
             Precision

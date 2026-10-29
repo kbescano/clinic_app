@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
-import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
-import { EASE, SplitReveal } from '@/components/shared/motion'
+import { motion, useScroll, useTransform } from 'motion/react'
+import { EASE, SplitReveal, usePrefersReducedMotion } from '@/components/shared/motion'
 import { useSmoothScroll } from '@/components/shared/SmoothScroll'
 import NextOpening from './NextOpening'
 
@@ -69,7 +69,8 @@ function SlideVideo({
   // Phones and data-saver users get the 540p file; everyone else 1080p. Chosen after mount so the
   // server and client markup match.
   useEffect(() => {
-    const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData
+    const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection
+      ?.saveData
     const small = window.matchMedia('(max-width: 767px)').matches || saveData
     setSrc(clipUrl(clip, small ? 'sd_960_540' : 'hd_1920_1080'))
   }, [clip])
@@ -79,7 +80,11 @@ function SlideVideo({
     const video = ref.current
     if (!video || !src) return
     video.muted = true
-    if (active && !still) {
+    if (still) {
+      video.pause()
+      return
+    }
+    if (active) {
       video.play().catch(() => {})
       return
     }
@@ -105,18 +110,24 @@ function SlideVideo({
 }
 
 export default function CinematicVideoHero() {
-  const reduce = useReducedMotion() ?? false
+  const reduce = usePrefersReducedMotion()
   const { scrollTo } = useSmoothScroll()
   const [current, setCurrent] = useState(0)
   const [hidden, setHidden] = useState(false)
-  const [ready, setReady] = useState<boolean[]>(() => SLIDES.map(() => false))
-  const [dwellDone, setDwellDone] = useState(false)
+  // Flags live in refs so that clearing "dwell done" and changing slide happen in the same step.
+  // (As state, the advance check re-ran while the flag was still set and skipped a slide.)
+  const readyRef = useRef<boolean[]>(SLIDES.map(() => false))
+  const dwellDoneRef = useRef(false)
+  const [tick, setTick] = useState(0)
 
   // Each slide gets a full dwell, restarting whenever the slide changes (including manual picks).
   useEffect(() => {
-    setDwellDone(false)
+    dwellDoneRef.current = false
     if (reduce || hidden) return
-    const timer = window.setTimeout(() => setDwellDone(true), SLIDE_MS)
+    const timer = window.setTimeout(() => {
+      dwellDoneRef.current = true
+      setTick((t) => t + 1)
+    }, SLIDE_MS)
     return () => window.clearTimeout(timer)
   }, [current, reduce, hidden])
 
@@ -124,15 +135,16 @@ export default function CinematicVideoHero() {
   // downloading is waited for, and one that never loads is skipped, so the hero never shows an
   // empty gradient where footage should be.
   useEffect(() => {
-    if (!dwellDone) return
+    if (!dwellDoneRef.current) return
     for (let step = 1; step < SLIDES.length; step++) {
       const index = (current + step) % SLIDES.length
-      if (ready[index]) {
+      if (readyRef.current[index]) {
+        dwellDoneRef.current = false
         setCurrent(index)
         return
       }
     }
-  }, [dwellDone, ready, current])
+  }, [tick, current])
 
   useEffect(() => {
     const onVisibility = () => setHidden(document.hidden)
@@ -162,7 +174,10 @@ export default function CinematicVideoHero() {
       <h1 className="sr-only">{SLIDES[current].title}</h1>
 
       {/* FOOTAGE */}
-      <motion.div style={reduce ? undefined : { scale: mediaScale, y: mediaY }} className="absolute inset-0 will-change-transform">
+      <motion.div
+        style={{ scale: reduce ? 1 : mediaScale, y: reduce ? 0 : mediaY }}
+        className="absolute inset-0 will-change-transform"
+      >
         {SLIDES.map((slide, i) => (
           <div
             key={slide.clip.id}
@@ -174,7 +189,11 @@ export default function CinematicVideoHero() {
               clip={slide.clip}
               active={current === i}
               still={reduce}
-              onReady={() => setReady((r) => (r[i] ? r : r.map((v, j) => (j === i ? true : v))))}
+              onReady={() => {
+                if (readyRef.current[i]) return
+                readyRef.current[i] = true
+                setTick((t) => t + 1)
+              }}
             />
           </div>
         ))}
@@ -183,11 +202,14 @@ export default function CinematicVideoHero() {
       {/* SCRIMS: one for legibility under the text, one that deepens as you scroll away */}
       <div className="pointer-events-none absolute inset-0 z-20 bg-[radial-gradient(circle,transparent_25%,rgba(0,0,0,0.45)_100%)]" />
       <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-black/80 via-black/10 to-black/45" />
-      <motion.div style={{ opacity: veil }} className="pointer-events-none absolute inset-0 z-20 bg-black" />
+      <motion.div
+        style={{ opacity: veil }}
+        className="pointer-events-none absolute inset-0 z-20 bg-black"
+      />
 
       {/* HEADLINES */}
       <motion.div
-        style={reduce ? undefined : { y: contentY, opacity: contentOpacity }}
+        style={{ y: reduce ? 0 : contentY, opacity: reduce ? 1 : contentOpacity }}
         className="absolute inset-0 z-40"
       >
         {SLIDES.map((slide, i) => {
@@ -221,7 +243,7 @@ export default function CinematicVideoHero() {
             >
               <motion.p
                 animate={{ opacity: active ? 1 : 0, x: active ? 0 : -16 }}
-                transition={{ duration: 0.8, ease: EASE, delay: active ? 0.1 : 0 }}
+                transition={{ duration: 0.8, ease: EASE, delay: active ? 0.5 : 0 }}
                 className="mb-5 flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] md:mb-8 md:text-sm"
               >
                 <span className="h-px w-10 bg-white" />
@@ -232,13 +254,13 @@ export default function CinematicVideoHero() {
                 as="p"
                 text={slide.title}
                 state={state}
-                delay={0.15}
+                delay={0.6}
                 className="mb-8 block max-w-[16ch] text-balance text-[clamp(2.75rem,9.5vw,10rem)] font-extrabold uppercase leading-[0.86] tracking-tighter md:mb-12"
               />
 
               <motion.div
                 animate={{ opacity: active ? 1 : 0, y: active ? 0 : 12 }}
-                transition={{ duration: 0.8, ease: EASE, delay: active ? 0.55 : 0 }}
+                transition={{ duration: 0.8, ease: EASE, delay: active ? 1.0 : 0 }}
               >
                 {isAnchor ? (
                   <a
@@ -267,14 +289,18 @@ export default function CinematicVideoHero() {
 
       {/* LIVE AVAILABILITY */}
       <motion.div
-        style={reduce ? undefined : { opacity: contentOpacity }}
+        style={{ opacity: reduce ? 1 : contentOpacity }}
         className="absolute bottom-6 right-5 z-50 md:bottom-10 md:right-14"
       >
         <NextOpening />
       </motion.div>
 
       {/* SLIDE PICKER: segments fill over the dwell time */}
-      <div className="absolute bottom-7 left-5 z-50 flex items-end gap-1 md:bottom-11 md:left-14" role="group" aria-label="Choose slide">
+      <div
+        className="absolute bottom-7 left-5 z-50 flex items-end gap-1 md:bottom-11 md:left-14"
+        role="group"
+        aria-label="Choose slide"
+      >
         {SLIDES.map((slide, i) => (
           <button
             key={slide.title}
@@ -288,7 +314,10 @@ export default function CinematicVideoHero() {
                 key={`${i}-${current === i}`}
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: current === i ? 1 : 0 }}
-                transition={{ duration: current === i && !reduce ? SLIDE_MS / 1000 : 0.01, ease: 'linear' }}
+                transition={{
+                  duration: current === i && !reduce ? SLIDE_MS / 1000 : 0.01,
+                  ease: 'linear',
+                }}
                 style={{ originX: 0 }}
                 className="absolute inset-0 bg-white"
               />
