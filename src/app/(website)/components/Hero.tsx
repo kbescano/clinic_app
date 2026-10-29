@@ -1,205 +1,300 @@
 'use client'
 
 import Link from 'next/link'
-import React, { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react'
+import { EASE, SplitReveal } from '@/components/shared/motion'
+import { useSmoothScroll } from '@/components/shared/SmoothScroll'
+import NextOpening from './NextOpening'
 
-const SLIDES = [
+interface Slide {
+  label: string
+  title: string
+  cta: string
+  /** On-page anchors scroll smoothly; everything else is a normal link. */
+  href: string
+  /** Pexels clip id and frame rate: the CDN serves 1080p and 540p files of each (the 4K original is up to 35 MB). */
+  clip: { id: number; fps: number }
+  /** Shown while (or instead of) the footage, so a slow or blocked video never leaves a black void. */
+  tint: string
+}
+
+const SLIDES: Slide[] = [
   {
-    id: 1,
     label: 'Clinical Treatments',
     title: 'The Art of Rejuvenation',
     cta: 'Discover the process',
-    video: 'https://www.pexels.com/download/video/4267991/',
+    href: '#services',
+    clip: { id: 4267991, fps: 30 },
+    tint: 'from-zinc-700 via-zinc-900 to-black',
   },
   {
-    id: 2,
     label: 'The Collection',
     title: 'Your Daily Ritual',
-    cta: 'Shop the edit',
-    video: 'https://www.pexels.com/download/video/4264901/',
+    cta: 'View treatments',
+    href: '#services',
+    clip: { id: 4264901, fps: 30 },
+    tint: 'from-stone-600 via-stone-900 to-black',
   },
   {
-    id: 3,
     label: 'Advanced Dermal',
     title: 'Precision Skin Care',
     cta: 'Book an analysis',
-    video: 'https://www.pexels.com/download/video/8204093/',
+    href: '/booking',
+    clip: { id: 8204093, fps: 25 },
+    tint: 'from-slate-600 via-slate-900 to-black',
   },
 ]
 
-export default function CinematicVideoHero() {
-  const [currentSlide, setCurrentSlide] = useState(0)
-  const [isReady, setIsReady] = useState(false)
-  const [isMounted, setIsMounted] = useState(false) // Trigger for first-load animation
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([])
+const SLIDE_MS = 6500
 
-  const radius = 8
-  const circumference = 2 * Math.PI * radius
-  const SLIDE_DURATION = 6000
+const clipUrl = ({ id, fps }: Slide['clip'], quality: 'hd_1920_1080' | 'sd_960_540') =>
+  `https://videos.pexels.com/video-files/${id}/${id}-${quality}_${fps}fps.mp4`
 
+function SlideVideo({
+  clip,
+  active,
+  still,
+  onReady,
+}: {
+  clip: Slide['clip']
+  active: boolean
+  still: boolean
+  onReady: () => void
+}) {
+  const ref = useRef<HTMLVideoElement>(null)
+  const [src, setSrc] = useState<string>()
+  const [loaded, setLoaded] = useState(false)
+
+  // Phones and data-saver users get the 540p file; everyone else 1080p. Chosen after mount so the
+  // server and client markup match.
   useEffect(() => {
-    // Force a re-render to start the first animation
-    setIsMounted(true)
+    const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData
+    const small = window.matchMedia('(max-width: 767px)').matches || saveData
+    setSrc(clipUrl(clip, small ? 'sd_960_540' : 'hd_1920_1080'))
+  }, [clip])
 
-    const slideTimer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % SLIDES.length)
-    }, SLIDE_DURATION)
-
-    const readyTimer = setTimeout(() => setIsReady(true), 400)
-
-    return () => {
-      clearInterval(slideTimer)
-      clearTimeout(readyTimer)
+  // Only the visible clip plays. The outgoing one keeps running just long enough to finish its fade.
+  useEffect(() => {
+    const video = ref.current
+    if (!video || !src) return
+    video.muted = true
+    if (active && !still) {
+      video.play().catch(() => {})
+      return
     }
-  }, [])
-
-  useEffect(() => {
-    videoRefs.current.forEach((video) => {
-      if (video) {
-        video.defaultMuted = true
-        video.muted = true
-      }
-    })
-  }, [isReady])
-
-  const slowEase = 'cubic-bezier(0.2, 0, 0.2, 1)'
+    const timer = window.setTimeout(() => video.pause(), 2200)
+    return () => window.clearTimeout(timer)
+  }, [active, still, src])
 
   return (
-    <section className="relative h-[95dvh] md:h-[100dvh] overflow-hidden bg-[#050505] text-white font-sans">
-      {/* --- CINEMATIC OVERLAYS --- */}
-      <div className="absolute inset-0 z-20 bg-[radial-gradient(circle,transparent_20%,rgba(0,0,0,0.4)_100%)] pointer-events-none" />
-      <div className="absolute inset-0 z-20 bg-gradient-to-t from-black/75 via-black/10 to-black/40 pointer-events-none" />
+    <video
+      ref={ref}
+      src={src}
+      muted
+      loop
+      playsInline
+      preload="auto"
+      onCanPlay={() => {
+        setLoaded(true)
+        onReady()
+      }}
+      className={`h-full w-full object-cover transition-opacity duration-[1600ms] ${loaded ? 'opacity-100' : 'opacity-0'}`}
+    />
+  )
+}
 
-      {/* --- VIDEO STACK --- */}
-      {SLIDES.map((slide, index) => (
-        <div
-          key={slide.id}
-          className={`absolute inset-0 transition-opacity duration-[2000ms] ${slowEase} ${
-            currentSlide === index ? 'opacity-100 z-10' : 'opacity-0 z-0'
-          }`}
-        >
-          <video
-            ref={(el) => {
-              videoRefs.current[index] = el
-            }}
-            autoPlay
-            loop
-            muted
-            playsInline
-            className={`h-full w-full object-cover transition-transform duration-[7000ms] ease-out ${
-              currentSlide === index && isReady ? 'scale-105' : 'scale-100'
-            }`}
-          >
-            <source src={slide.video} type="video/mp4" />
-          </video>
-        </div>
-      ))}
+export default function CinematicVideoHero() {
+  const reduce = useReducedMotion() ?? false
+  const { scrollTo } = useSmoothScroll()
+  const [current, setCurrent] = useState(0)
+  const [hidden, setHidden] = useState(false)
+  const [ready, setReady] = useState<boolean[]>(() => SLIDES.map(() => false))
+  const [dwellDone, setDwellDone] = useState(false)
 
-      {/* --- CONTENT OVERLAY: bottom-left, editorial --- */}
-      <div className="absolute inset-0 z-40">
-        {SLIDES.map((slide, index) => (
+  // Each slide gets a full dwell, restarting whenever the slide changes (including manual picks).
+  useEffect(() => {
+    setDwellDone(false)
+    if (reduce || hidden) return
+    const timer = window.setTimeout(() => setDwellDone(true), SLIDE_MS)
+    return () => window.clearTimeout(timer)
+  }, [current, reduce, hidden])
+
+  // ...then moves on to the next clip that is actually ready to play. A clip that is still
+  // downloading is waited for, and one that never loads is skipped, so the hero never shows an
+  // empty gradient where footage should be.
+  useEffect(() => {
+    if (!dwellDone) return
+    for (let step = 1; step < SLIDES.length; step++) {
+      const index = (current + step) % SLIDES.length
+      if (ready[index]) {
+        setCurrent(index)
+        return
+      }
+    }
+  }, [dwellDone, ready, current])
+
+  useEffect(() => {
+    const onVisibility = () => setHidden(document.hidden)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
+
+  // Scroll-linked exit: the footage drifts and darkens while the headline lifts away, so the page
+  // below feels like it is sliding over a scene instead of covering a flat picture.
+  const viewport = useRef(900)
+  useEffect(() => {
+    const measure = () => (viewport.current = window.innerHeight)
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [])
+  const { scrollY } = useScroll()
+  const progress = useTransform(scrollY, (v) => Math.min(1, Math.max(0, v / viewport.current)))
+  const mediaScale = useTransform(progress, [0, 1], [1, 1.16])
+  const mediaY = useTransform(progress, [0, 1], ['0%', '10%'])
+  const contentY = useTransform(progress, [0, 1], ['0vh', '-16vh'])
+  const contentOpacity = useTransform(progress, [0, 0.55], [1, 0])
+  const veil = useTransform(progress, [0, 1], [0, 0.7])
+
+  return (
+    <section className="relative h-[100dvh] overflow-hidden bg-[#050505] font-display text-white">
+      <h1 className="sr-only">{SLIDES[current].title}</h1>
+
+      {/* FOOTAGE */}
+      <motion.div style={reduce ? undefined : { scale: mediaScale, y: mediaY }} className="absolute inset-0 will-change-transform">
+        {SLIDES.map((slide, i) => (
           <div
-            key={`content-${slide.id}`}
-            className={`absolute left-6 right-6 md:left-14 md:right-14 bottom-28 md:bottom-32 flex flex-col items-start transition-all duration-[1200ms] ${slowEase} ${
-              currentSlide === index
-                ? 'opacity-100 translate-y-0'
-                : 'opacity-0 translate-y-10 pointer-events-none'
+            key={slide.clip.id}
+            className={`absolute inset-0 bg-gradient-to-br transition-opacity duration-[2000ms] ease-out ${slide.tint} ${
+              current === i ? 'z-10 opacity-100' : 'z-0 opacity-0'
             }`}
-            aria-hidden={currentSlide !== index}
           >
-            <p className="text-xs md:text-sm font-bold tracking-[0.3em] uppercase mb-5 md:mb-8">
-              {slide.label}
-            </p>
-
-            {currentSlide === index ? (
-              <h1 className="text-[clamp(2.75rem,9.5vw,10rem)] font-extrabold tracking-tighter uppercase leading-[0.86] mb-8 md:mb-12 max-w-[16ch] text-balance">
-                {slide.title}
-              </h1>
-            ) : (
-              <p
-                aria-hidden
-                className="text-[clamp(2.75rem,9.5vw,10rem)] font-extrabold tracking-tighter uppercase leading-[0.86] mb-8 md:mb-12 max-w-[16ch] text-balance"
-              >
-                {slide.title}
-              </p>
-            )}
-
-            <Link
-              href="/booking"
-              tabIndex={currentSlide === index ? 0 : -1}
-              className="group inline-flex items-center gap-4 bg-white text-zinc-950 px-7 md:px-9 py-4 md:py-5 text-xs md:text-sm font-bold uppercase tracking-[0.2em] transition-colors duration-300 hover:bg-zinc-200"
-            >
-              {slide.cta}
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                className="transition-transform duration-300 group-hover:translate-x-1"
-              >
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </Link>
+            <SlideVideo
+              clip={slide.clip}
+              active={current === i}
+              still={reduce}
+              onReady={() => setReady((r) => (r[i] ? r : r.map((v, j) => (j === i ? true : v))))}
+            />
           </div>
         ))}
-      </div>
+      </motion.div>
 
-      {/* --- DYNAMIC PAGINATION: NO DOT IF ACTIVE --- */}
-      <div className="absolute bottom-10 left-5 md:left-[52px] z-50 flex items-center gap-1 md:gap-2">
-        {SLIDES.map((_, index) => {
-          const isActive = currentSlide === index
-          return (
-            <button
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              // Reduced from w-10 to w-6 to pull them closer
-              className="group relative w-6 h-6 flex items-center justify-center"
+      {/* SCRIMS: one for legibility under the text, one that deepens as you scroll away */}
+      <div className="pointer-events-none absolute inset-0 z-20 bg-[radial-gradient(circle,transparent_25%,rgba(0,0,0,0.45)_100%)]" />
+      <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-black/80 via-black/10 to-black/45" />
+      <motion.div style={{ opacity: veil }} className="pointer-events-none absolute inset-0 z-20 bg-black" />
+
+      {/* HEADLINES */}
+      <motion.div
+        style={reduce ? undefined : { y: contentY, opacity: contentOpacity }}
+        className="absolute inset-0 z-40"
+      >
+        {SLIDES.map((slide, i) => {
+          const active = current === i
+          const state = active ? 'in' : 'out'
+          const isAnchor = slide.href.startsWith('#')
+          const buttonClass =
+            'group inline-flex items-center gap-4 bg-white px-7 py-4 text-xs font-bold uppercase tracking-[0.2em] text-zinc-950 transition-colors duration-300 hover:bg-zinc-200 md:px-9 md:py-5 md:text-sm'
+          const arrow = (
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              className="transition-transform duration-300 group-hover:translate-x-1"
+              aria-hidden
             >
-              {/* Center Dot */}
-              <div
-                className={`absolute w-1 h-1 rounded-full transition-all duration-700 ease-in-out ${
-                  isActive
-                    ? 'bg-white opacity-0 scale-50'
-                    : 'bg-white/30 group-hover:bg-white/60 opacity-100 scale-100'
-                }`}
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          )
+
+          return (
+            <div
+              key={slide.title}
+              aria-hidden={!active}
+              className={`absolute bottom-28 left-6 right-6 flex flex-col items-start md:bottom-32 md:left-14 md:right-14 ${
+                active ? '' : 'pointer-events-none'
+              }`}
+            >
+              <motion.p
+                animate={{ opacity: active ? 1 : 0, x: active ? 0 : -16 }}
+                transition={{ duration: 0.8, ease: EASE, delay: active ? 0.1 : 0 }}
+                className="mb-5 flex items-center gap-4 text-xs font-bold uppercase tracking-[0.3em] md:mb-8 md:text-sm"
+              >
+                <span className="h-px w-10 bg-white" />
+                {slide.label}
+              </motion.p>
+
+              <SplitReveal
+                as="p"
+                text={slide.title}
+                state={state}
+                delay={0.15}
+                className="mb-8 block max-w-[16ch] text-balance text-[clamp(2.75rem,9.5vw,10rem)] font-extrabold uppercase leading-[0.86] tracking-tighter md:mb-12"
               />
 
-              {/* Progress Circle Container */}
-              <svg
-                className={`absolute inset-0 w-full h-full -rotate-90 transform transition-all duration-1000 ${slowEase} ${
-                  isActive ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
-                }`}
+              <motion.div
+                animate={{ opacity: active ? 1 : 0, y: active ? 0 : 12 }}
+                transition={{ duration: 0.8, ease: EASE, delay: active ? 0.55 : 0 }}
               >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r={radius}
-                  stroke="currentColor"
-                  strokeWidth="1"
-                  fill="transparent"
-                  className="text-white/10"
-                />
-                <circle
-                  cx="12"
-                  cy="12"
-                  r={radius}
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  fill="transparent"
-                  strokeDasharray={circumference}
-                  style={{
-                    // Logic: Start at full circumference, transition to 0 ONLY if mounted and active
-                    strokeDashoffset: isActive && isMounted ? 0 : circumference,
-                    transition: isActive ? `stroke-dashoffset ${SLIDE_DURATION}ms linear` : 'none',
-                  }}
-                  className="text-white"
-                />
-              </svg>
-            </button>
+                {isAnchor ? (
+                  <a
+                    href={slide.href}
+                    tabIndex={active ? 0 : -1}
+                    onClick={(e) => {
+                      e.preventDefault()
+                      scrollTo(slide.href, { offset: -80 })
+                    }}
+                    className={buttonClass}
+                  >
+                    {slide.cta}
+                    {arrow}
+                  </a>
+                ) : (
+                  <Link href={slide.href} tabIndex={active ? 0 : -1} className={buttonClass}>
+                    {slide.cta}
+                    {arrow}
+                  </Link>
+                )}
+              </motion.div>
+            </div>
           )
         })}
+      </motion.div>
+
+      {/* LIVE AVAILABILITY */}
+      <motion.div
+        style={reduce ? undefined : { opacity: contentOpacity }}
+        className="absolute bottom-6 right-5 z-50 md:bottom-10 md:right-14"
+      >
+        <NextOpening />
+      </motion.div>
+
+      {/* SLIDE PICKER: segments fill over the dwell time */}
+      <div className="absolute bottom-7 left-5 z-50 flex items-end gap-1 md:bottom-11 md:left-14" role="group" aria-label="Choose slide">
+        {SLIDES.map((slide, i) => (
+          <button
+            key={slide.title}
+            onClick={() => setCurrent(i)}
+            aria-label={`Show slide ${i + 1}: ${slide.title}`}
+            aria-current={current === i}
+            className="group flex h-8 w-9 items-end md:w-12"
+          >
+            <span className="relative block h-[3px] w-full overflow-hidden bg-white/30 transition-colors group-hover:bg-white/50">
+              <motion.span
+                key={`${i}-${current === i}`}
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: current === i ? 1 : 0 }}
+                transition={{ duration: current === i && !reduce ? SLIDE_MS / 1000 : 0.01, ease: 'linear' }}
+                style={{ originX: 0 }}
+                className="absolute inset-0 bg-white"
+              />
+            </span>
+          </button>
+        ))}
       </div>
     </section>
   )

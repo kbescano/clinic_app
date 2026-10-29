@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import FadeIn from '@/components/shared/FadeIn'
 import BackToHome from '@/components/shared/BackToHome'
-import { RegistrySkeleton } from '@/components/shared/RegistrySkeleton' // <-- Imported
+import { RegistrySkeleton, SKELETON_VISIBLE_MS } from '@/components/shared/RegistrySkeleton' // <-- Imported
 import dayjs from '@/lib/dayjs'
 
 // --- TYPES (STRICTLY PRESERVED) ---
@@ -60,11 +60,11 @@ export default function SpecialistDashboardClient({
   const activeMetrics = view === 'today' ? todayMetrics : weekMetrics
   const now = dayjs().tz('Asia/Manila')
 
-  // Run the 2-second timer to perfectly match the RegistrySkeleton
+  // Reveal in step with the RegistrySkeleton overlay fading out
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false)
-    }, 2000)
+    }, SKELETON_VISIBLE_MS)
     return () => clearTimeout(timer)
   }, [])
 

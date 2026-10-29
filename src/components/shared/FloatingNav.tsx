@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
@@ -15,22 +15,23 @@ export default function FloatingNav({ navItems }: { navItems: FloatingNavItem[] 
   const pathname = usePathname()
 
   const [showMenu, setShowMenu] = useState(false)
-  const [lastScrollY, setLastScrollY] = useState(0)
+  // A ref, not state: tracking the previous position must not re-render the nav on every scroll tick.
+  const lastScrollY = useRef(0)
 
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY
-      if (currentScrollY > lastScrollY && currentScrollY > 50) {
+      if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
         setShowMenu(true)
-      } else if (currentScrollY < lastScrollY) {
+      } else if (currentScrollY < lastScrollY.current) {
         setShowMenu(false)
       }
-      setLastScrollY(currentScrollY)
+      lastScrollY.current = currentScrollY
     }
 
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [lastScrollY])
+  }, [])
 
   return (
     <>

@@ -3,7 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { motion, useScroll, useSpring } from 'motion/react'
 import FadeIn from '@/components/shared/FadeIn'
+import { useSmoothScroll } from '@/components/shared/SmoothScroll'
 
 interface HeaderData {
   topLabel: string
@@ -26,6 +28,11 @@ export default function Navbar({ headerData }: NavbarProps) {
   const [isAtTop, setIsAtTop] = useState(true)
   const lastScrollY = useRef(0)
   const pathname = usePathname()
+  const { scrollTo } = useSmoothScroll()
+
+  // Reading progress: a bar along the bottom edge that fills as the page is scrolled.
+  const { scrollYProgress } = useScroll()
+  const progress = useSpring(scrollYProgress, { stiffness: 140, damping: 30, restDelta: 0.001 })
 
   const isHomePage = pathname === '/'
   const isTransparent = isHomePage && isAtTop
@@ -74,6 +81,13 @@ export default function Navbar({ headerData }: NavbarProps) {
                   <Link
                     key={link.href}
                     href={link.href}
+                    onClick={(e) => {
+                      // On the home page an in-page link glides there instead of jumping.
+                      if (pathname === '/' && link.href.startsWith('/#')) {
+                        e.preventDefault()
+                        scrollTo(link.href.slice(1), { offset: -80 })
+                      }
+                    }}
                     className={`text-xs font-bold uppercase tracking-[0.18em] underline-offset-[10px] decoration-2 transition-opacity hover:opacity-60 ${
                       isActive ? 'underline' : ''
                     }`}
@@ -97,6 +111,13 @@ export default function Navbar({ headerData }: NavbarProps) {
           </div>
         </div>
       </FadeIn>
+      <motion.div
+        aria-hidden
+        style={{ scaleX: progress, originX: 0 }}
+        className={`absolute bottom-0 left-0 h-[3px] w-full bg-current transition-opacity duration-300 ${
+          isTransparent ? 'opacity-0' : 'opacity-100'
+        }`}
+      />
     </nav>
   )
 }

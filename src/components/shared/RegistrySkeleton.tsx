@@ -3,6 +3,9 @@
 import React, { useEffect, useState, Suspense } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
 
+/** How long the overlay stays fully visible before it starts to fade. */
+export const SKELETON_VISIBLE_MS = 600
+
 // 1. Move the actual logic into an inner component
 function SkeletonInner() {
   const pathname = usePathname()
@@ -21,11 +24,10 @@ function SkeletonInner() {
       setShowContent(true)
     }, 50)
 
-    // 3. Trigger the grand exit at 1500ms
-    // The CSS transition takes 500ms, reaching absolute zero opacity at exactly 2000ms.
+    // 3. Fade out after SKELETON_VISIBLE_MS (the CSS transition then takes another 400ms).
     const fadeOutTimer = setTimeout(() => {
       setIsFadingOut(true)
-    }, 1500)
+    }, SKELETON_VISIBLE_MS)
 
     return () => {
       clearTimeout(entranceTimer)
@@ -35,22 +37,22 @@ function SkeletonInner() {
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-[#050505] transition-opacity duration-500 ease-in-out ${
+      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-white dark:bg-[#050505] transition-opacity duration-[400ms] ease-in-out ${
         isFadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'
       }`}
     >
       {/* THE SPINNER */}
       <div
-        className={`relative flex items-center justify-center transition-all duration-[1500ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        className={`relative flex items-center justify-center transition-[opacity,transform] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
           showContent
-            ? 'opacity-100 blur-0 scale-100 drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]'
-            : 'opacity-0 blur-[20px] scale-90 drop-shadow-none'
+            ? 'opacity-100 scale-100'
+            : 'opacity-0 scale-90'
         }`}
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
-          className="w-12 h-12 animate-spin opacity-90 text-white"
+          className="w-12 h-12 animate-spin opacity-90 text-zinc-950 dark:text-white"
           style={{ animationDuration: '2s' }}
         >
           <defs>

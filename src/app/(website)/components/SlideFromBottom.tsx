@@ -1,55 +1,31 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React from 'react'
 import { motion } from 'motion/react'
+import { useScrollLock } from '@/components/shared/SmoothScroll'
 
-interface SlideFromBottomProps {
-  children: React.ReactNode
-  /** Dynamic height for desktop (e.g., '60vh', '500px') */
-  height?: string
-}
-
-export default function SlideFromBottom({ children, height = '50vh' }: SlideFromBottomProps) {
-  // --- THE NUCLEAR SCROLL LOCK ---
-  useEffect(() => {
-    const scrollY = window.scrollY
-    document.body.style.position = 'fixed'
-    document.body.style.top = `-${scrollY}px`
-    document.body.style.width = '100%'
-    document.body.style.overflowY = 'hidden'
-
-    return () => {
-      const savedScrollY = document.body.style.top
-      document.body.style.position = ''
-      document.body.style.top = ''
-      document.body.style.width = ''
-      document.body.style.overflowY = ''
-      window.scrollTo(0, parseInt(savedScrollY || '0') * -1)
-    }
-  }, [])
+/**
+ * A sheet that rises from the bottom edge: full screen on phones, a centred panel on desktop.
+ * Mounting it locks page scroll; unmounting releases it.
+ */
+export default function SlideFromBottom({ children, label }: { children: React.ReactNode; label: string }) {
+  useScrollLock(true)
 
   return (
     <motion.div
+      role="dialog"
+      aria-modal="true"
+      aria-label={label}
       initial={{ y: '100%' }}
       animate={{ y: 0 }}
       exit={{ y: '100%' }}
-      transition={{
-        duration: 0.8,
-        ease: [0.33, 1, 0.68, 1],
-      }}
-      style={{ '--slide-height': height } as React.CSSProperties}
-      /* MOBILE: Full width (w-full), Full height (h-full), anchored top-left (inset-0)
-         DESKTOP (md): 50vw width, dynamic height, centered horizontally (left-1/2 -translate-x-1/2)
-      */
-      className="fixed inset-0 md:top-auto md:bottom-0 w-full h-full md:w-[50vw] md:h-[var(--slide-height)] md:left-1/2 md:-translate-x-1/2 bg-white dark:bg-black z-[250] shadow-2xl border-t md:border-x border-zinc-100 dark:border-zinc-900 flex flex-col"
+      transition={{ duration: 0.7, ease: [0.33, 1, 0.68, 1] }}
+      className="fixed inset-0 z-[250] flex h-full w-full flex-col border-zinc-950 bg-white dark:border-zinc-700 dark:bg-black md:inset-x-auto md:bottom-0 md:left-1/2 md:top-auto md:h-auto md:max-h-[88vh] md:w-[min(760px,92vw)] md:-translate-x-1/2 md:border-x-2 md:border-t-2"
     >
-      {/* MINIMALIST DRAG HANDLE */}
-      <div className="flex justify-center pt-4 pb-2 shrink-0">
-        <div className="w-12 h-1 bg-zinc-100 dark:bg-zinc-800 rounded-full" />
+      {/* data-lenis-prevent: the sheet scrolls natively even though the page behind is locked */}
+      <div data-lenis-prevent className="flex-1 overflow-y-auto overscroll-contain">
+        {children}
       </div>
-
-      {/* SCROLLABLE CONTENT AREA */}
-      <div className="flex-1 overflow-y-hidden px-6 pb-12">{children}</div>
     </motion.div>
   )
 }

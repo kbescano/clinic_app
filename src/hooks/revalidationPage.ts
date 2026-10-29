@@ -4,6 +4,7 @@ import type { CollectionAfterChangeHook, GlobalAfterChangeHook } from 'payload'
 // This is what the Services collection is looking for
 export const revalidatePage: CollectionAfterChangeHook = ({ doc }) => {
   revalidatePath('/')
+  revalidatePath('/services')
   if (doc.slug) {
     revalidatePath(`/${doc.slug}`)
   }

@@ -1,0 +1,6 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "clinic-dev", "runtimeExecutable": "npx", "runtimeArgs": ["cross-env", "NODE_OPTIONS=--no-deprecation", "next", "dev", "-p", "3100"], "port": 3100 }
+  ]
+}
