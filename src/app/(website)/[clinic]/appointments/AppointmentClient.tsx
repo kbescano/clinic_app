@@ -13,6 +13,7 @@ import {
 } from '@heroicons/react/24/outline'
 import dayjs from '@/lib/dayjs'
 import { useSearchParams } from 'next/navigation'
+import { useClinic } from '@/app/(website)/components/ClinicContext'
 
 interface PatientVisit {
   id: string
@@ -41,6 +42,7 @@ interface AppointmentGroup {
 
 export default function AppointmentClient({ initialData }: { initialData: PatientProfile | null }) {
   const searchParams = useSearchParams()
+  const { slug: clinic, href } = useClinic()
   const autoEmail = searchParams?.get('email')
   const autoPhone = searchParams?.get('ph')
 
@@ -67,29 +69,29 @@ export default function AppointmentClient({ initialData }: { initialData: Patien
       setAuthForm({ email: autoEmail, lastFour })
 
       startTransition(async () => {
-        const res = await verifyPatientProfile(autoEmail, lastFour)
+        const res = await verifyPatientProfile(autoEmail, lastFour, clinic)
         if (res.error) {
           setError(res.error)
           setIsAutoLoggingIn(false)
         } else {
           setPatientData(res?.data as PatientProfile | null)
           setIsVerified(true)
-          window.history.replaceState(null, '', '/appointments')
+          window.history.replaceState(null, '', href('/appointments'))
         }
       })
     }
-  }, [isVerified, autoEmail, autoPhone, isAutoLoggingIn])
+  }, [isVerified, autoEmail, autoPhone, isAutoLoggingIn, clinic, href])
 
   const bookNewUrl = useMemo(() => {
-    if (!patientData) return '/booking'
+    if (!patientData) return href('/booking')
     const params = new URLSearchParams({
       fn: patientData.firstName || '',
       sn: patientData.surname || '',
       email: patientData.email || '',
       ph: patientData.phone || '',
     })
-    return `/booking?${params.toString()}`
-  }, [patientData])
+    return `${href('/booking')}?${params.toString()}`
+  }, [patientData, href])
 
   const { timelineRegistry, totalServices } = useMemo(() => {
     if (!patientData?.history) return { timelineRegistry: [], totalServices: 0 }
@@ -171,7 +173,7 @@ export default function AppointmentClient({ initialData }: { initialData: Patien
     e.preventDefault()
     setError(null)
     startTransition(async () => {
-      const res = await verifyPatientProfile(authForm.email, authForm.lastFour)
+      const res = await verifyPatientProfile(authForm.email, authForm.lastFour, clinic)
       if (res.error) setError(res.error)
       else {
         setPatientData(res.data as PatientProfile | null)
@@ -484,6 +486,7 @@ function AppointmentRow({
   isUpcoming: boolean
   patientData: PatientProfile | null
 }) {
+  const { href } = useClinic()
   const statusColors: Record<string, string> = {
     confirmed: 'text-[#248232]',
     completed: 'text-[#48a9a6]',
@@ -497,7 +500,7 @@ function AppointmentRow({
   const isCurrentlyOngoing = now.isAfter(visitDate) && now.isBefore(visitDate.add(1, 'hour'))
   const isFutureTime = now.isBefore(visitDate)
 
-  const rescheduleUrl = `/booking?reschedule=true&id=${visit.id || ''}&service=${encodeURIComponent(visit.service || '')}&date=${dayjs(visit.date).format('YYYY-MM-DD')}&time=${dayjs(visit.date).format('HH:mm')}&fn=${encodeURIComponent(visit.firstName || '')}&sn=${encodeURIComponent(visit.surname || '')}&email=${encodeURIComponent(patientData?.email || '')}&ph=${encodeURIComponent(patientData?.phone || '')}`
+  const rescheduleUrl = `${href('/booking')}?reschedule=true&id=${visit.id || ''}&service=${encodeURIComponent(visit.service || '')}&date=${dayjs(visit.date).format('YYYY-MM-DD')}&time=${dayjs(visit.date).format('HH:mm')}&fn=${encodeURIComponent(visit.firstName || '')}&sn=${encodeURIComponent(visit.surname || '')}&email=${encodeURIComponent(patientData?.email || '')}&ph=${encodeURIComponent(patientData?.phone || '')}`
 
   return (
     <div className="flex justify-between items-baseline gap-6 group">

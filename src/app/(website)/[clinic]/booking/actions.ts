@@ -11,18 +11,30 @@ import {
   getPatientSessionEmail,
   setPatientSession,
 } from '@/lib/patientSession'
+import { getTenant } from '@/lib/tenants'
+import { clinicPath, isClinicSlug, type ClinicSlug } from '@/lib/clinics'
+import type { Tenant } from '@/payload-types'
 
 // --- TYPES & INTERFACES ---
 
-interface BookingConfigGlobal {
-  openingTime?: string
-  closingTime?: string
-  slotInterval?: string
-  specialistCapacity?: number
-  lunchBreak?: {
-    start?: string
-    end?: string
+/** A clinic's booking rules, with the same fallbacks the single-clinic globals had. */
+function bookingRules(tenant: Tenant) {
+  const b = tenant.booking
+  return {
+    capacity: Number(b?.specialistCapacity) || 1,
+    interval: Number(b?.slotInterval) || 30,
+    openingStr: b?.openingTime || '09:00',
+    closingStr: b?.closingTime || '17:00',
+    lunchStartStr: b?.lunchStart || '12:00',
+    lunchEndStr: b?.lunchEnd || '13:00',
   }
+}
+
+/** The clinic a public request is for. Every booking lookup and write is scoped to it. */
+async function tenantFor(clinic: unknown): Promise<Tenant> {
+  const tenant = isClinicSlug(clinic) ? await getTenant(clinic) : null
+  if (!tenant) throw new Error('Unknown clinic')
+  return tenant
 }
 
 interface ServiceDoc {
@@ -81,22 +93,12 @@ const isOverlapping = (
 }
 
 /**
- * Fetches busy slots for a specific date.
+ * Fetches busy slots for a specific date at one clinic.
  */
-export async function getBusySlots(dateString: string): Promise<string[]> {
+export async function getBusySlots(dateString: string, clinic: string): Promise<string[]> {
   const payload = await getPayload({ config })
-
-  const bookingConfig = (await payload.findGlobal({
-    slug: 'booking-config',
-  })) as unknown as BookingConfigGlobal
-
-  const capacity = bookingConfig?.specialistCapacity ?? 1
-  const interval = Number(bookingConfig?.slotInterval) || 30
-
-  const openingStr = bookingConfig?.openingTime || '09:00'
-  const closingStr = bookingConfig?.closingTime || '17:00'
-  const lunchStartStr = bookingConfig?.lunchBreak?.start || '12:00'
-  const lunchEndStr = bookingConfig?.lunchBreak?.end || '13:00'
+  const tenant = await tenantFor(clinic)
+  const { capacity, interval, openingStr, closingStr, lunchStartStr, lunchEndStr } = bookingRules(tenant)
 
   const targetDate = dayjs(dateString).tz('Asia/Manila')
   const startOfDay = targetDate.startOf('day').toISOString()
@@ -106,6 +108,7 @@ export async function getBusySlots(dateString: string): Promise<string[]> {
     collection: 'appointments',
     where: {
       and: [
+        { tenant: { equals: tenant.id } },
         { appointmentDate: { greater_than_equal: startOfDay } },
         { appointmentDate: { less_than_equal: endOfDay } },
         { status: { not_equals: 'cancelled' } },
@@ -172,6 +175,9 @@ export async function createBookingAction(
   formData: FormData,
 ): Promise<BookingState> {
   const payload = await getPayload({ config })
+  const clinic = String(formData.get('clinic') ?? '')
+  const tenant = isClinicSlug(clinic) ? await getTenant(clinic) : null
+  if (!tenant || !isClinicSlug(clinic)) return { error: 'Unknown clinic.' }
 
   // Read the verified session before resetting it: rescheduling must prove ownership with it.
   const sessionEmail = await getPatientSessionEmail()
@@ -193,7 +199,13 @@ export async function createBookingAction(
     const original = await payload
       .findByID({ collection: 'appointments', id: rescheduleId, depth: 0, overrideAccess: true })
       .catch(() => null)
-    if (!original || !sessionEmail || original.email?.trim().toLowerCase() !== sessionEmail) {
+    const originalTenant = typeof original?.tenant === 'object' ? original?.tenant?.id : original?.tenant
+    if (
+      !original ||
+      originalTenant !== tenant.id ||
+      !sessionEmail ||
+      original.email?.trim().toLowerCase() !== sessionEmail
+    ) {
       return { error: 'You can only reschedule your own appointments.' }
     }
   }
@@ -211,10 +223,14 @@ export async function createBookingAction(
   try {
     const servicesData = await payload.find({
       collection: 'services',
-      where: { id: { in: Array.from(new Set(rawServiceIds)) } },
+      where: { and: [{ id: { in: Array.from(new Set(rawServiceIds)) } }, { tenant: { equals: tenant.id } }] },
       overrideAccess: true,
     })
     const servicesDocs = servicesData.docs as unknown as ServiceDoc[]
+    // Only this clinic's treatments can be booked here.
+    if (rawServiceIds.some((id) => !servicesDocs.some((s) => String(s.id) === String(id)))) {
+      return { error: 'Please choose a treatment from this clinic.' }
+    }
 
     const personEndTimes: Record<string, string> = {}
 
@@ -257,10 +273,7 @@ export async function createBookingAction(
       }
     })
 
-    const bookingConfig = (await payload.findGlobal({
-      slug: 'booking-config',
-    })) as unknown as BookingConfigGlobal
-    const capacity = bookingConfig?.specialistCapacity ?? 1
+    const { capacity } = bookingRules(tenant)
 
     const earliestStart = validatedEntries.reduce(
       (min, e) => (e.appointmentDate < min ? e.appointmentDate : min),
@@ -275,6 +288,7 @@ export async function createBookingAction(
       collection: 'appointments',
       where: {
         and: [
+          { tenant: { equals: tenant.id } },
           { endDateTime: { greater_than: earliestStart } },
           { appointmentDate: { less_than: latestEnd } },
           { status: { not_equals: 'cancelled' } },
@@ -333,6 +347,7 @@ export async function createBookingAction(
           bookingGroupId: item.bookingGroupId,
           isGuest: item.isGuest,
           status: 'confirmed',
+          tenant: tenant.id,
         },
       })
     }
@@ -352,10 +367,7 @@ export async function createBookingAction(
 
     if (groupDocs.length > 0) {
       const mainDoc = groupDocs.find((d) => !d.isGuest) || groupDocs[0]
-      const contactConfig = (await payload.findGlobal({ slug: 'contact-config' })) as unknown as {
-        address?: string
-      }
-      const clinicLocation = contactConfig?.address || 'Atelier Clinical Suite'
+      const clinicLocation = tenant.contact?.address || tenant.name
 
       const displayDate = dayjs(mainDoc.appointmentDate).tz('Asia/Manila').format('MMMM D, YYYY')
       const displayTime = dayjs(mainDoc.appointmentDate).tz('Asia/Manila').format('hh:mm A')
@@ -378,6 +390,7 @@ export async function createBookingAction(
             'confirmation',
             clinicLocation,
             attendees,
+            { clinicName: tenant.name, statusUrl: statusUrlFor(clinic) },
           ),
         })
       } catch (emailErr) {
@@ -391,21 +404,32 @@ export async function createBookingAction(
   }
 
   const redirectQuery = formData.get('redirectQuery')
-  redirect(`/booking/confirmation?${redirectQuery || ''}`)
+  redirect(`${clinicPath(clinic, '/booking/confirmation')}?${redirectQuery || ''}`)
+}
+
+/** The public "manage your booking" page for a clinic, as linked from emails. */
+function statusUrlFor(clinic: ClinicSlug) {
+  const base = (process.env.NEXT_PUBLIC_SERVER_URL || '').replace(/\/$/, '')
+  return `${base}${clinicPath(clinic, '/booking/status')}`
 }
 
 /**
- * Look up group history by email
+ * Look up group history by email, at one clinic
  */
-export async function getCustomerByEmail(email: string) {
+export async function getCustomerByEmail(email: string, clinic: string) {
   const payload = await getPayload({ config })
+  const tenant = await tenantFor(clinic)
   const cleanEmail = email.trim().toLowerCase()
   const nowInManila = dayjs().tz('Asia/Manila').toISOString()
 
   const result = await payload.find({
     collection: 'appointments',
     where: {
-      and: [{ email: { equals: cleanEmail } }, { status: { not_equals: 'cancelled' } }],
+      and: [
+        { tenant: { equals: tenant.id } },
+        { email: { equals: cleanEmail } },
+        { status: { not_equals: 'cancelled' } },
+      ],
     },
     sort: '-appointmentDate',
     limit: 100,
@@ -440,17 +464,9 @@ export async function getCustomerByEmail(email: string) {
   }
 }
 
-export async function getClinicTimeSlots(): Promise<string[]> {
-  const payload = await getPayload({ config })
-  const bookingConfig = (await payload.findGlobal({
-    slug: 'booking-config',
-  })) as unknown as BookingConfigGlobal
-
-  const interval = Number(bookingConfig?.slotInterval) || 30
-  const openingStr = bookingConfig?.openingTime || '09:00'
-  const closingStr = bookingConfig?.closingTime || '17:00'
-  const lunchStartStr = bookingConfig?.lunchBreak?.start || '12:00'
-  const lunchEndStr = bookingConfig?.lunchBreak?.end || '13:00'
+export async function getClinicTimeSlots(clinic: string): Promise<string[]> {
+  const tenant = await tenantFor(clinic)
+  const { interval, openingStr, closingStr, lunchStartStr, lunchEndStr } = bookingRules(tenant)
 
   const slots: string[] = []
   let currentSlot = dayjs()

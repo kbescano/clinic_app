@@ -12,6 +12,7 @@ import { Appointments } from './collections/Appointments'
 import { Services } from './collections/Services'
 import { Media } from './collections/Media'
 import { Specialists } from './collections/Specialist'
+import { Tenants } from './collections/Tenants'
 import { ContactConfig } from './globals/ContactConfig'
 import { ColorConfig } from './globals/ColorConfig'
 import { HeaderConfig } from './globals/GlobalConfig'
@@ -25,7 +26,7 @@ export default buildConfig({
     user: Users.slug,
   },
   sharp,
-  collections: [Users, Appointments, Services, Media, Specialists],
+  collections: [Tenants, Users, Appointments, Services, Media, Specialists],
   globals: [ContactConfig, ColorConfig, HeaderConfig, BookingConfig],
   editor: lexicalEditor({}),
   secret: process.env.PAYLOAD_SECRET || '',

@@ -67,6 +67,7 @@ export interface Config {
   };
   blocks: {};
   collections: {
+    tenants: Tenant;
     users: User;
     appointments: Appointment;
     services: Service;
@@ -79,6 +80,7 @@ export interface Config {
   };
   collectionsJoins: {};
   collectionsSelect: {
+    tenants: TenantsSelect<false> | TenantsSelect<true>;
     users: UsersSelect<false> | UsersSelect<true>;
     appointments: AppointmentsSelect<false> | AppointmentsSelect<true>;
     services: ServicesSelect<false> | ServicesSelect<true>;
@@ -135,89 +137,40 @@ export interface UserAuthOperations {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "users".
+ * via the `definition` "tenants".
  */
-export interface User {
+export interface Tenant {
   id: number;
+  /**
+   * Shown in the site header, footer and emails.
+   */
   name: string;
-  role: 'admin';
-  updatedAt: string;
-  createdAt: string;
-  email: string;
-  resetPasswordToken?: string | null;
-  resetPasswordExpiration?: string | null;
-  salt?: string | null;
-  hash?: string | null;
-  loginAttempts?: number | null;
-  lockUntil?: string | null;
-  sessions?:
-    | {
-        id: string;
-        createdAt?: string | null;
-        expiresAt: string;
-      }[]
-    | null;
-  password?: string | null;
-  collection: 'users';
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "appointments".
- */
-export interface Appointment {
-  id: number;
-  firstName: string;
-  surname: string;
-  email: string;
-  phone: string;
-  service: number | Service;
-  appointmentDate: string;
-  status?: ('pending' | 'confirmed' | 'cancelled' | 'completed') | null;
   /**
-   * Leave empty for auto-capacity check. Assign a specialist manually for analytics tracking.
+   * Website address and homepage design.
    */
-  specialist?: (number | null) | Specialist;
+  slug: 'skin' | 'dental';
   /**
-   * Calculated based on Service duration + clinical buffer.
+   * Small line above the name, e.g. "Curated Care".
    */
-  endDateTime?: string | null;
-  /**
-   * Internal clinical notes added by the specialist after the visit.
-   */
-  specialistNotes?: string | null;
-  bookingGroupId?: string | null;
-  isGuest?: boolean | null;
-  emailStatus?: {
-    confirmationSent?: boolean | null;
-    reminder24hSent?: boolean | null;
-    reminder2hSent?: boolean | null;
+  topLabel?: string | null;
+  logo?: (number | null) | Media;
+  contact: {
+    address: string;
+    phoneNumber: string;
+    email: string;
+    officeHours: string;
   };
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "services".
- */
-export interface Service {
-  id: number;
-  title: string;
-  description: string;
-  images?:
-    | {
-        image: number | Media;
-        id?: string | null;
-      }[]
-    | null;
-  price: number;
-  details?:
-    | {
-        title: string;
-        description: string;
-        id?: string | null;
-      }[]
-    | null;
-  duration: '30' | '60' | '90';
+  booking: {
+    openingTime: string;
+    closingTime: string;
+    slotInterval: '30' | '60';
+    /**
+     * Chairs or rooms that can be in use at once.
+     */
+    specialistCapacity: number;
+    lunchStart: string;
+    lunchEnd: string;
+  };
   updatedAt: string;
   createdAt: string;
 }
@@ -321,13 +274,118 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "users".
+ */
+export interface User {
+  id: number;
+  name: string;
+  role: 'admin';
+  /**
+   * Can switch between clinics in the staff portal and manage staff accounts.
+   */
+  isSuperAdmin?: boolean | null;
+  /**
+   * The clinic this account works in. Its staff portal shows only that clinic.
+   */
+  tenant?: (number | null) | Tenant;
+  updatedAt: string;
+  createdAt: string;
+  email: string;
+  resetPasswordToken?: string | null;
+  resetPasswordExpiration?: string | null;
+  salt?: string | null;
+  hash?: string | null;
+  loginAttempts?: number | null;
+  lockUntil?: string | null;
+  sessions?:
+    | {
+        id: string;
+        createdAt?: string | null;
+        expiresAt: string;
+      }[]
+    | null;
+  password?: string | null;
+  collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "appointments".
+ */
+export interface Appointment {
+  id: number;
+  tenant?: (number | null) | Tenant;
+  firstName: string;
+  surname: string;
+  email: string;
+  phone: string;
+  service: number | Service;
+  appointmentDate: string;
+  status?: ('pending' | 'confirmed' | 'cancelled' | 'completed') | null;
+  /**
+   * Leave empty for auto-capacity check. Assign a specialist manually for analytics tracking.
+   */
+  specialist?: (number | null) | Specialist;
+  /**
+   * Calculated based on Service duration + clinical buffer.
+   */
+  endDateTime?: string | null;
+  /**
+   * Internal clinical notes added by the specialist after the visit.
+   */
+  specialistNotes?: string | null;
+  bookingGroupId?: string | null;
+  isGuest?: boolean | null;
+  emailStatus?: {
+    confirmationSent?: boolean | null;
+    reminder24hSent?: boolean | null;
+    reminder2hSent?: boolean | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "services".
+ */
+export interface Service {
+  id: number;
+  tenant?: (number | null) | Tenant;
+  title: string;
+  description: string;
+  /**
+   * Shown on the website. Without images the dental design uses its own photography.
+   */
+  images?:
+    | {
+        image: number | Media;
+        id?: string | null;
+      }[]
+    | null;
+  price: number;
+  details?:
+    | {
+        title: string;
+        description: string;
+        id?: string | null;
+      }[]
+    | null;
+  duration: '30' | '60' | '90';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "specialists".
  */
 export interface Specialist {
   id: number;
+  tenant?: (number | null) | Tenant;
   name: string;
   specialization: string;
-  image: number | Media;
+  /**
+   * Portrait for the website. Without one the dental design uses its own photography.
+   */
+  image?: (number | null) | Media;
   updatedAt: string;
   createdAt: string;
 }
@@ -355,6 +413,10 @@ export interface PayloadKv {
 export interface PayloadLockedDocument {
   id: number;
   document?:
+    | ({
+        relationTo: 'tenants';
+        value: number | Tenant;
+      } | null)
     | ({
         relationTo: 'users';
         value: number | User;
@@ -419,11 +481,43 @@ export interface PayloadMigration {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "tenants_select".
+ */
+export interface TenantsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  topLabel?: T;
+  logo?: T;
+  contact?:
+    | T
+    | {
+        address?: T;
+        phoneNumber?: T;
+        email?: T;
+        officeHours?: T;
+      };
+  booking?:
+    | T
+    | {
+        openingTime?: T;
+        closingTime?: T;
+        slotInterval?: T;
+        specialistCapacity?: T;
+        lunchStart?: T;
+        lunchEnd?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
   name?: T;
   role?: T;
+  isSuperAdmin?: T;
+  tenant?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -446,6 +540,7 @@ export interface UsersSelect<T extends boolean = true> {
  * via the `definition` "appointments_select".
  */
 export interface AppointmentsSelect<T extends boolean = true> {
+  tenant?: T;
   firstName?: T;
   surname?: T;
   email?: T;
@@ -473,6 +568,7 @@ export interface AppointmentsSelect<T extends boolean = true> {
  * via the `definition` "services_select".
  */
 export interface ServicesSelect<T extends boolean = true> {
+  tenant?: T;
   title?: T;
   description?: T;
   images?:
@@ -558,6 +654,7 @@ export interface MediaSelect<T extends boolean = true> {
  * via the `definition` "specialists_select".
  */
 export interface SpecialistsSelect<T extends boolean = true> {
+  tenant?: T;
   name?: T;
   specialization?: T;
   image?: T;

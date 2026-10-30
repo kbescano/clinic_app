@@ -1,26 +1,23 @@
 import React from 'react'
 import Link from 'next/link'
-import { getPayload } from 'payload'
-import config from '@/payload.config'
+import type { Tenant } from '@/payload-types'
+import { clinicPath } from '@/lib/clinics'
 import { Reveal, SplitReveal } from '@/components/shared/motion'
 import BackToTop from './BackToTop'
 
 const label = 'text-xs font-semibold uppercase tracking-[0.25em] text-zinc-500 mb-4'
 
 /** Closing call-to-action and contact details, shown at the end of the marketing pages. */
-export default async function SiteFooter() {
-  const payload = await getPayload({ config })
-  const [contact, header] = await Promise.all([
-    payload.findGlobal({ slug: 'contact-config' }),
-    payload.findGlobal({ slug: 'header-config' }),
-  ])
+export default function SiteFooter({ tenant }: { tenant: Tenant }) {
+  const { contact } = tenant
+  const href = (path: string) => clinicPath(tenant.slug, path)
 
   return (
     <footer className="bg-zinc-950 font-display text-white">
       <div className="mx-auto max-w-[1440px] px-6 pb-10 pt-20 md:px-14 md:pt-32">
         <p className={label}>Ready when you are</p>
 
-        <Link href="/booking" className="group block outline-offset-8">
+        <Link href={href('/booking')} className="group block outline-offset-8">
           <span className="flex items-end gap-4 text-[clamp(3rem,11vw,10rem)] font-extrabold uppercase leading-[0.85] tracking-tighter md:gap-8">
             <SplitReveal text="Book your session" stagger={0.09} className="block max-w-[8ch]" />
             <svg
@@ -61,14 +58,20 @@ export default async function SiteFooter() {
 
         <div className="mt-16 flex flex-col-reverse gap-6 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 md:flex-row md:items-center md:justify-between">
           <span>
-            © {new Date().getFullYear()} {header.clinicName}
+            © {new Date().getFullYear()} {tenant.name}
           </span>
-          <span className="flex items-center gap-8">
-            <Link href="/services" className="transition-colors hover:text-white">
+          <span className="flex flex-wrap items-center gap-x-8 gap-y-4">
+            <Link href={href('/services')} className="transition-colors hover:text-white">
               Services
             </Link>
-            <Link href="/appointments" className="transition-colors hover:text-white">
+            <Link href={href('/appointments')} className="transition-colors hover:text-white">
               My visits
+            </Link>
+            <Link href="/login" className="transition-colors hover:text-white">
+              Staff portal
+            </Link>
+            <Link href="/" className="transition-colors hover:text-white">
+              Our other clinic
             </Link>
             <BackToTop />
           </span>

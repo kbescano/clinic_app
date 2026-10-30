@@ -1,13 +1,17 @@
 import Link from 'next/link'
 import FadeIn from '@/components/shared/FadeIn'
 import BackToHome from '@/components/shared/BackToHome'
+import { clinicPath, isClinicSlug } from '@/lib/clinics'
 
 type Props = {
+  params: Promise<{ clinic: string }>
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
 
-export default async function ConfirmationPage({ searchParams }: Props) {
+export default async function ConfirmationPage({ params, searchParams }: Props) {
   const resolvedSearchParams = await searchParams
+  const { clinic } = await params
+  const href = (path: string) => (isClinicSlug(clinic) ? clinicPath(clinic, path) : path)
 
   const date =
     typeof resolvedSearchParams.date === 'string' ? resolvedSearchParams.date : 'Pending Date'
@@ -157,13 +161,13 @@ export default async function ConfirmationPage({ searchParams }: Props) {
           {/* ACTION BUTTONS */}
           <div className="space-y-3">
             <Link
-              href={`/appointments?email=${email}&ph=${ph}`}
+              href={`${href('/appointments')}?email=${email}&ph=${ph}`}
               className="block w-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs md:text-xs py-6 rounded-none uppercase tracking-[0.2em] text-center transition-all hover:opacity-90 active:scale-[0.98] shadow-xl"
             >
               View Upcoming Schedule
             </Link>
             <Link
-              href="/"
+              href={href('/')}
               className="block w-full bg-transparent border border-zinc-300 dark:border-zinc-800 text-zinc-950 dark:text-white text-xs md:text-xs py-6 rounded-none uppercase tracking-[0.2em] text-center transition-all hover:bg-zinc-50 dark:hover:bg-zinc-900 active:scale-[0.98]"
             >
               Return to Storefront

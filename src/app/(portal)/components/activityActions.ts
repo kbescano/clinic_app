@@ -3,7 +3,7 @@
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import dayjs from '@/lib/dayjs'
-import { getStaffUser } from '@/lib/auth'
+import { getPortalSession } from '@/lib/auth'
 
 interface ActivityDoc {
   id: string
@@ -18,12 +18,14 @@ interface ActivityDoc {
 
 export async function getLatestActivity() {
   // Patient names and phone numbers: staff only.
-  if (!(await getStaffUser())) return []
+  const session = await getPortalSession()
+  if (!session) return []
 
   const payload = await getPayload({ config })
 
   const result = await payload.find({
     collection: 'appointments',
+    where: { tenant: { equals: session.tenant.id } },
     sort: '-createdAt',
     limit: 10,
     overrideAccess: true,

@@ -1,6 +1,6 @@
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-import { getStaffUser } from '@/lib/auth'
+import { getPortalSession } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -23,9 +23,11 @@ interface ServiceDoc {
 }
 
 export async function POST(req: Request) {
-  if (!(await getStaffUser())) {
+  const session = await getPortalSession()
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  const { tenant } = session
 
   const payload = await getPayload({ config })
 
@@ -33,9 +35,10 @@ export async function POST(req: Request) {
   const data: IncomingAppointment[] = await req.json()
 
   try {
-    // 1. Fetch all services currently in your database
+    // 1. Fetch this clinic's services: uploads only ever land in the clinic the portal is showing
     const servicesRes = await payload.find({
       collection: 'services',
+      where: { tenant: { equals: tenant.id } },
       limit: 100,
     })
 
@@ -69,6 +72,7 @@ export async function POST(req: Request) {
           appointmentDate: item.appointmentDate,
           status: item.status || 'confirmed',
           service: sId as number, // Payload expects specific relation types
+          tenant: tenant.id,
         },
         overrideAccess: true,
       })

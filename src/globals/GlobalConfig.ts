@@ -3,6 +3,9 @@ import { GlobalConfig } from 'payload'
 
 export const HeaderConfig: GlobalConfig = {
   slug: 'header-config',
+  // Superseded by the per-clinic settings on Clinics (tenants). Kept, hidden, so its table and data
+  // stay in place; remove it with a migration once nothing reads it.
+  admin: { hidden: true },
   access: {
     read: () => true, // Anyone can see the clinic configuration
   },

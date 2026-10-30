@@ -20,6 +20,7 @@ import {
 } from '@heroicons/react/24/outline'
 import dayjs from '@/lib/dayjs'
 import { RegistrySkeleton } from '@/components/shared/RegistrySkeleton'
+import { useClinic } from '@/app/(website)/components/ClinicContext'
 
 const atelierEase = 'ease-[cubic-bezier(0.16,1,0.3,1)]'
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -62,6 +63,8 @@ function BookingFlowContent({
   initialData: { email: string; fn: string; sn: string; ph: string }
 }) {
   const searchParams = useSearchParams()
+  // Slots, capacity and treatments are this clinic's own.
+  const { slug: clinic } = useClinic()
   const isReschedule = searchParams.get('reschedule') === 'true'
   const rescheduleId = searchParams.get('id')
   const hasPrefillData = !!(initialData.email && initialData.fn)
@@ -213,14 +216,14 @@ function BookingFlowContent({
     setIsMounted(true)
     async function fetchDynamicSlots() {
       try {
-        const generatedSlots = await getClinicTimeSlots()
+        const generatedSlots = await getClinicTimeSlots(clinic)
         setTimeSlots(generatedSlots)
       } catch (error) {
         console.error('Failed to load clinic configuration', error)
       }
     }
     fetchDynamicSlots()
-  }, [])
+  }, [clinic])
 
   useEffect(() => {
     if (state?.error) setErrorToast(state.error)
@@ -230,13 +233,13 @@ function BookingFlowContent({
     async function updateAvailability() {
       if (activeBooking.date) {
         setLoadingSlots(true)
-        const taken = await getBusySlots(activeBooking.date)
+        const taken = await getBusySlots(activeBooking.date, clinic)
         setBusySlots(taken)
         setLoadingSlots(false)
       }
     }
     updateAvailability()
-  }, [activeBooking.date])
+  }, [activeBooking.date, clinic])
 
   const handleFinalSubmit = () => {
     const fd = new FormData()
@@ -260,6 +263,7 @@ function BookingFlowContent({
       params.append('guests', formattedGuestDetails)
     })
 
+    fd.append('clinic', clinic)
     fd.append('redirectQuery', params.toString())
     if (isReschedule && rescheduleId) fd.append('rescheduleId', rescheduleId)
 
@@ -494,7 +498,7 @@ function BookingFlowContent({
                         onClick={() => {
                           setIsVerifying(true)
                           setModalError(null)
-                          getCustomerByEmail(existingEmail.trim().toLowerCase())
+                          getCustomerByEmail(existingEmail.trim().toLowerCase(), clinic)
                             .then((d) => {
                               if (!d) {
                                 setModalError('No record found.')

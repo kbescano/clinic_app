@@ -1,30 +1,20 @@
 import React from 'react'
-import { getPayload } from 'payload'
-import config from '@/payload.config'
 import RootShell from '@/components/shared/RootShell'
 import { SmoothScroll } from '@/components/shared/SmoothScroll'
 import { MotionProvider } from '@/components/shared/motion'
-import Navbar from './components/Navbar'
-import WebsiteMenu from './components/WebsiteMenu'
-import { display } from './fonts'
+import { dental, display } from './fonts'
 
 export const metadata = {
-  description: 'A modern clinic management system.',
-  title: 'Clinic App',
+  description: 'Book a visit at one of our clinics.',
+  title: 'Our clinics',
 }
 
-export default async function WebsiteLayout({ children }: { children: React.ReactNode }) {
-  const payload = await getPayload({ config })
-  const headerData = await payload.findGlobal({ slug: 'header-config' })
-
+/** Root of the public sites: the clinic chooser at / and each clinic's site under /[clinic]. */
+export default function WebsiteLayout({ children }: { children: React.ReactNode }) {
   return (
-    <RootShell className={`${display.variable} font-display`}>
+    <RootShell className={`${display.variable} ${dental.variable} font-display`}>
       <SmoothScroll>
-        <MotionProvider>
-          <Navbar headerData={headerData} />
-          <main className="min-h-screen pb-20 lg:pb-0 dark:bg-black">{children}</main>
-          <WebsiteMenu />
-        </MotionProvider>
+        <MotionProvider>{children}</MotionProvider>
       </SmoothScroll>
     </RootShell>
   )

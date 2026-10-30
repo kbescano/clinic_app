@@ -9,6 +9,7 @@ import { ArrowUpRightIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/
 import { ClipReveal, Parallax, Reveal, SplitReveal } from '@/components/shared/motion'
 import { useSmoothScroll } from '@/components/shared/SmoothScroll'
 import type { PublicService } from '@/lib/publicServices'
+import { useClinic } from './ClinicContext'
 
 const RULE = 'border-zinc-950 dark:border-zinc-700'
 
@@ -90,6 +91,7 @@ function ServiceCard({
   index: number
   onActive: (id: number) => void
 }) {
+  const { href } = useClinic()
   const [expanded, setExpanded] = useState(false)
   const [openDetail, setOpenDetail] = useState<number | null>(null)
   const ref = useRef<HTMLElement>(null)
@@ -193,7 +195,7 @@ function ServiceCard({
               </p>
             </div>
             <Link
-              href={`/booking?serviceId=${service.id}`}
+              href={`${href('/booking')}?serviceId=${service.id}`}
               className="group/book flex items-center gap-3 whitespace-nowrap bg-zinc-950 px-6 py-4 text-xs font-bold uppercase tracking-[0.2em] text-white transition-colors duration-300 hover:bg-zinc-700 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-200"
             >
               Book now

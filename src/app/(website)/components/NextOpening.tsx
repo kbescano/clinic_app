@@ -1,34 +1,20 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
-
-interface Slot {
-  dayLabel: string
-  timeLabel: string
-}
+import { useClinic } from './ClinicContext'
+import { useNextOpening } from './useNextOpening'
 
 /** A live "next opening" chip. Hidden when nothing is bookable or the lookup fails. */
 export default function NextOpening({ className = '' }: { className?: string }) {
+  const { slug, href } = useClinic()
   // undefined = still loading, null = nothing to show
-  const [slot, setSlot] = useState<Slot | null | undefined>(undefined)
-
-  useEffect(() => {
-    const controller = new AbortController()
-    fetch('/api/availability/next', { signal: controller.signal })
-      .then((res) => (res.ok ? res.json() : null))
-      .then(setSlot)
-      .catch((error) => {
-        if (error.name !== 'AbortError') setSlot(null)
-      })
-    return () => controller.abort()
-  }, [])
+  const slot = useNextOpening(slug)
 
   if (slot === null) return null
 
   return (
     <Link
-      href="/booking"
+      href={href('/booking')}
       className={`group flex items-center gap-4 border border-white/40 bg-black/35 px-5 py-4 text-white backdrop-blur-md transition-colors duration-300 hover:bg-white hover:text-zinc-950 ${className}`}
     >
       <span className="relative flex h-2.5 w-2.5 shrink-0" aria-hidden>

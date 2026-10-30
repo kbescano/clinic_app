@@ -1,6 +1,6 @@
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-import { getStaffUser } from '@/lib/auth'
+import { getPortalSession } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 
@@ -12,7 +12,8 @@ export async function PATCH(
   // UPDATE THIS LINE: Strictly type params as a Promise
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await getStaffUser())) {
+  const session = await getPortalSession()
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -43,6 +44,13 @@ export async function PATCH(
     const resolvedParams = await params
     const appointmentId = resolvedParams.id
 
+    // Staff only change appointments of the clinic their portal is showing.
+    const existing = await payload.findByID({ collection: 'appointments', id: appointmentId, depth: 0 }).catch(() => null)
+    const existingTenant = typeof existing?.tenant === 'object' ? existing?.tenant?.id : existing?.tenant
+    if (!existing || existingTenant !== session.tenant.id) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
     // 1. Update the database
     await payload.update({
       collection: 'appointments',
@@ -53,7 +61,7 @@ export async function PATCH(
     // 2. PURGE THE CACHES
     revalidatePath('/admin/manager')
     revalidatePath('/admin/analytics')
-    revalidatePath('/booking')
+    revalidatePath('/[clinic]/booking', 'page')
     revalidatePath('/medical-history')
 
     return NextResponse.json({ success: true })

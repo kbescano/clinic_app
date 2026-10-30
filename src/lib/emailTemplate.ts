@@ -11,6 +11,8 @@ export const getEmailHtml = (
   type: string,
   location: string,
   attendees: Attendee[] = [],
+  // Which clinic is writing, and where the patient manages the booking.
+  { clinicName = 'Atelier Clinic', statusUrl = '' }: { clinicName?: string; statusUrl?: string } = {},
 ) => {
   const titles: Record<string, string> = {
     confirmation: 'Booking Confirmed',
@@ -132,7 +134,7 @@ export const getEmailHtml = (
                   <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 40px;">
                     <tr>
                       <td align="center">
-                        <a href="https://clinic-app-sp.vercel.app/booking/status" style="background-color: #18181b; color: #ffffff; font-size: 9px; text-transform: uppercase; letter-spacing: 0.4em; padding: 20px 40px; text-decoration: none; display: inline-block; font-family: sans-serif; font-weight: 700;">
+                        <a href="${statusUrl || `${(process.env.NEXT_PUBLIC_SERVER_URL || '').replace(/\/$/, '')}/skin/booking/status`}" style="background-color: #18181b; color: #ffffff; font-size: 9px; text-transform: uppercase; letter-spacing: 0.4em; padding: 20px 40px; text-decoration: none; display: inline-block; font-family: sans-serif; font-weight: 700;">
                           Manage Booking
                         </a>
                       </td>
@@ -147,7 +149,7 @@ export const getEmailHtml = (
               <tr>
                 <td align="center" style="border-top: 1px solid #f4f4f5; padding-top: 40px;">
                   <p style="font-size: 8px; color: #d4d4d8; text-transform: uppercase; letter-spacing: 0.6em; font-family: sans-serif; margin-bottom: 12px;">
-                    Atelier Clinic
+                    ${clinicName}
                   </p>
                   <p style="font-size: 8px; color: #a1a1aa; letter-spacing: 0.1em; font-family: sans-serif; line-height: 1.6; text-transform: uppercase;">
                     Automated Registry Dispatch • Do Not Reply

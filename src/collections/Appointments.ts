@@ -1,6 +1,8 @@
 import { revalidatePage } from '@/hooks/revalidationPage'
 import { sendConfirmationEmail } from '@/hooks/sendConfirmation'
 import { CollectionConfig } from 'payload'
+import { isStaff, ownClinic } from '@/access/tenants'
+import { tenantField } from '@/fields/tenant'
 
 export const Appointments: CollectionConfig = {
   slug: 'appointments',
@@ -11,12 +13,15 @@ export const Appointments: CollectionConfig = {
     useAsTitle: 'surname',
   },
   access: {
-    create: () => true,
-    read: ({ req: { user } }) => !!user,
-    update: ({ req: { user } }) => !!user,
-    delete: ({ req: { user } }) => !!user,
+    // Patients book through the website's booking action (server side, with capacity checks), so
+    // the REST endpoint is for staff only.
+    create: isStaff,
+    read: ownClinic,
+    update: ownClinic,
+    delete: ownClinic,
   },
   fields: [
+    tenantField(),
     {
       type: 'row',
       fields: [

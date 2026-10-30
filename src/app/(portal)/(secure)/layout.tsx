@@ -1,7 +1,6 @@
 import React from 'react'
-import { getPayload } from 'payload'
-import config from '@/payload.config'
-import { requireStaff } from '@/lib/auth'
+import { requirePortal } from '@/lib/auth'
+import { getTenants } from '@/lib/tenants'
 import { NotificationProvider } from '../components/NotificationContext'
 import NotificationModal from '../components/NotificationModal'
 import PortalHeader from '../components/PortalHeader'
@@ -13,14 +12,13 @@ import PortalMenu from '../components/PortalMenu'
  * re-run on client-side navigation.
  */
 export default async function SecurePortalLayout({ children }: { children: React.ReactNode }) {
-  const user = await requireStaff()
-
-  const payload = await getPayload({ config })
-  const headerData = await payload.findGlobal({ slug: 'header-config' })
+  const { user, tenant, canSwitchClinic } = await requirePortal()
+  // Super admins can switch clinics; everyone else only ever sees their own.
+  const clinics = canSwitchClinic ? (await getTenants()).map((t) => ({ slug: t.slug, name: t.name })) : []
 
   return (
     <NotificationProvider>
-      <PortalHeader clinicName={headerData?.clinicName} email={user.email} />
+      <PortalHeader clinicName={tenant.name} clinicSlug={tenant.slug} clinics={clinics} email={user.email} />
       <main className="min-h-screen pb-20 lg:pb-0 dark:bg-black">{children}</main>
 
       <PortalMenu />

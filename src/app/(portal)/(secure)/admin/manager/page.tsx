@@ -1,7 +1,7 @@
 import { getPayload } from 'payload'
 import { Where } from 'payload'
 import config from '@/payload.config'
-import { requireStaff } from '@/lib/auth'
+import { requirePortal } from '@/lib/auth'
 import AdminManagementClient from './AdminManagementClient'
 import dayjs from '@/lib/dayjs'
 
@@ -33,7 +33,7 @@ interface AppointmentDoc {
 }
 
 export default async function AdminManagementPage(props: { searchParams: Promise<SearchParams> }) {
-  await requireStaff()
+  const { tenant } = await requirePortal()
   const searchParams = await props.searchParams
   const range = searchParams.range || 'today'
   const status = searchParams.status || 'all'
@@ -43,6 +43,7 @@ export default async function AdminManagementPage(props: { searchParams: Promise
 
   const specialistsData = await payload.find({
     collection: 'specialists',
+    where: { tenant: { equals: tenant.id } },
     limit: 100, // Fetch up to 100 active specialists
     overrideAccess: true,
   })
@@ -72,6 +73,7 @@ export default async function AdminManagementPage(props: { searchParams: Promise
 
   // 2. Change the type from Record to Where[]
   const whereConditions: Where[] = [
+    { tenant: { equals: tenant.id } },
     { appointmentDate: { greater_than_equal: dbStart } },
     { appointmentDate: { less_than_equal: dbEnd } },
   ]

@@ -1,22 +1,28 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import FadeIn from '@/components/shared/FadeIn'
+import type { ClinicSlug } from '@/lib/clinics'
 import NotificationTrigger from './NotificationTrigger'
+import { switchPortalClinic } from './clinicActions'
 
 interface PortalHeaderProps {
   clinicName: string
+  clinicSlug: ClinicSlug
+  /** Only for super admins: the clinics they can switch between. */
+  clinics: { slug: ClinicSlug; name: string }[]
   email: string
 }
 
 const utilityLink =
   'text-[8px] uppercase tracking-[0.5em] font-serif text-[#595f72] dark:text-zinc-400 hover:text-[#251101] dark:hover:text-white transition-colors duration-500'
 
-export default function PortalHeader({ clinicName, email }: PortalHeaderProps) {
+export default function PortalHeader({ clinicName, clinicSlug, clinics, email }: PortalHeaderProps) {
   const [isVisible, setIsVisible] = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isSwitching, startSwitch] = useTransition()
   const lastScrollY = useRef(0)
   const router = useRouter()
 
@@ -46,11 +52,34 @@ export default function PortalHeader({ clinicName, email }: PortalHeaderProps) {
     >
       <FadeIn>
         <div className="max-w-[1800px] mx-auto px-6 md:px-12 h-20 md:h-28 flex items-center justify-between">
-          {/* LEFT: back to the public site */}
-          <div className="flex-1 flex items-center justify-start">
-            <Link href="/" className={`${utilityLink} hidden md:block`}>
+          {/* LEFT: the clinic's public site, and (super admins) which clinic to show */}
+          <div className="flex-1 flex items-center justify-start gap-6 md:gap-10">
+            <Link href={`/${clinicSlug}`} className={`${utilityLink} hidden md:block`}>
               Website
             </Link>
+            {clinics.length > 1 && (
+              <label className="flex items-center gap-2">
+                <span className="sr-only">Clinic</span>
+                <select
+                  value={clinicSlug}
+                  disabled={isSwitching}
+                  onChange={(e) => {
+                    const next = e.target.value
+                    startSwitch(async () => {
+                      await switchPortalClinic(next)
+                      router.refresh()
+                    })
+                  }}
+                  className={`${utilityLink} max-w-[7.5rem] cursor-pointer appearance-none truncate border-b border-current bg-transparent pb-1 pr-3 outline-none disabled:opacity-50 md:max-w-none`}
+                >
+                  {clinics.map((c) => (
+                    <option key={c.slug} value={c.slug}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
 
           {/* CENTER: BRANDING PILLAR */}

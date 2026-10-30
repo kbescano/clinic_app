@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useClinic } from './ClinicContext'
 
 export default function BookNowButton() {
+  const { href } = useClinic()
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
@@ -14,7 +16,7 @@ export default function BookNowButton() {
 
   return (
     <Link
-      href="/booking"
+      href={href('/booking')}
       tabIndex={isVisible ? 0 : -1}
       className={`md:hidden fixed left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-7 py-4 bg-zinc-950 text-white dark:bg-white dark:text-zinc-950 text-xs font-bold uppercase tracking-[0.2em] shadow-[0_12px_32px_rgba(0,0,0,0.35)] transition-all duration-500 active:scale-95 ${
         isVisible

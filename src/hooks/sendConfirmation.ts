@@ -21,15 +21,13 @@ export const sendConfirmationEmail: CollectionAfterChangeHook = async ({
       const displayDate = dayjs(doc.appointmentDate).tz('Asia/Manila').format('MMMM D, YYYY')
       const displayTime = dayjs(doc.appointmentDate).tz('Asia/Manila').format('hh:mm a')
 
-      // Fetch Dynamic Location from Global Config
-      const contactConfig = await req.payload.findGlobal({
-        slug: 'contact-config',
-        req,
-      })
-      const clinicLocation =
-        typeof contactConfig?.address === 'string'
-          ? contactConfig.address
-          : 'Clinical Suite, Manila'
+      // The appointment's own clinic supplies the name, address and link in the email.
+      const tenantId = typeof doc.tenant === 'object' ? doc.tenant?.id : doc.tenant
+      const tenant = tenantId
+        ? await req.payload.findByID({ collection: 'tenants', id: tenantId, depth: 0, req }).catch(() => null)
+        : null
+      const clinicLocation = tenant?.contact?.address || 'Clinical Suite, Manila'
+      const siteUrl = (process.env.NEXT_PUBLIC_SERVER_URL || '').replace(/\/$/, '')
 
       // Build Unified Attendee Manifest (1-Column Pattern)
       const attendees: { name: string; service: string; isPrimary: boolean }[] = []
@@ -80,6 +78,7 @@ export const sendConfirmationEmail: CollectionAfterChangeHook = async ({
           'confirmation',
           clinicLocation,
           attendees,
+          tenant ? { clinicName: tenant.name, statusUrl: `${siteUrl}/${tenant.slug}/booking/status` } : {},
         ),
       })
 

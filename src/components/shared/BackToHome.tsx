@@ -1,11 +1,13 @@
 'use client'
 
 import React from 'react'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 
 export default function BackToHome() {
   const router = useRouter()
+  // Home is the current clinic's homepage: the first segment of the path.
+  const home = `/${usePathname().split('/')[1] ?? ''}`
 
   return (
     /* hidden: Hide on mobile
@@ -14,7 +16,7 @@ export default function BackToHome() {
        left-10 top-1/2: Position in the middle-left 
     */
     <button
-      onClick={() => router.push('/')}
+      onClick={() => router.push(home)}
       className="hidden md:flex fixed left-8 top-1/2 -translate-y-1/2 z-50 flex-col items-center gap-6 group transition-all duration-500"
     >
       {/* Visual Indicator: Vertical Line */}

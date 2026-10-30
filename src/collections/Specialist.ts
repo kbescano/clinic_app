@@ -1,5 +1,7 @@
 import { CollectionConfig } from 'payload'
 import { revalidatePage } from '../hooks/revalidationPage'
+import { isStaff, ownClinic, publicOrOwnClinic } from '@/access/tenants'
+import { tenantField } from '@/fields/tenant'
 
 export const Specialists: CollectionConfig = {
   slug: 'specialists',
@@ -10,9 +12,13 @@ export const Specialists: CollectionConfig = {
     afterChange: [revalidatePage], // This triggers the magic
   },
   access: {
-    read: () => true, // Publicly viewable
+    read: publicOrOwnClinic, // Publicly viewable; staff lists show their own clinic
+    create: isStaff,
+    update: ownClinic,
+    delete: ownClinic,
   },
   fields: [
+    tenantField(),
     {
       name: 'name',
       type: 'text',
@@ -28,7 +34,7 @@ export const Specialists: CollectionConfig = {
       name: 'image',
       type: 'upload',
       relationTo: 'media',
-      required: true,
+      admin: { description: 'Portrait for the website. Without one the dental design uses its own photography.' },
     },
   ],
 }

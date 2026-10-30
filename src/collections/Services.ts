@@ -1,5 +1,7 @@
 import { CollectionConfig } from 'payload'
 import { revalidatePage } from '../hooks/revalidationPage'
+import { isStaff, ownClinic, publicOrOwnClinic } from '@/access/tenants'
+import { tenantField } from '@/fields/tenant'
 
 export const Services: CollectionConfig = {
   slug: 'services',
@@ -10,12 +12,13 @@ export const Services: CollectionConfig = {
     afterChange: [revalidatePage],
   },
   access: {
-    read: () => true,
-    create: ({ req: { user } }) => user?.role === 'admin',
-    update: ({ req: { user } }) => user?.role === 'admin',
-    delete: ({ req: { user } }) => user?.role === 'admin',
+    read: publicOrOwnClinic,
+    create: isStaff,
+    update: ownClinic,
+    delete: ownClinic,
   },
   fields: [
+    tenantField(),
     {
       name: 'title',
       type: 'text',
@@ -30,7 +33,7 @@ export const Services: CollectionConfig = {
       name: 'images',
       type: 'array',
       label: 'Service Images',
-      minRows: 1,
+      admin: { description: 'Shown on the website. Without images the dental design uses its own photography.' },
       fields: [
         {
           name: 'image',

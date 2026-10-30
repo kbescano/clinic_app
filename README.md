@@ -34,6 +34,30 @@ To do so, follow these steps:
 - Modify the `docker-compose.yml` file's `MONGODB_URL` to match the above `<dbname>`
 - Run `docker-compose up` to start the database, optionally pass `-d` to run in the background.
 
+## Clinics (tenants)
+
+The app runs two clinics from one database. Each one is a document in the **Clinics** collection
+(`tenants`), and every service, specialist, appointment and staff account belongs to one of them.
+
+- **Websites.** `/` lets visitors choose a clinic. `/skin` and `/dental` are each clinic's site, in
+  its own design, with the same booking flow (`/[clinic]/booking`, `/[clinic]/appointments`, …).
+  Old links such as `/booking` redirect to the skin clinic.
+- **Staff portal.** `/login`, then `/dashboard` and the rest show only the signed-in staff member's
+  clinic. Accounts marked **Access to every clinic** (super admins) get a clinic switcher in the
+  portal header and manage staff accounts in the CMS.
+- **Settings.** Each clinic's name, contact details and booking rules (hours, lunch, slot length,
+  bookings at the same time) live on its Clinics document. The old Header, Contact and Booking
+  globals are hidden and no longer read.
+
+Scripts (both read `DATABASE_URI` from `.env`; both take `--dry-run`):
+
+```bash
+node scripts/setup-tenants.mjs              # one-off move to clinics; safe to re-run
+node scripts/seed-appointments.mjs 2026-11  # test bookings for a month, every clinic (--clinic=dental for one)
+```
+
+Seeded test bookings all have a `booking_group_id` starting with `SEED-`.
+
 ## How it works
 
 The Payload config is tailored specifically to the needs of most websites. It is pre-configured in the following ways:

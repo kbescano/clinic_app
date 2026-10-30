@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, useScroll, useSpring } from 'motion/react'
 import { useSmoothScroll } from '@/components/shared/SmoothScroll'
+import { useClinic } from './ClinicContext'
 
 interface HeaderData {
   topLabel: string
@@ -18,7 +19,7 @@ interface NavbarProps {
 
 const LINKS = [
   { name: 'Services', href: '/services' },
-  { name: 'Specialists', href: '/#specialists' },
+  { name: 'Specialists', href: '#specialists' },
   { name: 'My visits', href: '/appointments' },
 ]
 
@@ -28,12 +29,13 @@ export default function Navbar({ headerData }: NavbarProps) {
   const lastScrollY = useRef(0)
   const pathname = usePathname()
   const { scrollTo } = useSmoothScroll()
+  const { href } = useClinic()
 
   // Reading progress: a bar along the bottom edge that fills as the page is scrolled.
   const { scrollYProgress } = useScroll()
   const progress = useSpring(scrollYProgress, { stiffness: 140, damping: 30, restDelta: 0.001 })
 
-  const isHomePage = pathname === '/'
+  const isHomePage = pathname === href()
   const isTransparent = isHomePage && isAtTop
 
   useEffect(() => {
@@ -60,7 +62,7 @@ export default function Navbar({ headerData }: NavbarProps) {
     >
       <div className="max-w-[1800px] mx-auto px-6 md:px-14 h-20 md:h-24 flex items-center justify-between gap-6">
         {/* WORDMARK */}
-        <Link href="/" className="flex flex-col leading-none">
+        <Link href={href()} className="flex flex-col leading-none">
           {isTransparent && headerData?.topLabel && (
             <span className="text-[10px] font-semibold uppercase tracking-[0.3em] opacity-70 mb-1.5">
               {headerData.topLabel}
@@ -74,16 +76,17 @@ export default function Navbar({ headerData }: NavbarProps) {
         <div className="flex items-center gap-8 md:gap-10">
           <div className="hidden md:flex items-center gap-8">
             {LINKS.map((link) => {
-              const isActive = pathname === link.href
+              const target = href(link.href)
+              const isActive = pathname === target
               return (
                 <Link
                   key={link.href}
-                  href={link.href}
+                  href={target}
                   onClick={(e) => {
                     // On the home page an in-page link glides there instead of jumping.
-                    if (pathname === '/' && link.href.startsWith('/#')) {
+                    if (isHomePage && link.href.startsWith('#')) {
                       e.preventDefault()
-                      scrollTo(link.href.slice(1), { offset: -80 })
+                      scrollTo(link.href, { offset: -80 })
                     }
                   }}
                   className={`text-xs font-bold uppercase tracking-[0.18em] underline-offset-[10px] decoration-2 transition-opacity hover:opacity-60 ${
@@ -97,7 +100,7 @@ export default function Navbar({ headerData }: NavbarProps) {
           </div>
 
           <Link
-            href="/booking"
+            href={href('/booking')}
             className={`px-4 md:px-7 py-3 md:py-3.5 text-xs font-bold uppercase tracking-[0.18em] whitespace-nowrap transition-colors duration-300 ${
               isTransparent
                 ? 'bg-white text-zinc-950 hover:bg-zinc-200'

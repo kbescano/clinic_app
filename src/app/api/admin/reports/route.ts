@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-import { getStaffUser } from '@/lib/auth'
+import { getPortalSession } from '@/lib/auth'
 import dayjs from '@/lib/dayjs'
 
 export const dynamic = 'force-dynamic'
@@ -38,9 +38,11 @@ interface FormattedReportEntry {
 }
 
 export async function GET(request: Request) {
-  if (!(await getStaffUser())) {
+  const session = await getPortalSession()
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+  const { tenant } = session
 
   try {
     const { searchParams } = new URL(request.url)
@@ -70,6 +72,7 @@ export async function GET(request: Request) {
       collection: 'appointments',
       where: {
         and: [
+          { tenant: { equals: tenant.id } },
           { appointmentDate: { greater_than_equal: dbStart.toISOString() } },
           { appointmentDate: { less_than_equal: dbEnd.toISOString() } },
           { status: { equals: 'completed' } },

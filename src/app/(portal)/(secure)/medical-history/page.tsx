@@ -1,6 +1,6 @@
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-import { requireStaff } from '@/lib/auth'
+import { requirePortal } from '@/lib/auth'
 import React, { Suspense } from 'react'
 import MedicalHistoryClient from './MedicalHistoryClient'
 import { RegistrySkeleton } from '@/components/shared/RegistrySkeleton'
@@ -14,7 +14,7 @@ export default async function MedicalHistoryPage({
 }: {
   searchParams: Promise<{ page?: string; search?: string }>
 }) {
-  await requireStaff()
+  const { tenant } = await requirePortal()
   const payload = await getPayload({ config })
   const params = await searchParams
 
@@ -24,15 +24,22 @@ export default async function MedicalHistoryPage({
   const data = await payload.find({
     collection: 'appointments',
     pagination: false,
-    where: search
-      ? {
-          or: [
-            { firstName: { contains: search } },
-            { surname: { contains: search } },
-            { email: { contains: search } },
-          ],
-        }
-      : {},
+    where: {
+      and: [
+        { tenant: { equals: tenant.id } },
+        ...(search
+          ? [
+              {
+                or: [
+                  { firstName: { contains: search } },
+                  { surname: { contains: search } },
+                  { email: { contains: search } },
+                ],
+              },
+            ]
+          : []),
+      ],
+    },
     sort: '-appointmentDate',
     depth: 1,
   })

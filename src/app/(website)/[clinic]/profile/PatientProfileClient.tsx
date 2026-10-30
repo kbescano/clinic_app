@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useTransition, useMemo } from 'reac
 import FadeIn from '@/components/shared/FadeIn'
 import BackToHome from '@/components/shared/BackToHome'
 import { verifyPatientProfile, logoutPatient } from './actions'
+import { useClinic } from '@/app/(website)/components/ClinicContext'
 import { ShieldCheckIcon, UserIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline'
 import dayjs from '@/lib/dayjs'
 
@@ -39,6 +40,7 @@ export default function PatientProfileClient({
 }: {
   initialData: PatientProfile | null
 }) {
+  const { slug: clinic } = useClinic()
   const [isPending, startTransition] = useTransition()
   const [patientData, setPatientData] = useState<PatientProfile | null>(initialData)
   const [isVerified, setIsVerified] = useState(!!initialData)
@@ -116,7 +118,7 @@ export default function PatientProfileClient({
     e.preventDefault()
     setError(null)
     startTransition(async () => {
-      const res = await verifyPatientProfile(authForm.email, authForm.lastFour)
+      const res = await verifyPatientProfile(authForm.email, authForm.lastFour, clinic)
       if (res.error) setError(res.error)
       else {
         setPatientData(res.data as PatientProfile | null)

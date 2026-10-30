@@ -7,6 +7,7 @@ import {
   getPatientSessionEmail,
   setPatientSession,
 } from '@/lib/patientSession'
+import { getTenant } from '@/lib/tenants'
 
 // --- TYPES & INTERFACES ---
 
@@ -42,11 +43,14 @@ export interface PatientProfile {
   history: PatientVisit[]
 }
 
-async function fetchPatientDocs(email: string): Promise<AppointmentDoc[]> {
+/** A patient's visits at one clinic: each clinic's site only ever shows its own records. */
+async function fetchPatientDocs(email: string, clinic: string): Promise<AppointmentDoc[]> {
+  const tenant = await getTenant(clinic)
+  if (!tenant) return []
   const payload = await getPayload({ config })
   const result = await payload.find({
     collection: 'appointments',
-    where: { email: { equals: email.toLowerCase() } },
+    where: { and: [{ tenant: { equals: tenant.id } }, { email: { equals: email.toLowerCase() } }] },
     sort: '-appointmentDate',
     overrideAccess: true,
     limit: 100,
@@ -77,13 +81,13 @@ function buildPatientProfile(docs: AppointmentDoc[]): PatientProfile | null {
   }
 }
 
-export async function verifyPatientProfile(email: string, lastFour: string) {
+export async function verifyPatientProfile(email: string, lastFour: string, clinic: string) {
   const cleanEmail = email.trim().toLowerCase()
 
   // endsWith('') is always true, so anything other than exactly four digits must be rejected.
   if (!/^\d{4}$/.test(lastFour)) return { error: 'Verification failed.' }
 
-  const docs = await fetchPatientDocs(cleanEmail)
+  const docs = await fetchPatientDocs(cleanEmail, clinic)
 
   const isVerified = docs.some((doc) => doc.phone.replace(/\D/g, '').endsWith(lastFour))
 
@@ -95,10 +99,10 @@ export async function verifyPatientProfile(email: string, lastFour: string) {
   return { success: true, data: buildPatientProfile(docs) }
 }
 
-export async function getStoredPatientProfile(): Promise<PatientProfile | null> {
+export async function getStoredPatientProfile(clinic: string): Promise<PatientProfile | null> {
   const email = await getPatientSessionEmail()
   if (!email) return null
-  return buildPatientProfile(await fetchPatientDocs(email))
+  return buildPatientProfile(await fetchPatientDocs(email, clinic))
 }
 
 export async function logoutPatient() {

@@ -7,6 +7,7 @@ import FadeIn from '@/components/shared/FadeIn'
 import { PlusIcon, ArrowUpRightIcon } from '@heroicons/react/24/outline'
 import BackToHome from '@/components/shared/BackToHome'
 import dayjs from '@/lib/dayjs'
+import { useClinic } from '@/app/(website)/components/ClinicContext'
 
 // --- TYPES & INTERFACES ---
 
@@ -40,6 +41,7 @@ export default function BookingStatusPage() {
 
 function StatusContent() {
   const searchParams = useSearchParams()
+  const { href } = useClinic()
   const [drawLine, setDrawLine] = useState(false)
 
   useEffect(() => {
@@ -202,7 +204,7 @@ function StatusContent() {
 
               <div className="flex flex-col gap-8 sticky top-32">
                 <Link
-                  href={`/booking?prefill=true&email=${encodeURIComponent(userEmail)}&fn=${encodeURIComponent(firstName)}&sn=${encodeURIComponent(userSurname)}&ph=${encodeURIComponent(userPhone)}`}
+                  href={`${href('/booking')}?prefill=true&email=${encodeURIComponent(userEmail)}&fn=${encodeURIComponent(firstName)}&sn=${encodeURIComponent(userSurname)}&ph=${encodeURIComponent(userPhone)}`}
                   className="group bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 p-8 md:p-12 flex flex-col justify-between min-h-[240px] md:min-h-[280px] transition-all duration-700 relative overflow-hidden shadow-[0_20px_40px_-15px_rgba(0,0,0,0.1)] animate-in fade-in slide-in-from-right-8 duration-1000 delay-300"
                 >
                   <div className="absolute top-0 left-0 w-full h-[1.5px] bg-[#48a9a6]/50" />

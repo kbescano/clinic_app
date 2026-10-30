@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import dayjs from '@/lib/dayjs'
-import { getBusySlots, getClinicTimeSlots } from '@/app/(website)/booking/actions'
+import { getBusySlots, getClinicTimeSlots } from '@/app/(website)/[clinic]/booking/actions'
+import { isClinicSlug } from '@/lib/clinics'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,20 +10,22 @@ export const dynamic = 'force-dynamic'
 const CACHE = { 'Cache-Control': 'public, max-age=0, s-maxage=60, stale-while-revalidate=300' }
 const SEARCH_DAYS = 7
 
-/** The earliest bookable slot, using the same rules as the booking form. */
-export async function GET() {
+/** A clinic's earliest bookable slot (?clinic=skin|dental), using the same rules as its booking form. */
+export async function GET(request: Request) {
+  const clinic = new URL(request.url).searchParams.get('clinic')
+  if (!isClinicSlug(clinic)) return NextResponse.json({ error: 'Unknown clinic' }, { status: 400 })
   try {
     const now = dayjs().tz('Asia/Manila')
     const today = now.format('YYYY-MM-DD')
     const tomorrow = now.add(1, 'day').format('YYYY-MM-DD')
     // After 15:00 the form stops offering same-day slots.
     const first = now.hour() >= 15 ? now.add(1, 'day') : now
-    const slots = await getClinicTimeSlots()
+    const slots = await getClinicTimeSlots(clinic)
 
     for (let i = 0; i < SEARCH_DAYS; i++) {
       const day = first.add(i, 'day')
       const date = day.format('YYYY-MM-DD')
-      const busy = new Set(await getBusySlots(date))
+      const busy = new Set(await getBusySlots(date, clinic))
       const free = slots.find((slot) => !busy.has(slot) && !(date === today && slot <= now.format('HH:mm')))
       if (!free) continue
 

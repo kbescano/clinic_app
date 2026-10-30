@@ -3,7 +3,7 @@
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { revalidatePath } from 'next/cache'
-import { assertStaff } from '@/lib/auth'
+import { assertPortal } from '@/lib/auth'
 
 // Define a local interface to satisfy the linter
 interface AppointmentResult {
@@ -26,10 +26,20 @@ interface AppointmentResult {
 }
 
 export async function assignSpecialistAction(appointmentId: string, specialistId: string | null) {
-  await assertStaff()
+  const { tenant } = await assertPortal()
   const payload = await getPayload({ config })
 
   const parsedSpecialistId = specialistId ? Number(specialistId) : null
+
+  // Both ids come from the browser: the appointment and the specialist must be this clinic's.
+  const [appointment, specialist] = await Promise.all([
+    payload.findByID({ collection: 'appointments', id: appointmentId, depth: 0 }).catch(() => null),
+    parsedSpecialistId ? payload.findByID({ collection: 'specialists', id: parsedSpecialistId, depth: 0 }).catch(() => null) : null,
+  ])
+  const tenantOf = (doc: { tenant?: number | { id: number } | null } | null) =>
+    typeof doc?.tenant === 'object' ? doc?.tenant?.id : doc?.tenant
+  if (!appointment || tenantOf(appointment) !== tenant.id) throw new Error('Appointment not found')
+  if (parsedSpecialistId && (!specialist || tenantOf(specialist) !== tenant.id)) throw new Error('Specialist not found')
 
   await payload.update({
     collection: 'appointments',
@@ -44,10 +54,11 @@ export async function assignSpecialistAction(appointmentId: string, specialistId
 }
 
 export async function getGlobalCacheAction() {
-  await assertStaff()
+  const { tenant } = await assertPortal()
   const payload = await getPayload({ config })
   const data = await payload.find({
     collection: 'appointments',
+    where: { tenant: { equals: tenant.id } },
     limit: 1000,
     depth: 1, // Ensure service and specialist titles are populated
   })

@@ -6,6 +6,7 @@ import { motion, useScroll, useTransform } from 'motion/react'
 import { EASE, SplitReveal, usePrefersReducedMotion } from '@/components/shared/motion'
 import { useSmoothScroll } from '@/components/shared/SmoothScroll'
 import NextOpening from './NextOpening'
+import { useClinic } from './ClinicContext'
 
 interface Slide {
   label: string
@@ -112,6 +113,7 @@ function SlideVideo({
 export default function CinematicVideoHero() {
   const reduce = usePrefersReducedMotion()
   const { scrollTo } = useSmoothScroll()
+  const { href } = useClinic()
   const [current, setCurrent] = useState(0)
   const [hidden, setHidden] = useState(false)
   // Flags live in refs so that clearing "dwell done" and changing slide happen in the same step.
@@ -276,7 +278,7 @@ export default function CinematicVideoHero() {
                     {arrow}
                   </a>
                 ) : (
-                  <Link href={slide.href} tabIndex={active ? 0 : -1} className={buttonClass}>
+                  <Link href={href(slide.href)} tabIndex={active ? 0 : -1} className={buttonClass}>
                     {slide.cta}
                     {arrow}
                   </Link>

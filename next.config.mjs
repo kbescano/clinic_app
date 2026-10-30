@@ -13,6 +13,17 @@ const nextConfig = {
     return webpackConfig
   },
   serverExternalPackages: ['payload'],
+  // The skin clinic's site used to live at the root; old links and bookmarks land on its new home.
+  async redirects() {
+    return [
+      ...['/booking', '/services', '/appointments', '/profile'].flatMap((path) => [
+        { source: path, destination: `/skin${path}`, permanent: false },
+        { source: `${path}/:rest*`, destination: `/skin${path}/:rest*`, permanent: false },
+      ]),
+      // The dental design lists its treatments on the homepage.
+      { source: '/dental/services', destination: '/dental#treatments', permanent: false },
+    ]
+  },
   images: {
     remotePatterns: [
       {

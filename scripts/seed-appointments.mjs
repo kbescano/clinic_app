@@ -1,16 +1,17 @@
-// Seeds realistic test appointments for one month.
+// Seeds realistic test appointments for one month, for every clinic (or one).
 //
-//   node scripts/seed-appointments.mjs 2026-09              insert
-//   node scripts/seed-appointments.mjs 2026-09 --dry-run    print the plan, write nothing
-//   node scripts/seed-appointments.mjs 2026-09 --replace    delete this month's seeded rows first
+//   node scripts/seed-appointments.mjs 2026-11                  insert, every clinic
+//   node scripts/seed-appointments.mjs 2026-11 --clinic=dental  one clinic only
+//   node scripts/seed-appointments.mjs 2026-11 --dry-run        print the plan, write nothing
+//   node scripts/seed-appointments.mjs 2026-11 --replace        delete this month's seeded rows first
 //
 // Every row gets booking_group_id 'SEED-YYYYMM-…', so seeded data is trivially identifiable:
 //   delete from appointments where booking_group_id like 'SEED-%';
 //
-// It follows the booking rules in the `booking-config` global (hours, lunch, slot interval,
-// capacity) and the real durations/prices in `services`, so the calendar, dashboard, history and
-// analytics pages all get coherent data. Inserts go straight to Postgres, bypassing Payload hooks
-// (no confirmation emails, no cache revalidation). `pg` comes in through @payloadcms/db-postgres.
+// It follows each clinic's own booking rules (hours, lunch, slot interval, capacity) and its real
+// services, durations and prices, so each staff portal's calendar, dashboard, history and analytics
+// get coherent data. Inserts go straight to Postgres, bypassing Payload hooks (no confirmation
+// emails, no cache revalidation). `pg` comes in through @payloadcms/db-postgres.
 import 'dotenv/config'
 import pg from 'pg'
 
@@ -19,6 +20,7 @@ const flags = new Set(args.filter((a) => a.startsWith('--')))
 const monthArg = args.find((a) => /^\d{4}-\d{2}$/.test(a))
 const DRY_RUN = flags.has('--dry-run')
 const REPLACE = flags.has('--replace')
+const onlyClinic = args.find((a) => a.startsWith('--clinic='))?.split('=')[1]
 
 const TZ_OFFSET = '+08:00' // Asia/Manila, no DST
 const nowManila = new Date()
@@ -37,7 +39,7 @@ function mulberry32(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
   }
 }
-const rand = mulberry32(year * 100 + monthNum)
+let rand = mulberry32(year * 100 + monthNum)
 const pick = (list) => list[Math.floor(rand() * list.length)]
 const chance = (p) => rand() < p
 const between = (lo, hi) => lo + Math.floor(rand() * (hi - lo + 1))
@@ -54,13 +56,22 @@ const patients = Array.from({ length: 44 }, (_, i) => {
 // Skewed pick so some patients return several times in the month.
 const pickPatient = () => patients[Math.floor(Math.pow(rand(), 1.6) * patients.length)]
 
-const NOTES = [
+const NOTES = {}
+NOTES.skin = [
   'Skin responded well. Advise SPF 50 daily and follow up in 4 weeks.',
   'Mild redness after treatment, expected to settle within 24 hours.',
   'Patient reports improved texture. Continue current routine.',
   'Discussed maintenance plan; next session recommended in 2 weeks.',
   'Sensitivity noted around the cheeks. Use gentle cleanser only.',
   'No adverse reaction. Patient satisfied with results.',
+]
+NOTES.dental = [
+  'No new caries. Mild plaque on lower molars; reinforced flossing.',
+  'Shade moved from A3 to B1. Advised to avoid coffee for 48 hours.',
+  'Aligner tray fitting well. Next check in 6 weeks.',
+  'Healing abutment in place, site healing as expected.',
+  'Sensitivity on upper left; prescribed desensitising toothpaste.',
+  'Patient nervous but comfortable with breaks. Book a longer slot next time.',
 ]
 
 // --- helpers ------------------------------------------------------------------------------------
@@ -75,19 +86,42 @@ async function main() {
   await client.connect()
 
   try {
-    const cfgRow = (await client.query('select * from booking_config limit 1')).rows[0] ?? {}
-    const open = toMin(cfgRow.opening_time ?? '09:00')
-    const close = toMin(cfgRow.closing_time ?? '17:00')
-    const interval = Number(cfgRow.slot_interval) || 30
-    const capacity = Number(cfgRow.specialist_capacity) || 1
-    const lunchStart = toMin(cfgRow.lunch_break_start ?? '12:00')
-    const lunchEnd = toMin(cfgRow.lunch_break_end ?? '13:00')
+    const clinics = (await client.query('select * from tenants order by id')).rows.filter((t) => !onlyClinic || t.slug === onlyClinic)
+    if (clinics.length === 0) throw new Error(onlyClinic ? `No clinic "${onlyClinic}".` : 'No clinics: run scripts/setup-tenants.mjs first.')
 
-    const services = (await client.query('select id, title, duration, price from services order by id')).rows.map(
-      (s) => ({ id: s.id, title: s.title, duration: Number(s.duration) || 60, price: Number(s.price) || 0 }),
-    )
-    const specialists = (await client.query('select id from specialists order by id')).rows.map((r) => r.id)
-    if (services.length === 0) throw new Error('No services found: create services in the CMS first.')
+    await client.query('begin')
+    for (const clinic of clinics) await seedClinic(client, clinic)
+    if (DRY_RUN) {
+      await client.query('rollback')
+      console.log('\n--dry-run: nothing written.')
+    } else {
+      await client.query('commit')
+    }
+  } catch (err) {
+    await client.query('rollback').catch(() => {})
+    console.error('Failed, nothing was written:', err.message)
+    process.exitCode = 1
+  } finally {
+    await client.end()
+  }
+}
+
+async function seedClinic(client, clinic) {
+  {
+    rand = mulberry32(year * 100 + monthNum + (clinic.slug === 'skin' ? 0 : clinic.id * 7919))
+    const open = toMin(clinic.booking_opening_time ?? '09:00')
+    const close = toMin(clinic.booking_closing_time ?? '17:00')
+    const interval = Number(clinic.booking_slot_interval) || 30
+    const capacity = Number(clinic.booking_specialist_capacity) || 1
+    const lunchStart = toMin(clinic.booking_lunch_start ?? '12:00')
+    const lunchEnd = toMin(clinic.booking_lunch_end ?? '13:00')
+    const notes = NOTES[clinic.slug] ?? NOTES.skin
+
+    const services = (
+      await client.query('select id, title, duration, price from services where tenant_id = $1 order by id', [clinic.id])
+    ).rows.map((s) => ({ id: s.id, title: s.title, duration: Number(s.duration) || 60, price: Number(s.price) || 0 }))
+    const specialists = (await client.query('select id from specialists where tenant_id = $1 order by id', [clinic.id])).rows.map((r) => r.id)
+    if (services.length === 0) return console.log(`\n${clinic.name}: no services, skipped.`)
 
     // Candidate start times, weighted towards mid-morning and early afternoon.
     const startWeight = (m) => (m >= 600 && m < 690 ? 3 : m >= 810 && m < 930 ? 3 : 1)
@@ -99,7 +133,8 @@ async function main() {
       return list
     }
 
-    // Busier towards the end of the week and slowly growing through the month.
+    // Busier towards the end of the week and slowly growing through the month; more chairs, more visits.
+    const scale = Math.max(1, capacity / 2)
     const baseByWeekday = { 1: 4, 2: 5, 3: 5, 4: 6, 5: 7, 6: 6 } // Sunday closed
     const rows = []
     let bookingSeq = 0
@@ -110,7 +145,7 @@ async function main() {
       if (!baseByWeekday[dow]) continue
       const dateStr = `${year}-${pad(monthNum)}-${pad(d)}`
       const trend = 0.9 + (d / daysInMonth) * 0.25
-      const target = Math.max(2, Math.round(baseByWeekday[dow] * trend) + between(-1, 1))
+      const target = Math.max(2, Math.round(baseByWeekday[dow] * trend * scale) + between(-1, 1))
 
       // Same rule as createBookingAction: a booking is refused once the number of active bookings
       // overlapping its window reaches the capacity.
@@ -148,7 +183,7 @@ async function main() {
           if (withGuest) booked.push({ start, end: start + guestService.duration })
         }
 
-        const group = `${marker}-${String(++bookingSeq).padStart(4, '0')}`
+        const group = `${marker}-${clinic.slug}-${String(++bookingSeq).padStart(4, '0')}`
         // Booked between a few hours and two weeks ahead, never in the future.
         const createdMs = Math.min(startMs - between(2, 14 * 24) * 3600_000, nowMs - between(1, 90) * 60_000)
         const done = status === 'completed'
@@ -161,7 +196,7 @@ async function main() {
           appointment_date: stamp(dateStr, start),
           end_date_time: stamp(dateStr, start + svc.duration),
           status,
-          specialist_notes: done && chance(0.35) ? pick(NOTES) : null,
+          specialist_notes: done && chance(0.35) ? pick(notes) : null,
           booking_group_id: group,
           is_guest: isGuest,
           confirmation_sent: status === 'confirmed' || done,
@@ -184,20 +219,18 @@ async function main() {
     // --- report ---------------------------------------------------------------------------------
     const byStatus = rows.reduce((acc, r) => ((acc[r.status] = (acc[r.status] ?? 0) + 1), acc), {})
     const revenue = rows.filter((r) => r.status === 'completed').reduce((sum, r) => sum + r.price, 0)
-    console.log(`Month ${month}: ${rows.length} appointments over ${new Set(rows.map((r) => r.appointment_date.slice(0, 10))).size} days`)
+    console.log(`\n${clinic.name} (${clinic.slug}), ${month}: ${rows.length} appointments over ${new Set(rows.map((r) => r.appointment_date.slice(0, 10))).size} days`)
     console.log('By status:', byStatus)
     console.log(`Completed revenue: PHP ${revenue.toLocaleString()}  |  guests: ${rows.filter((r) => r.is_guest).length}  |  marker: ${marker}-*`)
 
-    if (DRY_RUN) return console.log('\n--dry-run: nothing written.')
-
-    await client.query('begin')
-    const existing = (await client.query('select count(*)::int n from appointments where booking_group_id like $1', [`${marker}-%`])).rows[0].n
+    const existing = (
+      await client.query('select count(*)::int n from appointments where booking_group_id like $1 and tenant_id = $2', [`${marker}-%`, clinic.id])
+    ).rows[0].n
     if (existing > 0 && !REPLACE) {
-      await client.query('rollback')
-      return console.log(`\nAborted: ${existing} seeded rows already exist for ${month}. Re-run with --replace to swap them.`)
+      return console.log(`Skipped: ${existing} seeded rows already exist for ${month}. Re-run with --replace to swap them.`)
     }
     if (existing > 0) {
-      await client.query('delete from appointments where booking_group_id like $1', [`${marker}-%`])
+      await client.query('delete from appointments where booking_group_id like $1 and tenant_id = $2', [`${marker}-%`, clinic.id])
       console.log(`Removed ${existing} previously seeded rows.`)
     }
 
@@ -206,23 +239,16 @@ async function main() {
         `insert into appointments
            (first_name, surname, email, phone, service_id, appointment_date, end_date_time, status,
             specialist_notes, booking_group_id, is_guest, email_status_confirmation_sent,
-            email_status_reminder24h_sent, email_status_reminder2h_sent, specialist_id, created_at, updated_at)
-         values ($1,$2,$3,$4,$5,$6,$7,$8::enum_appointments_status,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+            email_status_reminder24h_sent, email_status_reminder2h_sent, specialist_id, created_at, updated_at, tenant_id)
+         values ($1,$2,$3,$4,$5,$6,$7,$8::enum_appointments_status,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
         [
           r.first_name, r.surname, r.email, r.phone, r.service_id, r.appointment_date, r.end_date_time, r.status,
           r.specialist_notes, r.booking_group_id, r.is_guest, r.confirmation_sent, r.reminder24, r.reminder2,
-          r.specialist_id, r.created_at, r.updated_at,
+          r.specialist_id, r.created_at, r.updated_at, clinic.id,
         ],
       )
     }
-    await client.query('commit')
-    console.log(`\nInserted ${rows.length} appointments.`)
-  } catch (err) {
-    await client.query('rollback').catch(() => {})
-    console.error('Failed, nothing was written:', err.message)
-    process.exitCode = 1
-  } finally {
-    await client.end()
+    console.log(`${DRY_RUN ? 'Would insert' : 'Inserted'} ${rows.length} appointments.`)
   }
 }
 

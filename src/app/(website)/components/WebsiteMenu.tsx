@@ -14,19 +14,20 @@ import {
   ClipboardDocumentListIcon as ClipboardListSolid,
 } from '@heroicons/react/24/solid'
 import FloatingNav, { type FloatingNavItem } from '@/components/shared/FloatingNav'
-
-const navItems: FloatingNavItem[] = [
-  { name: 'Home', href: '/', icon: HomeIcon, activeIcon: HomeSolid },
-  { name: 'Services', href: '/services', icon: SparklesIcon, activeIcon: SparklesSolid },
-  { name: 'Book', href: '/booking', icon: CalendarDaysIcon, activeIcon: CalendarDaysSolid },
-  {
-    name: 'Visits',
-    href: '/appointments',
-    icon: ClipboardDocumentListIcon,
-    activeIcon: ClipboardListSolid,
-  },
-]
+import { useClinic } from './ClinicContext'
 
 export default function WebsiteMenu() {
+  const { href } = useClinic()
+  const navItems: FloatingNavItem[] = [
+    { name: 'Home', href: href(), icon: HomeIcon, activeIcon: HomeSolid },
+    { name: 'Services', href: href('/services'), icon: SparklesIcon, activeIcon: SparklesSolid },
+    { name: 'Book', href: href('/booking'), icon: CalendarDaysIcon, activeIcon: CalendarDaysSolid },
+    {
+      name: 'Visits',
+      href: href('/appointments'),
+      icon: ClipboardDocumentListIcon,
+      activeIcon: ClipboardListSolid,
+    },
+  ]
   return <FloatingNav navItems={navItems} />
 }

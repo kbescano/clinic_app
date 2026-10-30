@@ -2,6 +2,9 @@ import { GlobalConfig } from 'payload'
 
 export const BookingConfig: GlobalConfig = {
   slug: 'booking-config',
+  // Superseded by the per-clinic settings on Clinics (tenants). Kept, hidden, so its table and data
+  // stay in place; remove it with a migration once nothing reads it.
+  admin: { hidden: true },
   label: 'Booking Settings',
   access: {
     read: () => true,
