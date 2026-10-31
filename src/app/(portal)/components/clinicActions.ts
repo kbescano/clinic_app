@@ -1,7 +1,6 @@
 'use server'
 
 import { cookies } from 'next/headers'
-import { revalidatePath } from 'next/cache'
 import { assertPortal, PORTAL_CLINIC_COOKIE } from '@/lib/auth'
 import { isClinicSlug } from '@/lib/clinics'
 import { getTenant } from '@/lib/tenants'
@@ -19,5 +18,5 @@ export async function switchPortalClinic(slug: string) {
     maxAge: 60 * 60 * 24 * 30,
     path: '/',
   })
-  revalidatePath('/', 'layout')
+  // Portal pages render per request, so the caller's router.refresh() is enough.
 }

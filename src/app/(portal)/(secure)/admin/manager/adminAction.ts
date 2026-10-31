@@ -3,7 +3,7 @@
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { revalidatePath } from 'next/cache'
-import { assertPortal } from '@/lib/auth'
+import { appointmentScope, assertPortal, assertPortalStaff } from '@/lib/auth'
 
 // Define a local interface to satisfy the linter
 interface AppointmentResult {
@@ -26,7 +26,7 @@ interface AppointmentResult {
 }
 
 export async function assignSpecialistAction(appointmentId: string, specialistId: string | null) {
-  const { tenant } = await assertPortal()
+  const { tenant } = await assertPortalStaff()
   const payload = await getPayload({ config })
 
   const parsedSpecialistId = specialistId ? Number(specialistId) : null
@@ -54,11 +54,11 @@ export async function assignSpecialistAction(appointmentId: string, specialistId
 }
 
 export async function getGlobalCacheAction() {
-  const { tenant } = await assertPortal()
+  const session = await assertPortal()
   const payload = await getPayload({ config })
   const data = await payload.find({
     collection: 'appointments',
-    where: { tenant: { equals: tenant.id } },
+    where: appointmentScope(session),
     limit: 1000,
     depth: 1, // Ensure service and specialist titles are populated
   })

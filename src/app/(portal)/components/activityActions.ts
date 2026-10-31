@@ -3,7 +3,7 @@
 import { getPayload } from 'payload'
 import config from '@/payload.config'
 import dayjs from '@/lib/dayjs'
-import { getPortalSession } from '@/lib/auth'
+import { appointmentScope, getPortalSession } from '@/lib/auth'
 
 interface ActivityDoc {
   id: string
@@ -25,7 +25,7 @@ export async function getLatestActivity() {
 
   const result = await payload.find({
     collection: 'appointments',
-    where: { tenant: { equals: session.tenant.id } },
+    where: appointmentScope(session),
     sort: '-createdAt',
     limit: 10,
     overrideAccess: true,

@@ -1,6 +1,6 @@
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-import { requirePortal } from '@/lib/auth'
+import { appointmentScope, requirePortal } from '@/lib/auth'
 import SpecialistDashboardClient from './DashboardClient'
 import dayjs from '@/lib/dayjs'
 
@@ -81,7 +81,7 @@ function calculateMetrics(docs: AppointmentDoc[]): DashboardMetrics {
 }
 
 export default async function SpecialistDashboardPage() {
-  const { tenant } = await requirePortal()
+  const session = await requirePortal()
   const payload = await getPayload({ config })
   const now = dayjs().tz('Asia/Manila')
   const todayStart = now.startOf('day').toISOString()
@@ -92,8 +92,7 @@ export default async function SpecialistDashboardPage() {
     payload.find({
       collection: 'appointments',
       where: {
-        tenant: { equals: tenant.id },
-        appointmentDate: { greater_than_equal: todayStart, less_than_equal: todayEnd },
+        and: [appointmentScope(session), { appointmentDate: { greater_than_equal: todayStart, less_than_equal: todayEnd } }],
       },
       sort: 'appointmentDate',
       depth: 1,
@@ -102,8 +101,7 @@ export default async function SpecialistDashboardPage() {
     payload.find({
       collection: 'appointments',
       where: {
-        tenant: { equals: tenant.id },
-        appointmentDate: { greater_than: todayEnd, less_than_equal: next7Days },
+        and: [appointmentScope(session), { appointmentDate: { greater_than: todayEnd, less_than_equal: next7Days } }],
       },
       sort: 'appointmentDate',
       depth: 1,

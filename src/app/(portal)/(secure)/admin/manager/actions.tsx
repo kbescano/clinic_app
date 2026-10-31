@@ -10,6 +10,7 @@ import {
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline'
 import Notification from '@/components/shared/Notification'
+import { usePortalDemo } from '../../../components/PortalDemo'
 
 interface BookingActionsProps {
   appointmentId: string
@@ -25,10 +26,12 @@ export default function BookingActions({ appointmentId, currentStatus }: Booking
   const [showCancelModal, setShowCancelModal] = useState(false)
   const [isPending, startTransition] = useTransition()
   const router = useRouter()
+  const { blockInDemo } = usePortalDemo()
 
   const isUpdating = isPending || !!loadingType
 
   const updateStatus = async (newStatus: string) => {
+    if (blockInDemo()) return setShowCancelModal(false)
     setLoadingType(newStatus)
     setShowCancelModal(false)
     try {

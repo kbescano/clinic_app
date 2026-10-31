@@ -13,6 +13,7 @@ import {
 import FadeIn from '@/components/shared/FadeIn'
 import BackToHome from '@/components/shared/BackToHome'
 import Notification from '@/components/shared/Notification'
+import { usePortalDemo } from '../../components/PortalDemo'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 // --- TYPES & INTERFACES ---
@@ -59,6 +60,7 @@ export default function MedicalHistoryClient({
 }) {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { blockInDemo } = usePortalDemo()
 
   const [search, setSearch] = useState(searchParams.get('search') || '')
   const [sortBy, setSortBy] = useState<'latest' | 'oldest' | 'name'>('latest')
@@ -77,6 +79,7 @@ export default function MedicalHistoryClient({
   }, [initialData])
 
   const handleSaveNote = async (id: string, note: string) => {
+    if (blockInDemo()) return
     setSavingId(id)
     try {
       const res = await fetch(`/api/appointments/${id}`, {

@@ -7,8 +7,8 @@ import Navbar from '../components/Navbar'
 import WebsiteMenu from '../components/WebsiteMenu'
 import DentalNav from '../components/dental/DentalNav'
 
-// Only the configured clinics exist; anything else under /[clinic] is a 404.
-export const dynamicParams = false
+// Both clinics are prerendered. Unknown slugs 404 through requireTenant(). (Not `dynamicParams =
+// false`: with it, on-demand revalidation can't regenerate these pages and they start to 404.)
 export const generateStaticParams = () => CLINIC_SLUGS.map((clinic) => ({ clinic }))
 
 type Props = { children: React.ReactNode; params: Promise<{ clinic: string }> }

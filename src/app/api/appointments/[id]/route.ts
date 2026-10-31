@@ -1,6 +1,6 @@
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-import { getPortalSession } from '@/lib/auth'
+import { DEMO_READ_ONLY, getPortalSession } from '@/lib/auth'
 import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 
@@ -15,6 +15,9 @@ export async function PATCH(
   const session = await getPortalSession()
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  if (session.demo) {
+    return NextResponse.json({ error: DEMO_READ_ONLY }, { status: 403 })
   }
 
   try {

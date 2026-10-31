@@ -12,6 +12,7 @@ import MassUpload from '../../../components/MassUpload'
 import BackToHome from '@/components/shared/BackToHome'
 import AdminFilter from '../../../components/AdminFilter'
 import BookingActions from './actions'
+import { usePortalDemo } from '../../../components/PortalDemo'
 import dayjs from '@/lib/dayjs'
 import { useSearchParams } from 'next/navigation'
 import { assignSpecialistAction, getGlobalCacheAction } from './adminAction'
@@ -348,6 +349,7 @@ function AppointmentTicket({
   const [isVisible, setIsVisible] = useState(false)
   const ticketRef = useRef<HTMLDivElement>(null)
   const [isPending, startTransition] = useTransition()
+  const { blockInDemo } = usePortalDemo()
 
   const currentSpecialistId = String(
     typeof apt.specialist === 'object' ? apt.specialist?.id : apt.specialist || '',
@@ -381,6 +383,7 @@ function AppointmentTicket({
   }, [])
 
   const handleSpecialistChange = (newId: string) => {
+    if (blockInDemo()) return
     startTransition(async () => {
       if (assignSpecialistAction) {
         // Logic remains identical: send null if the string is empty

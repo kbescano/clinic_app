@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getPayload } from 'payload'
 import config from '@/payload.config'
-import { getPortalSession } from '@/lib/auth'
+import { appointmentScope, getPortalSession } from '@/lib/auth'
 import dayjs from '@/lib/dayjs'
 
 export const dynamic = 'force-dynamic'
@@ -30,7 +30,6 @@ export async function GET(request: Request) {
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
-  const { tenant } = session
 
   const { searchParams } = new URL(request.url)
   const range = searchParams.get('range') || 'today'
@@ -77,7 +76,7 @@ export async function GET(request: Request) {
       collection: 'appointments',
       where: {
         and: [
-          { tenant: { equals: tenant.id } },
+          appointmentScope(session),
           { appointmentDate: { greater_than_equal: dbStart.toISOString() } },
           { appointmentDate: { less_than_equal: dbEnd.toISOString() } },
           { status: { not_equals: 'cancelled' } },
@@ -91,7 +90,7 @@ export async function GET(request: Request) {
       collection: 'appointments',
       where: {
         and: [
-          { tenant: { equals: tenant.id } },
+          appointmentScope(session),
           { appointmentDate: { greater_than_equal: prevStart.toISOString() } },
           { appointmentDate: { less_than_equal: prevEnd.toISOString() } },
           { status: { not_equals: 'cancelled' } },

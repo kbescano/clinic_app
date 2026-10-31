@@ -1,13 +1,17 @@
 import { cookies, headers as nextHeaders } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { getPayload } from 'payload'
+import { getPayload, type Where } from 'payload'
 import config from '@/payload.config'
 import type { Tenant } from '@/payload-types'
 import { isSuperAdmin, tenantIdOf } from '@/access/tenants'
 import { getTenant, getTenants } from '@/lib/tenants'
+import { getDemoClinic } from '@/lib/portalDemo'
 
 /** Which clinic a super admin is looking at in the portal. Staff are always in their own clinic. */
 export const PORTAL_CLINIC_COOKIE = 'portal_clinic'
+
+/** Seeded sample bookings (scripts/seed-appointments.mjs) all carry this in their group id. */
+const SAMPLE_BOOKING_MARK = 'SEED-'
 
 /**
  * Staff session check for the portal. The portal reads through the Local API (which bypasses
@@ -19,13 +23,28 @@ export async function getStaffUser() {
   return user?.collection === 'users' && user.role === 'admin' ? user : null
 }
 
+export interface PortalSession {
+  /** Shown in the header; "Demo" for demo sessions. */
+  email: string
+  /** The clinic the portal is showing. Every portal query must be scoped with appointmentScope(). */
+  tenant: Tenant
+  canSwitchClinic: boolean
+  /** A demo visitor: sample bookings only, and nothing can be changed. */
+  demo: boolean
+}
+
 /**
- * The signed-in staff member and the clinic (tenant) the portal is showing. Every portal query
- * must filter on `tenant.id`: one clinic's staff never see another clinic's patients.
+ * The signed-in staff member (or demo visitor) and the clinic the portal is showing. One clinic's
+ * staff never see another clinic's patients; demo visitors never see a real patient.
  */
-export async function getPortalSession() {
+export async function getPortalSession(): Promise<PortalSession | null> {
   const user = await getStaffUser()
-  if (!user) return null
+
+  if (!user) {
+    const demoClinic = await getDemoClinic()
+    const tenant = demoClinic ? await getTenant(demoClinic) : null
+    return tenant ? { email: 'Demo', tenant, canSwitchClinic: false, demo: true } : null
+  }
 
   let tenant: Tenant | null = null
   if (isSuperAdmin(user)) {
@@ -45,10 +64,17 @@ export async function getPortalSession() {
     }
   }
 
-  return tenant ? { user, tenant, canSwitchClinic: isSuperAdmin(user) } : null
+  return tenant ? { email: user.email, tenant, canSwitchClinic: isSuperAdmin(user), demo: false } : null
 }
 
-/** For server components: send visitors without a staff session (or a clinic) to the portal login. */
+/** The appointments a portal session may see: its clinic's, and for demo visitors only sample ones. */
+export function appointmentScope(session: PortalSession): Where {
+  return session.demo
+    ? { and: [{ tenant: { equals: session.tenant.id } }, { bookingGroupId: { like: SAMPLE_BOOKING_MARK } }] }
+    : { tenant: { equals: session.tenant.id } }
+}
+
+/** For server components: send visitors without a staff or demo session to the portal login. */
 export async function requirePortal() {
   const session = await getPortalSession()
   if (!session) redirect('/login')
@@ -61,3 +87,12 @@ export async function assertPortal() {
   if (!session) throw new Error('Unauthorized')
   return session
 }
+
+/** For anything that changes data: staff only, never a demo session. */
+export async function assertPortalStaff() {
+  const session = await assertPortal()
+  if (session.demo) throw new Error('Demo mode is view-only.')
+  return session
+}
+
+export const DEMO_READ_ONLY = 'Demo mode is view-only. Sign in as staff to make changes.'

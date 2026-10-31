@@ -3,8 +3,10 @@
 import React, { useState, useEffect } from 'react'
 import FadeIn from '@/components/shared/FadeIn'
 import { CheckCircleIcon, DocumentTextIcon, CodeBracketIcon } from '@heroicons/react/24/outline'
+import { usePortalDemo } from './PortalDemo'
 
 export default function MassUpload() {
+  const { blockInDemo } = usePortalDemo()
   const [jsonInput, setJsonInput] = useState('')
   const [isUploading, setIsUploading] = useState(false)
   const [status, setStatus] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
@@ -16,7 +18,7 @@ export default function MassUpload() {
   }, [])
 
   const handleUpload = async () => {
-    if (!jsonInput) return
+    if (!jsonInput || blockInDemo()) return
     setIsUploading(true)
     setStatus(null)
 

@@ -7,6 +7,7 @@ import FadeIn from '@/components/shared/FadeIn'
 import type { ClinicSlug } from '@/lib/clinics'
 import NotificationTrigger from './NotificationTrigger'
 import { switchPortalClinic } from './clinicActions'
+import { exitPortalDemo } from './demoActions'
 
 interface PortalHeaderProps {
   clinicName: string
@@ -14,12 +15,14 @@ interface PortalHeaderProps {
   /** Only for super admins: the clinics they can switch between. */
   clinics: { slug: ClinicSlug; name: string }[]
   email: string
+  /** A demo visitor: show the demo strip, hide the CMS, and "Exit demo" instead of signing out. */
+  demo?: boolean
 }
 
 const utilityLink =
   'text-[8px] uppercase tracking-[0.5em] font-serif text-[#595f72] dark:text-zinc-400 hover:text-[#251101] dark:hover:text-white transition-colors duration-500'
 
-export default function PortalHeader({ clinicName, clinicSlug, clinics, email }: PortalHeaderProps) {
+export default function PortalHeader({ clinicName, clinicSlug, clinics, email, demo = false }: PortalHeaderProps) {
   const [isVisible, setIsVisible] = useState(true)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isSwitching, startSwitch] = useTransition()
@@ -39,6 +42,7 @@ export default function PortalHeader({ clinicName, clinicSlug, clinics, email }:
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
+    if (demo) return exitPortalDemo()
     await fetch('/api/users/logout', { method: 'POST' })
     router.push('/login')
     router.refresh()
@@ -50,6 +54,17 @@ export default function PortalHeader({ clinicName, clinicSlug, clinics, email }:
         isVisible ? 'translate-y-0' : '-translate-y-full'
       }`}
     >
+      {demo && (
+        <div className="flex items-center justify-center gap-3 bg-zinc-950 px-4 py-2 text-[11px] font-semibold text-white dark:bg-white dark:text-zinc-950">
+          <span className="rounded-full bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-zinc-950 dark:bg-zinc-950 dark:text-white">
+            Demo
+          </span>
+          <span>Sample bookings, view only</span>
+          <button onClick={handleLogout} className="underline underline-offset-4 hover:opacity-70">
+            Exit demo
+          </button>
+        </div>
+      )}
       <FadeIn>
         <div className="max-w-[1800px] mx-auto px-6 md:px-12 h-20 md:h-28 flex items-center justify-between">
           {/* LEFT: the clinic's public site, and (super admins) which clinic to show */}
@@ -97,16 +112,18 @@ export default function PortalHeader({ clinicName, clinicSlug, clinics, email }:
 
           {/* RIGHT: UTILITY PILLAR */}
           <div className="flex-1 flex items-center justify-end gap-6 md:gap-10">
-            <Link href="/dashboard-secret-portal" className={`${utilityLink} hidden md:block`}>
-              CMS
-            </Link>
+            {!demo && (
+              <Link href="/dashboard-secret-portal" className={`${utilityLink} hidden md:block`}>
+                CMS
+              </Link>
+            )}
             <button
               onClick={handleLogout}
               disabled={isLoggingOut}
               title={email}
               className={`${utilityLink} disabled:opacity-50`}
             >
-              {isLoggingOut ? 'Signing out…' : 'Sign out'}
+              {isLoggingOut ? 'Signing out…' : demo ? 'Exit demo' : 'Sign out'}
             </button>
             <div className="transform hover:scale-110 transition-transform duration-500">
               <NotificationTrigger />
