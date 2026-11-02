@@ -48,3 +48,6 @@ node_modules/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Outreach lead list and Gmail sign-in (other businesses' contact details): never commit
+/leads/

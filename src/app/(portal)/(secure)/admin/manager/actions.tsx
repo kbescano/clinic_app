@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline'
 import Notification from '@/components/shared/Notification'
 import { usePortalDemo } from '../../../components/PortalDemo'
+import Tooltip from '../../../components/Tooltip'
 
 interface BookingActionsProps {
   appointmentId: string
@@ -141,48 +142,65 @@ export default function BookingActions({ appointmentId, currentStatus }: Booking
         {/* ROW 3 FIXED MARGIN */}
         <div className="flex flex-nowrap items-center gap-2 w-full shrink-0 mt-4 lg:mt-6 min-h-[16px]">
           {currentStatus === 'completed' ? (
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/5 border border-emerald-500/10 rounded-full">
-              <CheckBadgeIcon className="w-3.5 h-3.5 text-emerald-500" />
-              <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-emerald-500 leading-none m-0">
-                Settled
-              </span>
-            </div>
+            <Tooltip text="Completed: counted as Settled revenue on the Dashboard and in Analytics revenue." side="top" align="start">
+              <div tabIndex={0} className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/5 border border-emerald-500/10 rounded-full outline-none">
+                <CheckBadgeIcon className="w-3.5 h-3.5 text-emerald-500" />
+                <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-emerald-500 leading-none m-0">
+                  Settled
+                </span>
+              </div>
+            </Tooltip>
           ) : (
             <>
-              <button
-                disabled={isUpdating}
-                onClick={() => updateStatus(currentStatus === 'pending' ? 'confirmed' : 'pending')}
-                className="px-3 py-1 border border-zinc-100 dark:border-zinc-800 text-[10px] uppercase tracking-[0.3em] font-bold rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all text-zinc-500 disabled:opacity-50 leading-none m-0"
+              <Tooltip
+                text={
+                  currentStatus === 'pending'
+                    ? "Confirm once you've agreed the time with the patient. It then counts toward Projected revenue on the Dashboard."
+                    : 'Move back to Pending, e.g. if the patient still has to confirm. Pending visits are not counted as revenue.'
+                }
+                side="top"
+                align="start"
               >
-                {loadingType === 'confirmed' || loadingType === 'pending'
-                  ? '...'
-                  : currentStatus === 'pending'
-                    ? 'Confirm'
-                    : 'Revert'}
-              </button>
+                <button
+                  disabled={isUpdating}
+                  onClick={() => updateStatus(currentStatus === 'pending' ? 'confirmed' : 'pending')}
+                  className="px-3 py-1 border border-zinc-100 dark:border-zinc-800 text-[10px] uppercase tracking-[0.3em] font-bold rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-all text-zinc-500 disabled:opacity-50 leading-none m-0"
+                >
+                  {loadingType === 'confirmed' || loadingType === 'pending'
+                    ? '...'
+                    : currentStatus === 'pending'
+                      ? 'Confirm'
+                      : 'Revert'}
+                </button>
+              </Tooltip>
 
-              <button
-                disabled={isUpdating}
-                onClick={() => updateStatus('completed')}
-                className="px-3 py-1 bg-black dark:bg-white text-white dark:text-black text-[10px] uppercase tracking-[0.3em] font-bold rounded-xl hover:opacity-80 transition-all flex items-center gap-2 disabled:opacity-50 leading-none m-0"
-              >
-                {loadingType === 'completed' ? (
-                  <ArrowPathIcon className="w-3 h-3 animate-spin" />
-                ) : (
-                  <>
-                    <CheckIcon className="w-3.5 h-3.5" />
-                    Completed
-                  </>
-                )}
-              </button>
+              <Tooltip text="Press after the visit. Completed visits are what the Dashboard (Settled) and Analytics count as revenue." side="top">
+                <button
+                  disabled={isUpdating}
+                  onClick={() => updateStatus('completed')}
+                  className="px-3 py-1 bg-black dark:bg-white text-white dark:text-black text-[10px] uppercase tracking-[0.3em] font-bold rounded-xl hover:opacity-80 transition-all flex items-center gap-2 disabled:opacity-50 leading-none m-0"
+                >
+                  {loadingType === 'completed' ? (
+                    <ArrowPathIcon className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <>
+                      <CheckIcon className="w-3.5 h-3.5" />
+                      Completed
+                    </>
+                  )}
+                </button>
+              </Tooltip>
 
-              <button
-                disabled={isUpdating}
-                onClick={() => setShowCancelModal(true)}
-                className="px-1.5 py-1 text-zinc-300 dark:text-zinc-700 hover:text-red-500 transition-colors disabled:opacity-20 shrink-0 leading-none m-0"
-              >
-                <XMarkIcon className="w-4 h-4" />
-              </button>
+              <Tooltip text="Cancel this booking and free its time slot. Cancelled visits are left out of all totals." side="top" align="end">
+                <button
+                  disabled={isUpdating}
+                  onClick={() => setShowCancelModal(true)}
+                  aria-label="Cancel booking"
+                  className="px-1.5 py-1 text-zinc-300 dark:text-zinc-700 hover:text-red-500 transition-colors disabled:opacity-20 shrink-0 leading-none m-0"
+                >
+                  <XMarkIcon className="w-4 h-4" />
+                </button>
+              </Tooltip>
             </>
           )}
         </div>

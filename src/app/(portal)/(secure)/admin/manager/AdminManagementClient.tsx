@@ -12,6 +12,7 @@ import MassUpload from '../../../components/MassUpload'
 import BackToHome from '@/components/shared/BackToHome'
 import AdminFilter from '../../../components/AdminFilter'
 import BookingActions from './actions'
+import BookingGuide from '../../../components/BookingGuide'
 import { usePortalDemo } from '../../../components/PortalDemo'
 import dayjs from '@/lib/dayjs'
 import { useSearchParams } from 'next/navigation'
@@ -183,7 +184,7 @@ export default function AdminManagementClient({
                     : 'opacity-0 translate-y-8 blur-md'
                 }`}
               >
-                Management
+                Bookings
               </h1>
             </div>
 
@@ -195,6 +196,8 @@ export default function AdminManagementClient({
               {!search && <AdminFilter initialRange={range} initialStatus={status} />}
             </div>
           </header>
+
+          <BookingGuide from="bookings" />
 
           <div className="flex flex-col gap-14 md:gap-20">
             <div

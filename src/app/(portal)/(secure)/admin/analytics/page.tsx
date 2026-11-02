@@ -7,6 +7,7 @@ import BackToHome from '@/components/shared/BackToHome'
 import { RegistrySkeleton } from '@/components/shared/RegistrySkeleton'
 import dayjs from '@/lib/dayjs'
 import Link from 'next/link'
+import BookingGuide from '../../../components/BookingGuide'
 
 export const dynamic = 'force-dynamic'
 
@@ -224,6 +225,8 @@ export default function AdminAnalytics() {
               </div>
             </div>
           </header>
+
+          <BookingGuide from="analytics" />
 
           <section
             ref={metricsRef}

@@ -4,7 +4,6 @@ import { getTenants } from '@/lib/tenants'
 import { NotificationProvider } from '../components/NotificationContext'
 import NotificationModal from '../components/NotificationModal'
 import PortalHeader from '../components/PortalHeader'
-import PortalMenu from '../components/PortalMenu'
 import { PortalDemoProvider } from '../components/PortalDemo'
 
 /**
@@ -21,10 +20,9 @@ export default async function SecurePortalLayout({ children }: { children: React
     <PortalDemoProvider demo={demo}>
     <NotificationProvider>
       <PortalHeader clinicName={tenant.name} clinicSlug={tenant.slug} clinics={clinics} email={email} demo={demo} />
-      {/* The demo strip makes the fixed header taller. */}
-      <main className={`min-h-screen pb-20 lg:pb-0 dark:bg-black ${demo ? 'pt-8' : ''}`}>{children}</main>
+      {/* Pages pad for the header's top row; this adds its page links row (and the demo strip). */}
+      <main className={`min-h-screen dark:bg-black ${demo ? 'pt-20' : 'pt-12'}`}>{children}</main>
 
-      <PortalMenu />
       <NotificationModal />
     </NotificationProvider>
     </PortalDemoProvider>
